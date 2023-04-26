@@ -191,7 +191,8 @@ if num_bets == 3:
     bethouse_combobox3.bind("<KeyRelease>", update_bethouse_combobox3)
     bethouse_combobox3.grid(row=3, column=9, padx=5, pady=5, sticky=tk.W)
 else:
-    bethouse_combobox3 = ttk.Combobox(frame, textvariable=bethouse_var3, values=[], width=7)
+    bethouse_combobox3 = ttk.Combobox(frame, textvariable=bethouse_var3, values=list(bethouse_options.keys()), width=7)
+    bethouse_combobox3.bind("<KeyRelease>", update_bethouse_combobox3)
     bethouse_combobox3.grid(row=3, column=9, padx=5, pady=5, sticky=tk.W)
     bethouse_combobox3.grid_remove()
 
@@ -199,7 +200,6 @@ else:
 mercado_label = tk.Label(frame, text="Mercado")
 mercado_label.grid(row=0, column=10)
 mercado_options = ["1", "12", "1X", "X", "X2", "2", "AH1", "AH2", "ClearSheet1", "ClearSheet2", "DNB1", "DNB2", "EH1", "EH2", "EHX", "Exactly", "Lay", "Not", "Removal", "ScoreBoth", "TO", "TU", "WinNil1", "WinNil2"]
-
 def validate_mercado(text):
     return text in mercado_options or not text
 
@@ -282,6 +282,7 @@ if num_bets == 3:
     mercado_combobox3.grid(row=3, column=10, padx=5, pady=5, sticky=tk.W)
 else:
     mercado_combobox3 = ttk.Combobox(frame, textvariable=mercado_var3, values=mercado_options, width=7)
+    mercado_combobox3.bind("<KeyRelease>", update_mercado_combobox3)
     mercado_combobox3.grid(row=3, column=10, padx=5, pady=5, sticky=tk.W)
     mercado_combobox3.grid_remove()
 
@@ -432,17 +433,18 @@ def on_variable_change(*args):
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
     bethouses = [bethouse_options.get(bethouse_var.get(), 0.0), bethouse_options.get(bethouse_var2.get(), 0.0), bethouse_options.get(bethouse_var3.get(), 0.0)]
-    if (len([odd for odd in odds if odd is not None]) >= 2) and (len([aposta for aposta in apostas if aposta is not None]) >= 1):
+    if (len([odd for odd in odds if odd != 0.0]) >= 2) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1):
         calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(), mercado_var2.get(), bethouses[0], bethouses[1], bethouses[2], arred_var.get())
         resultado = calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(),mercado_var2.get(), bethouses[0], bethouses[1], bethouses[2], arred_var.get())
-        palpite1_label.config(text=f"R$ {round(resultado[0],2)}" if resultado[0] is not None else "")
-        palpite2_label.config(text=f"R$ {round(resultado[1],2)}" if resultado[1] is not None else "")
-        palpite3_label.config(text=f"R$ {round(resultado[2],2)}" if resultado[2] is not None else "")
-        lucro1_label.config(text=f"R$ {round(resultado[4],2)}" if resultado[4] is not None else "", fg='seagreen' if resultado[4] > 0 else ('red' if resultado[4] < 0 else 'gray'))
-        lucro2_label.config(text=f"R$ {round(resultado[5],2)}" if resultado[5] is not None else "", fg='seagreen' if resultado[5] > 0 else ('red' if resultado[6] < 0 else 'gray'))
-        lucro3_label.config(text=f"R$ {round(resultado[6],2)}" if resultado[6] is not None else "", fg='seagreen' if resultado[6] > 0 else ('red' if resultado[7] < 0 else 'gray'))
-        liability_label1.config(text=f"R$ {round(resultado[3],2)}" if resultado[3] is not None else "")
-        liability_label2.config(text=f"R$ {round(resultado[3], 2)}" if resultado[3] is not None else "")
+        palpite1_label.config(text=f"R$ {format(round(resultado[0],2), '.2f')}" if resultado[0] is not None else "")
+        palpite2_label.config(text=f"R$ {format(round(resultado[1],2), '.2f')}" if resultado[1] is not None else "")
+        palpite3_label.config(text=f"R$ {format(round(resultado[2],2), '.2f')}" if resultado[2] is not None else "")
+        lucro1_label.config(text=f"R$ {format(round(resultado[4],2), '.2f')}" if resultado[4] is not None else "", fg='seagreen' if resultado[4] > 0 else ('red' if resultado[4] < 0 else 'gray'), font=("Arial", 14, "bold"))
+        lucro2_label.config(text=f"R$ {format(round(resultado[5],2), '.2f')}" if resultado[5] is not None else "", fg='seagreen' if resultado[5] > 0 else ('red' if resultado[6] < 0 else 'gray'), font=("Arial", 14, "bold"))
+        lucro3_label.config(text=f"R$ {format(round(resultado[6],2), '.2f')}" if resultado[6] is not None else "", fg='seagreen' if resultado[6] > 0 else ('red' if resultado[7] < 0 else 'gray'), font=("Arial", 14, "bold"))
+        liability_label1.config(text=f"R$ {format(round(resultado[3],2), '.2f')}" if resultado[3] is not None else "")
+        liability_label2.config(text=f"R$ {format(round(resultado[3],2), '.2f')}" if resultado[3] is not None else "")
+        lucro_percent_label1.config(text=f"{round(resultado[7],2)}%" if resultado[4] is not None else "", fg='seagreen' if resultado[4] > 0 else ('red' if resultado[4] < 0 else 'gray'), font=("Arial", 20, "bold"))
 # associando a função on_variable_change para as variáveis
 odd_var.trace_add('write', on_variable_change)
 odd_var2.trace_add('write', on_variable_change)
@@ -478,30 +480,44 @@ lucro1_label.grid(row=1, column=16)
 lucro2_label = tk.Label(frame, text="")
 lucro2_label.grid(row=2, column=16)
 lucro3_label = tk.Label(frame, text="")
+lucro_percent_label = tk.Label(frame, text='Lucro %')
+lucro_percent_label.grid(row=0, column=17, padx=5, pady=5, sticky=tk.W)
+lucro_percent_label1 = tk.Label(frame, text="", font=("Arial", 20, "bold"))
+lucro_percent_label1.grid(row=1, column=17, rowspan=2)
 def update_columns():
     if mercado_var.get() == "Lay" or mercado_var2.get() =="Lay":
         liability_label.grid(row=0, column=16, padx=5, pady=5, sticky=tk.W)
         lucro_label.grid(row=0, column=17, padx=5, pady=5, sticky=tk.W)
         lucro1_label.grid(row=1, column=17)
         lucro2_label.grid(row=2, column=17)
+        lucro_percent_label.grid(row=0, column=18, padx=5, pady=5, sticky=tk.W)
+        lucro_percent_label1.grid(row=1, column=18, rowspan=2)
         if mercado_var.get() == "Lay":
             liability_label1.grid(row=1, column=16, padx=5, pady=5, sticky=tk.W)
             liability_label2.grid_remove()
+            lucro_percent_label.grid(row=0, column=18, padx=5, pady=5, sticky=tk.W)
+            lucro_percent_label1.grid(row=1, column=18, rowspan=2)
         else:
             liability_label2.grid(row=2, column=16, padx=5, pady=5, sticky=tk.W)
             liability_label1.grid_remove()
+            lucro_percent_label.grid(row=0, column=18, padx=5, pady=5, sticky=tk.W)
+            lucro_percent_label1.grid(row=1, column=18, rowspan=2)
     else:
         liability_label.grid_forget()
         lucro_label.grid(row=0, column=16, padx=5, pady=5, sticky=tk.W)
         lucro1_label.grid(row=1, column=16)
         lucro2_label.grid(row=2, column=16)
+        lucro_percent_label.grid(row=0, column=17, padx=5, pady=5, sticky=tk.W)
+        lucro_percent_label1.grid(row=1, column=17, rowspan=2)
 
 if num_bets == 3:
     palpite3_label.grid(row=3, column=15)
     lucro3_label.grid(row=3, column=16)
 else:
+    palpite3_label.grid(row=3, column=15)
+    lucro3_label.grid(row=3, column=16)
     palpite3_label.grid_remove()
-    lucro3_label.grid_remove
+    lucro3_label.grid_remove()
 
 #Para Calcular apostas
 def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, bethouse_options1, bethouse_options2, bethouse_options3, arred_var):
