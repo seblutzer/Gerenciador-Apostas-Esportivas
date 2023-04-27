@@ -3,7 +3,10 @@ from tkinter import ttk
 from tkinter import messagebox
 import datetime
 import json
-import pickle
+import csv
+import os.path
+import os
+import sys
 
 # cria uma janela
 janela = tk.Tk()
@@ -200,7 +203,47 @@ arred_label.grid(row=3, column=0)
 arred_options = [0.01, 0.05, 0.1, 0.5, 1]
 arred_var = tk.DoubleVar(value=arred_options[0])
 arred_combobox = ttk.Combobox(frame, textvariable=arred_var, values=arred_options, width=3, state="readonly")
-arred_combobox.grid(row=3, column=3, padx=5, pady=5, sticky=tk.W)
+arred_combobox.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
+
+#Adicionar Ano
+def validate_year(text):
+    if len(text) < 2:
+        return False
+    if text.isdigit() or text == "":
+        if len(text) != 4:
+            return False
+        if text == "":
+            return True
+        current_year = datetime.date.today().year
+        if int(text) < 1900 or int(text) > current_year:
+            return False
+    else:
+        return False
+    return True
+def update_year_combobox(event):
+    current_input = ano_var.get()
+    matching_options = [str(opt) for opt in opcoes_anos]
+    if len(current_input) < 2:
+        ano_var.set(str(datetime.date.today().year)[:len(current_input)])
+        return
+    for i, char in enumerate(current_input):
+        if not any(len(opt) > i for opt in matching_options):
+            ano_var.set(current_input[:-1])
+            return
+        allowed_chars = [opt[i] for opt in matching_options if len(opt) > i]
+        if char not in allowed_chars:
+            ano_var.set(current_input[:-1])
+            return
+        matching_options = [opt for opt in matching_options if opt.startswith(current_input[:i+1])]
+    ano_combobox['values'] = matching_options
+    if len(matching_options) == 1:
+        ano_var.set(matching_options[0])
+        ano_combobox.icursor(tk.END)
+opcoes_anos = [datetime.date.today().year - 1, datetime.date.today().year, datetime.date.today().year + 1]
+ano_var = tk.StringVar(value=datetime.date.today().year)
+ano_combobox = ttk.Combobox(frame, textvariable=ano_var, values=opcoes_anos, width=4)
+ano_combobox.bind('<KeyRelease>', update_year_combobox)
+ano_combobox.grid(row=2, column=4, padx=5, pady=5, sticky=tk.W)
 
 # Adiciona campo Jogo
 jogo_label = tk.Label(frame, text="Jogo")
@@ -220,42 +263,14 @@ def validate_day(text):
     else:
         return False
     return True
-
-def validate_hour(text):
-    if text.isdigit() or text == "":
-        if len(text) > 2:
-            return False
-        if text == "":
-            return True
-        if int(text) < 0 or int(text) > 23:
-            return False
-    else:
-        return False
-    return True
-
-def validate_minute(text):
-    if text.isdigit() or text == "":
-        if len(text) > 2:
-            return False
-        if text == "":
-            return True
-        if int(text) < 0 or int(text) > 59:
-            return False
-    else:
-        return False
-    return True
-
 data_label = tk.Label(frame, text="Data")
-data_label.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W)
+data_label.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
 
 # Configurar o box dia
 dia_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_day), "%P"))
 dia_atual = datetime.date.today().day
 dia_entry.insert(0, dia_atual)
 dia_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W)
-
-barra_label1 = tk.Label(frame, text="/")
-barra_label1.grid(row=2, column=2)
 
 # Configurar o box mês
 mes_options = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -288,18 +303,37 @@ else:
 mes_combobox.bind("<KeyRelease>", update_combobox)
 mes_combobox.grid(row=2, column=3, padx=5, pady=5, sticky=tk.W)
 
-as_label1 = tk.Label(frame, text="as")
-as_label1.grid(row=2, column=4)
-
+def validate_hour(text):
+    if text.isdigit() or text == "":
+        if len(text) > 2:
+            return False
+        if text == "":
+            return True
+        if int(text) < 0 or int(text) > 23:
+            return False
+    else:
+        return False
+    return True
 # Configurar o box Hora
 hora_label = tk.Label(frame, text="Hora")
 hora_label.grid(row=1, column=5)
 hora_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_hour), "%P"))
+hora_entry.insert(0, 12)
 hora_entry.grid(row=2, column=5, padx=5, pady=5, sticky=tk.W)
-
 doispontos_label = tk.Label(frame, text=":")
 doispontos_label.grid(row=2, column=6)
 
+def validate_minute(text):
+    if text.isdigit() or text == "":
+        if len(text) > 2:
+            return False
+        if text == "":
+            return True
+        if int(text) < 0 or int(text) > 59:
+            return False
+    else:
+        return False
+    return True
 # Configurar o box minuto
 minuto_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_minute), "%P"), justify="right")
 minuto_entry.insert(0, "00")
@@ -520,6 +554,7 @@ if num_bets == 3:
     valor_entry3.grid(row=4, column=11, padx=5, pady=5, sticky=tk.W)
 else:
     valor_entry3 = tk.Entry(frame, textvariable=valor_var3, validate="key", validatecommand=vcmd_valor, width=4,justify="right")
+    valor_entry3.bind("<KeyRelease>", lambda event: on_entry_change_valor3(valor_entry3))
     valor_entry3.grid(row=4, column=11, padx=5, pady=5, sticky=tk.W)
     valor_entry3.grid_remove()
 
@@ -546,9 +581,9 @@ def on_entry_change_odd(entry):
         entry.icursor(len(current_text))
 odd_var = tk.DoubleVar(value=None)
 vcmd_odd = (frame.register(on_validate_odd), '%P')
-entry = tk.Entry(frame, textvariable=odd_var, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
-entry.bind("<KeyRelease>", lambda event: on_entry_change_odd(entry))
-entry.grid(row=2, column=12, padx=5, pady=5, sticky=tk.W)
+odd_entry = tk.Entry(frame, textvariable=odd_var, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
+odd_entry.bind("<KeyRelease>", lambda event: on_entry_change_odd(odd_entry))
+odd_entry.grid(row=2, column=12, padx=5, pady=5, sticky=tk.W)
 
 # Adiciona campo ODD2
 def on_entry_change_odd2(entry):
@@ -565,19 +600,20 @@ odd_entry2.grid(row=3, column=12, padx=5, pady=5, sticky=tk.W)
 
 # Adiciona campo ODD3
 odd_var3 = tk.DoubleVar(value=None)
+def on_entry_change_odd3(entry):
+    current_text = entry.get()
+    if ',' in current_text:
+        current_text = current_text.replace(',', '.')
+        entry.delete(0, tk.END)
+        entry.insert(0, current_text)
+        entry.icursor(len(current_text))
 if num_bets == 3:
-    def on_entry_change_odd3(entry):
-        current_text = entry.get()
-        if ',' in current_text:
-            current_text = current_text.replace(',', '.')
-            entry.delete(0, tk.END)
-            entry.insert(0, current_text)
-            entry.icursor(len(current_text))
     odd_entry3 = tk.Entry(frame, textvariable=odd_var3, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
     odd_entry3.bind("<KeyRelease>", lambda event: on_entry_change_odd3(odd_entry3))
     odd_entry3.grid(row=4, column=12, padx=5, pady=5, sticky=tk.W)
 else:
     odd_entry3 = tk.Entry(frame, textvariable=odd_var3, validate="key", validatecommand=vcmd_odd, width=4,justify="right")
+    odd_entry3.bind("<KeyRelease>", lambda event: on_entry_change_odd3(odd_entry3))
     odd_entry3.grid(row=4, column=12, padx=5, pady=5, sticky=tk.W)
     odd_entry3.grid_remove()
 
@@ -627,16 +663,16 @@ aposta_entry2.grid(row=3, column=14, padx=5, pady=5, sticky=tk.W)
 
 #Adicionar aposta3
 real_label3 = tk.Label(frame, text="R$")
+def on_entry_change_aposta3(entry):
+    current_text = entry.get()
+    if ',' in current_text:
+        current_text = current_text.replace(',', '.')
+        entry.delete(0, tk.END)
+        entry.insert(0, current_text)
+        entry.icursor(len(current_text))
 aposta_var3 = tk.DoubleVar(value=None)
 if num_bets == 3:
     real_label3.grid(row=4, column=13)
-    def on_entry_change_aposta3(entry):
-        current_text = entry.get()
-        if ',' in current_text:
-            current_text = current_text.replace(',', '.')
-            entry.delete(0, tk.END)
-            entry.insert(0, current_text)
-            entry.icursor(len(current_text))
     aposta_entry3 = tk.Entry(frame, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var3, width=5, justify="right")
     aposta_entry3.bind("<KeyRelease>", lambda event: on_entry_change_aposta3(aposta_entry3))
     aposta_entry3.grid(row=4, column=14, padx=5, pady=5, sticky=tk.W)
@@ -644,6 +680,7 @@ else:
     real_label3.grid(row=4, column=13)
     real_label3.grid_remove()
     aposta_entry3 = tk.Entry(frame, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var3, width=5, justify="right")
+    aposta_entry3.bind("<KeyRelease>", lambda event: on_entry_change_aposta3(aposta_entry3))
     aposta_entry3.grid(row=4, column=14, padx=5, pady=5, sticky=tk.W)
     aposta_entry3.grid_remove()
 
@@ -664,6 +701,7 @@ def on_variable_change(*args):
         liability_label1.config(text=f"R$ {format(round(resultado[3],2), '.2f')}" if resultado[3] is not None else "")
         liability_label2.config(text=f"R$ {format(round(resultado[3],2), '.2f')}" if resultado[3] is not None else "")
         lucro_percent_label1.config(text=f"{round(resultado[7],2)}%" if resultado[4] is not None else "", fg='seagreen' if resultado[4] > 0 else ('red' if resultado[4] < 0 else 'gray'), font=("Arial", 20, "bold"))
+
 # associando a função on_variable_change para as variáveis
 odd_var.trace_add('write', on_variable_change)
 odd_var2.trace_add('write', on_variable_change)
@@ -764,6 +802,11 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             percent1 = aposta1 / (aposta1 + aposta2 + aposta3)
             percent2 = aposta2 / (aposta1 + aposta2 + aposta3)
             percent3 = aposta3 / (aposta1 + aposta2 + aposta3)
+            lucro1 = round(((aposta1 * odd1 - aposta1) * (1 - bethouse_options1) + aposta1) - aposta1 - aposta2 - aposta3, 2)
+            lucro2 = round(((aposta2 * odd2 - aposta2) * (1 - bethouse_options2) + aposta2) - aposta2 - aposta3, 2)
+            lucro3 = round(((aposta3 * odd3 - aposta3) * (1 - bethouse_options3) + aposta3) + ((aposta2 * odd2 - aposta2) * (1 - bethouse_options2) + aposta2) - aposta1 - aposta2 - aposta3, 2)
+            lucro_percent = round((((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3)) * 100, 2)
+            return aposta1, aposta2, aposta3, None, lucro1, lucro2, lucro3, lucro_percent
         else:
             percent1 = (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd1 - 1) * (1 - bethouse_options1) + 1) / ((((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd1 - 1) * (1 - bethouse_options1) + 1) + (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd2 - 1) * (1 - bethouse_options2) + 1) + (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd3 - 1) * (1 - bethouse_options3) + 1))
             percent2 = (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd2 - 1) * (1 - bethouse_options2) + 1) / ((((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd1 - 1) * (1 - bethouse_options1) + 1) + (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd2 - 1) * (1 - bethouse_options2) + 1) + (((odd1 - 1) * (1 - bethouse_options1) + 1) + ((odd2 - 1) * (1 - bethouse_options2) + 1) + ((odd3 - 1) * (1 - bethouse_options3) + 1)) / ((odd3 - 1) * (1 - bethouse_options3) + 1))
@@ -790,7 +833,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
         aposta2 = round(((aposta1 * percent2) / percent1) / arred_var) * arred_var
         aposta3 = round(((aposta2 * percent3) / percent2) / arred_var) * arred_var
     elif aposta3 > 0.0:
-        aposta1 = round(((aposta2 * percent1) / percent2) / arred_var) * arred_var
+        aposta1 = round(((aposta3 * percent1) / percent3) / arred_var) * arred_var
         aposta2 = round(((aposta1 * percent2) / percent1) / arred_var) * arred_var
     if mercado2 == "Lay":
         liability = round((aposta2 * (odd2 / (odd2 - 1)) - aposta2), 2)
@@ -806,17 +849,77 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
         lucro2 = round(((aposta2 * odd2 - aposta2) * (1 - bethouse_options2) + aposta2) - aposta1 - aposta2 - aposta3,2)
     if odd3 > 0.0:
         lucro3 = round(((aposta3 * odd3 - aposta3) * (1 - bethouse_options3) + aposta3) - aposta1 - aposta2 - aposta3, 2)
-        lucro_percent = round(((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3) * 100, 2)
-    else: lucro3 = 0
-    lucro_percent = round(((lucro1 + lucro2) / 2) / (aposta1 + aposta2) * 100, 2)
-
+        lucro_percent = round((((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3)) * 100, 2)
+    else:
+        lucro3 = 0
+        lucro_percent = round(((lucro1 + lucro2) / 2) / (aposta1 + aposta2) * 100, 2)
     return aposta1, aposta2, aposta3, liability, lucro1, lucro2, lucro3, lucro_percent
 #resultado = calc_apostas(aposta_var, aposta_var2, aposta_var3, odd_var, odd_var2, odd_var3, mercado_var, mercado_var2, bethouse_options.get(bethouse_var.get(), 0), bethouse_options.get(bethouse_var2.get(), 0), bethouse_options.get(bethouse_var3.get(), 0), arred_var)
 
 # cria o botão de gravação
+def reiniciar_programa():
+    python = sys.executable
+    os.execl(python, python, *sys.argv)
+
 def gravar():
-    # código para salvar os dados em um arquivo CSV
-    pass
+    #resultado = calc_apostas(float(aposta_entry.get()), float(aposta_entry2.get()), float(aposta_entry3.get()), float(odd_entry.get()), float(odd_entry2.get()), float(odd_entry3.get()), mercado_combobox.get(), mercado_combobox2.get(), float(bethouse_options.get(bethouse_combobox.get())), float(bethouse_options.get(bethouse_combobox2.get())), float(bethouse_options.get(bethouse_combobox3.get())), float(arred_var.get()))
+    time_casa = jogo_entry.get().split(" - ")[0]
+    time_fora = jogo_entry.get().split(" - ")[1]
+    dia = dia_entry.get()
+    mes = mes_combobox.get()
+    ano = ano_combobox.get()
+    hora = hora_entry.get()
+    minuto = minuto_entry.get()
+    bethouse1 = bethouse_combobox.get()
+    mercado1 = mercado_combobox.get()
+    merc_valor1 = valor_entry.get()
+    odd1 = odd_entry.get()
+    if aposta_entry == 0.0:
+        aposta1 = palpite1_label
+    else:
+        aposta1 = aposta_entry.get()
+    bethouse2 = bethouse_combobox2.get()
+    mercado2 = mercado_combobox2.get()
+    merc_valor2 = valor_entry2.get()
+    odd2 = odd_entry2.get()
+    if aposta_entry2 == 0.0:
+        aposta2 = palpite2_label
+    else:
+        aposta2 = aposta_entry2.get()
+    bethouse3 = bethouse_combobox3.get()
+    mercado3 = mercado_combobox3.get()
+    merc_valor3 = valor_entry3.get()
+    odd3 = odd_entry3.get()
+    if aposta_entry3 == 0.0:
+        aposta3 = palpite3_label
+    else:
+        aposta3 = aposta_entry3.get()
+    lucro = ""  # Coloque aqui a lógica para calcular o lucro
+    lucro_per = ""  # Coloque aqui a lógica para calcular o lucro percentual
+
+    # Nome do arquivo CSV
+    arquivo_csv = "Apostas.csv"
+
+    # Verifica se o arquivo CSV existe
+    arquivo_existe = os.path.isfile(arquivo_csv)
+
+    # Dados a serem gravados
+    dados = [[time_casa, time_fora, dia, mes, ano, hora, minuto, bethouse1, mercado1, merc_valor1, odd1, aposta1, bethouse2, mercado2, merc_valor2, odd2, aposta2, bethouse3, mercado3, merc_valor3, odd3, aposta3, lucro, lucro_per]]
+
+    # Gravação dos dados no arquivo CSV
+    with open(arquivo_csv, "a", newline="") as f:
+        writer = csv.writer(f)
+
+        # Escreve a primeira linha como os nomes das colunas, se o arquivo não existir
+        if not arquivo_existe:
+            colunas = ["Time Casa", "Time Fora", "Dia", "Mês", "Ano", "Hora", "Minuto", "Bethouse 1", "Mercado 1", "Valor 1", "Odd 1", "Aposta 1", "Bethouse 2", "Mercado 2", "Valor 2", "Odd 2", "Aposta 2", "Bethouse 3", "Mercado 3", "Valor 3", "Odd 3", "Aposta 3", "Lucro", "Lucro Percentual"]
+            writer.writerow(colunas)
+
+        # Escreve os dados na linha atual
+        writer.writerows(dados)
+
+    reiniciar_programa()
+
 
 gravar_button = tk.Button(janela, text="Gravar", command=gravar)
 gravar_button.grid(row=2, column=0)
