@@ -10,11 +10,11 @@ from ttkthemes import ThemedTk
 import tkinter.colorchooser as colorchooser
 
 # cria uma janela
-janela = tk.Tk()
-style = ttk.Style()
-style.theme_use('clam')
+#janela = tk.Tk()
+#style = ttk.Style()
+#style.theme_use('clam')
 
-#janela = ThemedTk(theme="black")
+janela = ThemedTk(theme="marine")
 
 # Cria o frame
 frame = tk.Frame(janela, padx=10, pady=10)
@@ -243,6 +243,7 @@ def open_bethouses():
             mercado_options_listbox.insert(tk.END, f"{mercado}")
     # Chama a função para atualizar a lista de BetHouses
     update_bethouses_list()
+
 # Cria um menu pop-up com as opções desejadas
 settings_menu = tk.Menu(frame, tearoff=False)
 settings_menu.add_command(label="BetHouse", command=open_bethouses)
@@ -428,17 +429,21 @@ def update_bethouse_combobox(event):
     if len(matching_options) == 1:
         bethouse_var.set(matching_options[0])
         bethouse_combobox.icursor(tk.END)
-def on_select(value):
+def on_select1(value):
     selected_bethouse = bethouse_var.get()
     text_color = bethouse_options[selected_bethouse]['text_color']
     background_color = bethouse_options[selected_bethouse]['background_color']
-    bethouse_combobox.configure(fg=text_color, bg=background_color)
+    bethouse_combobox.configure(foreground=text_color, background=background_color)
+    valor_entry.configure(fg=text_color, bg=background_color)
+    odd_entry.configure(fg=text_color, bg=background_color)
+    aposta_entry.configure(fg=text_color, bg=background_color)
 bethouse_label = tk.Label(frame, text="BetHouse")
 bethouse_label.grid(row=1, column=9)
 bethouse_var = tk.StringVar(value=None)
 bethouse_combobox = ttk.Combobox(frame, textvariable=bethouse_var, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox.bind("<KeyRelease>", update_bethouse_combobox)
-bethouse_combobox.bind("<<ComboboxSelected>>", on_select)
+bethouse_combobox.bind("<FocusOut>", on_select1)
+bethouse_combobox.bind("<<ComboboxSelected>>", on_select1)
 bethouse_combobox.grid(row=2, column=9, padx=5, pady=5, sticky=tk.W) # BetHouse 1
 
 def update_bethouse_combobox2(event):
@@ -457,9 +462,19 @@ def update_bethouse_combobox2(event):
     if len(matching_options) == 1:
         bethouse_var2.set(matching_options[0])
         bethouse_combobox2.icursor(tk.END)
+def on_select2(value):
+    selected_bethouse = bethouse_var2.get()
+    text_color = bethouse_options[selected_bethouse]['text_color']
+    background_color = bethouse_options[selected_bethouse]['background_color']
+    bethouse_combobox2.configure(foreground=text_color, background=background_color)
+    valor_entry2.configure(fg=text_color, bg=background_color)
+    odd_entry2.configure(fg=text_color, bg=background_color)
+    aposta_entry2.configure(fg=text_color, bg=background_color)
 bethouse_var2 = tk.StringVar(value=None)
 bethouse_combobox2 = ttk.Combobox(frame, textvariable=bethouse_var2, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox2.bind("<KeyRelease>", update_bethouse_combobox2)
+bethouse_combobox2.bind("<<FocusOut>>", on_select2)
+bethouse_combobox2.bind("<<ComboboxSelected>>", on_select2)
 bethouse_combobox2.grid(row=3, column=9, padx=5, pady=5, sticky=tk.W) # BetHouse 2
 
 # cria o botão de alternância
@@ -511,9 +526,19 @@ def update_bethouse_combobox3(event):
     if len(matching_options) == 1:
         bethouse_var3.set(matching_options[0])
         bethouse_combobox3.icursor(tk.END)
+def on_select3(value):
+    selected_bethouse = bethouse_var3.get()
+    text_color = bethouse_options[selected_bethouse]['text_color']
+    background_color = bethouse_options[selected_bethouse]['background_color']
+    bethouse_combobox3.configure(foreground=text_color, background=background_color)
+    valor_entry3.configure(fg=text_color, bg=background_color)
+    odd_entry3.configure(fg=text_color, bg=background_color)
+    aposta_entry3.configure(fg=text_color, bg=background_color)
 bethouse_var3 = tk.StringVar(value=None)
 bethouse_combobox3 = ttk.Combobox(frame, textvariable=bethouse_var3, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox3.bind("<KeyRelease>", update_bethouse_combobox3) # BetHouse 3
+bethouse_combobox3.bind("<<FocusOut>>", on_select3)
+bethouse_combobox3.bind("<<ComboboxSelected>>", on_select3) # BetHouse 3
 
 # Adiciona campo Mercado
 def validate_mercado(text):
@@ -748,7 +773,7 @@ aposta_entry3.bind("<KeyRelease>", lambda event: on_entry_change_aposta3(aposta_
 def on_variable_change(*args):
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
-    bethouses = [bethouse_options.get(bethouse_var.get(), 0.0), bethouse_options.get(bethouse_var2.get(), 0.0), bethouse_options.get(bethouse_var3.get(), 0.0)]
+    bethouses = [bethouse_options.get(bethouse_var.get(), {}).get('taxa', 0.0), bethouse_options.get(bethouse_var2.get(), {}).get('taxa', 0.0), bethouse_options.get(bethouse_var3.get(), {}).get('taxa', 0.0)]
     if (len([odd for odd in odds if odd != 0.0]) >= 2) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1):
         calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(), mercado_var2.get(), bethouses[0], bethouses[1], bethouses[2], arred_var.get())
         resultado = calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(),mercado_var2.get(), bethouses[0], bethouses[1], bethouses[2], arred_var.get())
@@ -982,8 +1007,8 @@ def gravar():
             aposta3 = palpite3_label.cget("text").replace("R$", "").strip()
         else:
             aposta3 = aposta_var3.get()
-        lucro_estimado = (float(lucro1_label.cget("text").replace("R$", "").strip()) + float(lucro2_label.cget("text").replace("R$", "").strip()) + float(lucro3_label.cget("text").replace("R$", "").strip())) / 3
-        lucro_per = lucro_percent_label.cget("text").replace("R$", "").strip()
+        lucro_estimado = round((float(lucro1_label.cget("text").replace("R$", "").strip()) + float(lucro2_label.cget("text").replace("R$", "").strip()) + float(lucro3_label.cget("text").replace("R$", "").strip())) / 3, 2)
+        lucro_per = float(lucro_percent_label1.cget("text").replace("%", "").strip()) / 100
 
         # Nome do arquivo CSV
         arquivo_csv = "Apostas.csv"
