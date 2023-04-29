@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import *
+from tkintertable import TableCanvas, TableModel
 import datetime
 import json
 import csv
@@ -8,6 +10,10 @@ import os.path
 import os
 from ttkthemes import ThemedTk
 import tkinter.colorchooser as colorchooser
+import pandas as pd
+from IPython.display import display
+import ipywidgets as widgets
+
 
 # cria uma janela
 #janela = tk.Tk()
@@ -17,12 +23,24 @@ import tkinter.colorchooser as colorchooser
 janela = ThemedTk(theme="marine")
 
 # Cria o frame
-frame = tk.Frame(janela, padx=10, pady=10)
-frame.grid(row=0, column=0)
+frameJogo = tk.Frame(janela, padx=10, pady=10)
+frameJogo.grid(row=0, column=0)
+
+frameApostas = tk.Frame(janela)
+frameApostas.grid(row=4, column=0)
+
+frameTabela = tk.Frame(janela)
+frameTabela.grid(row=8, column=0)
 
 # Define uma imagem para o botão de configurações
 settings_icon = tk.PhotoImage(file="/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/engrenagens.png").subsample(20, 20)
-settings_button = tk.Button(frame, image=settings_icon, bd=0) # Ajustes Iniciais
+settings_button = tk.Button(frameJogo, image=settings_icon, bd=0) # Ajustes Iniciais
+
+# Verifica se o arquivo CSV existe
+if not os.path.isfile("Apostas.csv"):
+    with open("Apostas.csv", "w", newline="") as f:
+        colunas = ["id", "time_casa", "time_fora", "dia", "mes", "ano", "hora", "minuto", "bethouse1", "mercado1", "valor1", "odd1", "aposta1", "resultado1", "bethouse2", "mercado2", "valor2", "odd2", "aposta2", "resultado2", "bethouse3", "mercado3", "valor3", "odd3", "aposta3", "resultado3", "lucro_estimado", "lucro_per_estimado", "lucroReal", "lucro_perReal"]
+        csv.writer(f).writerow(colunas)
 
 def load_options():
     global bethouse_options, mercado_options, arred_var
@@ -41,7 +59,7 @@ load_options()
 
 def open_bethouses():
     # Cria uma janela pop-up
-    bethouses_window = tk.Toplevel(frame)
+    bethouses_window = tk.Toplevel(frameJogo)
     bethouses_window.title("BetHouses e Mercados")
     bethouses_frame = tk.Frame(bethouses_window)
     bethouses_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
@@ -131,8 +149,10 @@ def open_bethouses():
     add_bethouse_button.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
 
     # Cria a lista de BetHouses
+    configStyle = ttk.Style()
+    configStyle.configure("Normal.Treeview", rowheight=20)
     bethouses_list = sorted(bethouse_options.keys())
-    bethouses_tree = ttk.Treeview(bethouses_frame, columns=('Bethouse', 'Taxa'), show='headings')
+    bethouses_tree = ttk.Treeview(bethouses_frame, columns=('Bethouse', 'Taxa'), show='headings', style="Normal.Treeview")
     bethouses_tree.grid(row=3, column=0, columnspan=2, padx=5, pady=5)
     bethouses_tree.heading('Bethouse', text='Bethouse')
     bethouses_tree.heading('Taxa', text='Taxa')
@@ -245,11 +265,11 @@ def open_bethouses():
     update_bethouses_list()
 
 # Cria um menu pop-up com as opções desejadas
-settings_menu = tk.Menu(frame, tearoff=False)
-settings_menu.add_command(label="BetHouse", command=open_bethouses)
-settings_menu.add_command(label="Opção 2")
+settings_menu = tk.Menu(frameJogo, tearoff=False)
+settings_menu.add_command(label="Personalizar", command=open_bethouses)
+settings_menu.add_command(label="Finanças")
 settings_menu.add_separator()
-settings_menu.add_command(label="Sair", command=frame.quit)
+settings_menu.add_command(label="Sair", command=frameJogo.quit)
 
 # Define a ação do botão de configurações para mostrar o menu pop-up
 def show_settings_menu(event):
@@ -273,10 +293,10 @@ def save_bethouse_options():
 def arredondamento_changed(event):
     save_bethouse_options()
 
-arred_label = tk.Label(frame, text="Arredondamento")
+arred_label = tk.Label(frameJogo, text="Arredondamento")
 arred_label.grid(row=3, column=0)
 arred_options = [0.01, 0.05, 0.1, 0.5, 1]
-arred_combobox = ttk.Combobox(frame, textvariable=arred_var, values=arred_options, width=3, state="readonly")
+arred_combobox = ttk.Combobox(frameJogo, textvariable=arred_var, values=arred_options, width=3, state="readonly")
 arred_combobox.grid(row=3, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
 arred_combobox.bind("<<ComboboxSelected>>", arredondamento_changed) # Arredondar
 
@@ -316,14 +336,14 @@ def update_year_combobox(event):
         ano_combobox.icursor(tk.END)
 opcoes_anos = [datetime.date.today().year - 1, datetime.date.today().year, datetime.date.today().year + 1]
 ano_var = tk.StringVar(value=datetime.date.today().year)
-ano_combobox = ttk.Combobox(frame, textvariable=ano_var, values=opcoes_anos, width=4)
+ano_combobox = ttk.Combobox(frameJogo, textvariable=ano_var, values=opcoes_anos, width=4)
 ano_combobox.bind('<KeyRelease>', update_year_combobox)
 ano_combobox.grid(row=2, column=4, padx=5, pady=5, sticky=tk.W) # Ano
 
 # Adiciona campo Jogo
-jogo_label = tk.Label(frame, text="Jogo")
+jogo_label = tk.Label(frameJogo, text="Jogo")
 jogo_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
-jogo_entry = tk.Entry(frame)
+jogo_entry = tk.Entry(frameJogo)
 jogo_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W) # Jogo
 
 # Adiciona campo Data
@@ -338,11 +358,11 @@ def validate_day(text):
     else:
         return False
     return True
-data_label = tk.Label(frame, text="Data")
+data_label = tk.Label(frameJogo, text="Data")
 data_label.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
 
 # Configurar o box dia
-dia_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_day), "%P"))
+dia_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_day), "%P"))
 dia_atual = datetime.date.today().day
 dia_entry.insert(0, dia_atual)
 dia_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W) # Dia
@@ -366,7 +386,7 @@ def update_combobox(event):
 mes_options = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 mes_atual = datetime.datetime.now().strftime('%b')
 mes_atual_pt = {'Jan': 'Jan', 'Feb': 'Fev', 'Mar': 'Mar', 'Apr': 'Abr', 'May': 'Mai', 'Jun': 'Jun', 'Jul': 'Jul', 'Aug': 'Ago', 'Sep': 'Set', 'Oct': 'Out', 'Nov': 'Nov', 'Dec': 'Dez'}[mes_atual]
-mes_combobox = ttk.Combobox(frame, values=mes_options, width=3, validate="key", validatecommand=(frame.register(validate_month), "%P"))
+mes_combobox = ttk.Combobox(frameJogo, values=mes_options, width=3, validate="key", validatecommand=(frameJogo.register(validate_month), "%P"))
 if mes_atual_pt in mes_options:
     mes_combobox.current(mes_options.index(mes_atual_pt))
 else:
@@ -386,12 +406,12 @@ def validate_hour(text):
         return False
     return True
 # Configurar o box Hora
-hora_label = tk.Label(frame, text="Hora")
+hora_label = tk.Label(frameJogo, text="Hora")
 hora_label.grid(row=1, column=5)
-hora_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_hour), "%P"))
+hora_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_hour), "%P"))
 hora_entry.insert(0, 12)
 hora_entry.grid(row=2, column=5, padx=5, pady=5, sticky=tk.W)
-doispontos_label = tk.Label(frame, text=":")
+doispontos_label = tk.Label(frameJogo, text=":")
 doispontos_label.grid(row=2, column=6) # Hora
 
 def validate_minute(text):
@@ -406,7 +426,7 @@ def validate_minute(text):
         return False
     return True
 # Configurar o box minuto
-minuto_entry = tk.Entry(frame, width=2, validate="key", validatecommand=(frame.register(validate_minute), "%P"), justify="right")
+minuto_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_minute), "%P"), justify="right")
 minuto_entry.insert(0, "00")
 minuto_entry.grid(row=2, column=7, padx=5, pady=5, sticky=tk.W) # Minuto
 
@@ -437,10 +457,12 @@ def on_select1(value):
     valor_entry.configure(fg=text_color, bg=background_color)
     odd_entry.configure(fg=text_color, bg=background_color)
     aposta_entry.configure(fg=text_color, bg=background_color)
-bethouse_label = tk.Label(frame, text="BetHouse")
+    #frameApostas.configure(bg=bethouse_options.get(bethouse_var.get(), {}).get('background_color', None))
+
+bethouse_label = tk.Label(frameApostas, text="BetHouse")
 bethouse_label.grid(row=1, column=9)
 bethouse_var = tk.StringVar(value=None)
-bethouse_combobox = ttk.Combobox(frame, textvariable=bethouse_var, values=list(bethouse_options.keys()), width=7)
+bethouse_combobox = ttk.Combobox(frameApostas, textvariable=bethouse_var, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox.bind("<KeyRelease>", update_bethouse_combobox)
 bethouse_combobox.bind("<FocusOut>", on_select1)
 bethouse_combobox.bind("<<ComboboxSelected>>", on_select1)
@@ -471,7 +493,7 @@ def on_select2(value):
     odd_entry2.configure(fg=text_color, bg=background_color)
     aposta_entry2.configure(fg=text_color, bg=background_color)
 bethouse_var2 = tk.StringVar(value=None)
-bethouse_combobox2 = ttk.Combobox(frame, textvariable=bethouse_var2, values=list(bethouse_options.keys()), width=7)
+bethouse_combobox2 = ttk.Combobox(frameApostas, textvariable=bethouse_var2, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox2.bind("<KeyRelease>", update_bethouse_combobox2)
 bethouse_combobox2.bind("<<FocusOut>>", on_select2)
 bethouse_combobox2.bind("<<ComboboxSelected>>", on_select2)
@@ -507,8 +529,8 @@ def alternar_bets():
         palpite3_label.grid_remove()
         lucro3_label.grid_remove()
 
-alternar_bets_btn = tk.Button(frame, text="Triplo", command=alternar_bets)
-alternar_bets_btn.grid(row=4, column=5, columnspan=4) # Add 3ª Aposta
+alternar_bets_btn = tk.Button(frameJogo, text="Triplo", command=alternar_bets)
+alternar_bets_btn.grid(row=3, column=5, columnspan=4) # Add 3ª Aposta
 
 def update_bethouse_combobox3(event):
     current_input = bethouse_var3.get()
@@ -535,7 +557,7 @@ def on_select3(value):
     odd_entry3.configure(fg=text_color, bg=background_color)
     aposta_entry3.configure(fg=text_color, bg=background_color)
 bethouse_var3 = tk.StringVar(value=None)
-bethouse_combobox3 = ttk.Combobox(frame, textvariable=bethouse_var3, values=list(bethouse_options.keys()), width=7)
+bethouse_combobox3 = ttk.Combobox(frameApostas, textvariable=bethouse_var3, values=list(bethouse_options.keys()), width=7)
 bethouse_combobox3.bind("<KeyRelease>", update_bethouse_combobox3) # BetHouse 3
 bethouse_combobox3.bind("<<FocusOut>>", on_select3)
 bethouse_combobox3.bind("<<ComboboxSelected>>", on_select3) # BetHouse 3
@@ -561,11 +583,11 @@ def update_mercado_combobox(event):
         mercado_var.set(matching_options[0])
         mercado_combobox.icursor(tk.END)
 
-mercado_label = tk.Label(frame, text="Mercado")
+mercado_label = tk.Label(frameApostas, text="Mercado")
 mercado_label.grid(row=1, column=10)
 
 mercado_var = tk.StringVar(value=None)
-mercado_combobox = ttk.Combobox(frame, textvariable=mercado_var, values=mercado_options, width=7)
+mercado_combobox = ttk.Combobox(frameApostas, textvariable=mercado_var, values=mercado_options, width=7)
 mercado_combobox.bind("<KeyRelease>", lambda event: (update_mercado_combobox(event), update_columns()))
 mercado_combobox.grid(row=2, column=10, padx=5, pady=5, sticky=tk.W) # Mercado 1
 
@@ -589,8 +611,8 @@ def on_entry_change_valor(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 valor_var = tk.DoubleVar(value="")
-vcmd_valor = (frame.register(on_validate_valor), '%P')
-valor_entry = tk.Entry(frame, textvariable=valor_var, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
+vcmd_valor = (frameApostas.register(on_validate_valor), '%P')
+valor_entry = tk.Entry(frameApostas, textvariable=valor_var, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
 valor_entry.bind("<KeyRelease>", lambda event: on_entry_change_valor(valor_entry))
 valor_entry.grid(row=2, column=11, padx=5, pady=5, sticky=tk.W) # Valor de Mercado 1
 
@@ -611,7 +633,7 @@ def update_mercado_combobox2(event):
         mercado_var2.set(matching_options[0])
         mercado_combobox2.icursor(tk.END)
 mercado_var2 = tk.StringVar(value=None)
-mercado_combobox2 = ttk.Combobox(frame, textvariable=mercado_var2, values=mercado_options, width=7)
+mercado_combobox2 = ttk.Combobox(frameApostas, textvariable=mercado_var2, values=mercado_options, width=7)
 mercado_combobox2.bind("<KeyRelease>", lambda event: (update_mercado_combobox2(event), update_columns()))
 mercado_combobox2.grid(row=3, column=10, padx=5, pady=5, sticky=tk.W) # Mercado 2
 
@@ -624,7 +646,7 @@ def on_entry_change_valor2(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 valor_var2 = tk.DoubleVar(value="")
-valor_entry2 = tk.Entry(frame, textvariable=valor_var2, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
+valor_entry2 = tk.Entry(frameApostas, textvariable=valor_var2, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
 valor_entry2.bind("<KeyRelease>", lambda event: on_entry_change_valor2(valor_entry2))
 valor_entry2.grid(row=3, column=11, padx=5, pady=5, sticky=tk.W) # Valor de Mercado 2
 
@@ -645,7 +667,7 @@ def update_mercado_combobox3(event):
         mercado_var3.set(matching_options[0])
         mercado_combobox3.icursor(tk.END)
 mercado_var3 = tk.StringVar(value=None)
-mercado_combobox3 = ttk.Combobox(frame, textvariable=mercado_var3, values=mercado_options, width=7)
+mercado_combobox3 = ttk.Combobox(frameApostas, textvariable=mercado_var3, values=mercado_options, width=7)
 mercado_combobox3.bind("<KeyRelease>", update_mercado_combobox3) # Mercado 3
 
 # Adiciona campo Valor3
@@ -657,11 +679,11 @@ def on_entry_change_valor3(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 valor_var3 = tk.DoubleVar(value="")
-valor_entry3 = tk.Entry(frame, textvariable=valor_var3, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
+valor_entry3 = tk.Entry(frameApostas, textvariable=valor_var3, validate="key", validatecommand=vcmd_valor, width=4, justify="right")
 valor_entry3.bind("<KeyRelease>", lambda event: on_entry_change_valor3(valor_entry3)) # Valor de Mercado 3
 
 # Adiciona campo ODD
-odd_label = tk.Label(frame, text="ODD")
+odd_label = tk.Label(frameApostas, text="ODD")
 odd_label.grid(row=1, column=12)
 def on_validate_odd(P):
     if not P:
@@ -682,8 +704,8 @@ def on_entry_change_odd(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 odd_var = tk.DoubleVar(value=None)
-vcmd_odd = (frame.register(on_validate_odd), '%P')
-odd_entry = tk.Entry(frame, textvariable=odd_var, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
+vcmd_odd = (frameApostas.register(on_validate_odd), '%P')
+odd_entry = tk.Entry(frameApostas, textvariable=odd_var, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
 odd_entry.bind("<KeyRelease>", lambda event: on_entry_change_odd(odd_entry))
 odd_entry.grid(row=2, column=12, padx=5, pady=5, sticky=tk.W) # Odd 1
 
@@ -696,13 +718,13 @@ def on_entry_change_odd2(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 odd_var2 = tk.DoubleVar(value=None)
-odd_entry2 = tk.Entry(frame, textvariable=odd_var2, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
+odd_entry2 = tk.Entry(frameApostas, textvariable=odd_var2, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
 odd_entry2.bind("<KeyRelease>", lambda event: on_entry_change_odd2(odd_entry2))
 odd_entry2.grid(row=3, column=12, padx=5, pady=5, sticky=tk.W) # Odd 2
 
 # Adiciona campo ODD3
 odd_var3 = tk.DoubleVar(value=None)
-odd_entry3 = tk.Entry(frame, textvariable=odd_var3, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
+odd_entry3 = tk.Entry(frameApostas, textvariable=odd_var3, validate="key", validatecommand=vcmd_odd, width=4, justify="right")
 odd_entry3.bind("<KeyRelease>", lambda event: on_entry_change_odd3(odd_entry3))
 def on_entry_change_odd3(entry):
     current_text = entry.get()
@@ -713,9 +735,9 @@ def on_entry_change_odd3(entry):
         entry.icursor(len(current_text)) # Odd 3
 
 # Adiciona campo Aposta
-real_label = tk.Label(frame, text="R$")
+real_label = tk.Label(frameApostas, text="R$")
 real_label.grid(row=2, column=13)
-label_aposta = tk.Label(frame, text="Aposta")
+label_aposta = tk.Label(frameApostas, text="Aposta")
 label_aposta.grid(row=1, column=14, padx=5, pady=5, sticky=tk.W)
 def on_validate_aposta(P):
     if not P:
@@ -736,13 +758,13 @@ def on_entry_change_aposta(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 aposta_var = tk.DoubleVar(value=None)
-vcmd_aposta = (frame.register(on_validate_aposta), '%P')
-aposta_entry = tk.Entry(frame, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var, width=5, justify="right")
+vcmd_aposta = (frameApostas.register(on_validate_aposta), '%P')
+aposta_entry = tk.Entry(frameApostas, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var, width=5, justify="right")
 aposta_entry.bind("<KeyRelease>", lambda event: on_entry_change_aposta(aposta_entry))
 aposta_entry.grid(row=2, column=14, padx=5, pady=5, sticky=tk.W) # Aposta 1
 
 #Adicionar aposta2
-real_label2 = tk.Label(frame, text="R$")
+real_label2 = tk.Label(frameApostas, text="R$")
 real_label2.grid(row=3, column=13)
 def on_entry_change_aposta2(entry):
     current_text = entry.get()
@@ -752,12 +774,12 @@ def on_entry_change_aposta2(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 aposta_var2 = tk.DoubleVar(value=None)
-aposta_entry2 = tk.Entry(frame, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var2, width=5, justify="right")
+aposta_entry2 = tk.Entry(frameApostas, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var2, width=5, justify="right")
 aposta_entry2.bind("<KeyRelease>", lambda event: on_entry_change_aposta2(aposta_entry2))
 aposta_entry2.grid(row=3, column=14, padx=5, pady=5, sticky=tk.W) # Aposta 2
 
 #Adicionar aposta3
-real_label3 = tk.Label(frame, text="R$")
+real_label3 = tk.Label(frameApostas, text="R$")
 def on_entry_change_aposta3(entry):
     current_text = entry.get()
     if ',' in current_text:
@@ -766,7 +788,7 @@ def on_entry_change_aposta3(entry):
         entry.insert(0, current_text)
         entry.icursor(len(current_text))
 aposta_var3 = tk.DoubleVar(value=None)
-aposta_entry3 = tk.Entry(frame, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var3, width=5, justify="right")
+aposta_entry3 = tk.Entry(frameApostas, validate="key", validatecommand=vcmd_aposta, textvariable=aposta_var3, width=5, justify="right")
 aposta_entry3.bind("<KeyRelease>", lambda event: on_entry_change_aposta3(aposta_entry3)) # Aposta 3
 
 #Adicionando cálculos
@@ -813,28 +835,28 @@ mercado_var2.trace_add('write', on_variable_change)
 mercado_var3.trace_add('write', on_variable_change) # on_variable change para variaveis
 
 #Palpites
-palpite_label = tk.Label(frame, text='Palpites')
+palpite_label = tk.Label(frameApostas, text='Palpites')
 palpite_label.grid(row=1, column=15, padx=5, pady=5, sticky=tk.W)
-palpite1_label = tk.Label(frame, text="")
+palpite1_label = tk.Label(frameApostas, text="")
 palpite1_label.grid(row=2, column=15)
-palpite2_label = tk.Label(frame, text="")
+palpite2_label = tk.Label(frameApostas, text="")
 palpite2_label.grid(row=3, column=15)
-palpite3_label = tk.Label(frame, text="") # Palpites
+palpite3_label = tk.Label(frameApostas, text="") # Palpites
 
 #Lucro
-liability_label = tk.Label(frame, text='Liability')
-liability_label1 = tk.Label(frame, text='')
-liability_label2 = tk.Label(frame, text='')
-lucro_label = tk.Label(frame, text='Lucro')
+liability_label = tk.Label(frameApostas, text='Liability')
+liability_label1 = tk.Label(frameApostas, text='')
+liability_label2 = tk.Label(frameApostas, text='')
+lucro_label = tk.Label(frameApostas, text='Lucro')
 lucro_label.grid(row=1, column=16, padx=5, pady=5, sticky=tk.W)
-lucro1_label = tk.Label(frame, text="")
+lucro1_label = tk.Label(frameApostas, text="")
 lucro1_label.grid(row=2, column=16)
-lucro2_label = tk.Label(frame, text="")
+lucro2_label = tk.Label(frameApostas, text="")
 lucro2_label.grid(row=3, column=16)
-lucro3_label = tk.Label(frame, text="")
-lucro_percent_label = tk.Label(frame, text='Lucro %')
+lucro3_label = tk.Label(frameApostas, text="")
+lucro_percent_label = tk.Label(frameApostas, text='Lucro %')
 lucro_percent_label.grid(row=1, column=17, padx=5, pady=5, sticky=tk.W)
-lucro_percent_label1 = tk.Label(frame, text="", font=("Arial", 20, "bold"))
+lucro_percent_label1 = tk.Label(frameApostas, text="", font=("Arial", 20, "bold"))
 lucro_percent_label1.grid(row=2, column=17, rowspan=2) # Lucro
 
 def update_columns():
@@ -946,8 +968,6 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
 def resetar_variaveis():
     # Redefinir as variáveis para os valores iniciais desejados
     jogo_entry.delete(0, tk.END)
-    mes_combobox.set(mes_combobox.current(mes_options.index(mes_atual_pt)))
-    ano_combobox.set(datetime.date.today().year)
     dia_entry.delete(0, tk.END)
     dia_entry.insert(0, dia_atual)
     hora_entry.delete(0, tk.END)
@@ -971,11 +991,18 @@ def resetar_variaveis():
     aposta_var3.set(0.0)
     if num_bets == 3:
         alternar_bets()
+    preencher_treeview()
 
 def gravar():
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
+    def gerar_id(arquivo_csv):
+        with open(arquivo_csv, "r") as f:
+            reader = csv.reader(f)
+            count = sum(1 for _ in reader)  # Subtrai 1 para excluir o cabeçalho
+        return f"#{str(count).zfill(6)}"  # Formata o número do ID com zeros à esquerda
     if (len([odd for odd in odds if odd != 0.0]) >= 2) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1) and jogo_entry != "":
+        id = gerar_id("Apostas.csv")
         time_casa = jogo_entry.get().split(" - ")[0]
         time_fora = jogo_entry.get().split(" - ")[1]
         dia = dia_entry.get()
@@ -991,6 +1018,7 @@ def gravar():
             aposta1 = (palpite1_label.cget("text").replace("R$", "").strip())
         else:
             aposta1 = aposta_var.get()
+        resultado1 = ""
         bethouse2 = bethouse_combobox2.get()
         mercado2 = mercado_combobox2.get()
         merc_valor2 = valor_entry2.get()
@@ -999,6 +1027,7 @@ def gravar():
             aposta2 = (palpite2_label.cget("text").replace("R$", "").strip())
         else:
             aposta2 = aposta_var2.get()
+        resultado2 = ""
         bethouse3 = bethouse_combobox3.get()
         mercado3 = mercado_combobox3.get()
         merc_valor3 = valor_entry3.get()
@@ -1007,40 +1036,74 @@ def gravar():
             aposta3 = palpite3_label.cget("text").replace("R$", "").strip()
         else:
             aposta3 = aposta_var3.get()
+        resultado3 = ""
         lucro_estimado = round((float(lucro1_label.cget("text").replace("R$", "").strip()) + float(lucro2_label.cget("text").replace("R$", "").strip()) + float(lucro3_label.cget("text").replace("R$", "").strip())) / 3, 2)
-        lucro_per = float(lucro_percent_label1.cget("text").replace("%", "").strip()) / 100
-
-        # Nome do arquivo CSV
-        arquivo_csv = "Apostas.csv"
-
-        # Verifica se o arquivo CSV existe
-        arquivo_existe = os.path.isfile(arquivo_csv)
+        lucro_per_estimado = float(lucro_percent_label1.cget("text").replace("%", "").strip()) / 100
+        lucroReal = ""
+        lucro_perReal = ""
 
         # Dados a serem gravados
-        dados = [[time_casa, time_fora, dia, mes, ano, hora, minuto, bethouse1, mercado1, merc_valor1, odd1, aposta1, bethouse2, mercado2, merc_valor2, odd2, aposta2, bethouse3, mercado3, merc_valor3, odd3, aposta3, lucro_estimado, lucro_per]]
+        dados = [id, time_casa, time_fora, dia, mes, ano, hora, minuto, bethouse1, mercado1, merc_valor1, odd1, aposta1, resultado1, bethouse2, mercado2, merc_valor2, odd2, aposta2, resultado2, bethouse3, mercado3, merc_valor3, odd3, aposta3, resultado3, lucro_estimado, lucro_per_estimado, lucroReal, lucro_perReal]
 
         # Gravação dos dados no arquivo CSV
-        with open(arquivo_csv, "a", newline="") as f:
-            writer = csv.writer(f)
-
-            # Escreve a primeira linha como os nomes das colunas, se o arquivo não existir
-            if not arquivo_existe:
-                colunas = ["Time Casa", "Time Fora", "Dia", "Mês", "Ano", "Hora", "Minuto", "Bethouse 1", "Mercado 1", "Valor 1", "Odd 1", "Aposta 1", "Bethouse 2", "Mercado 2", "Valor 2", "Odd 2", "Aposta 2", "Bethouse 3", "Mercado 3", "Valor 3", "Odd 3", "Aposta 3", "Lucro Esperado", "Lucro Percentual"]
-                writer.writerow(colunas)
-
-            # Escreve os dados na linha atual
-            writer.writerows(dados)
+        with open("Apostas.csv", "a", newline="") as f:
+            csv.writer(f).writerow(dados)
 
         resetar_variaveis()
     else:
         messagebox.showwarning("Aviso", "Preencha o jogo, as odds e uma aposta.")
-gravar_button = tk.Button(janela, text="Gravar", command=gravar)
-gravar_button.grid(row=2, column=0)
 
-# cria a lista com as últimas 50 apostas
-# código para preencher a lista com dados do arquivo CSV
-lista = tk.Listbox(janela)
-lista.grid(row=3, column=0, columnspan=10)
+gravar_button = tk.Button(janela, text="Gravar", command=gravar)
+gravar_button.grid(row=6, column=0)
+
+
+def preencher_treeview():
+    # Limpar o conteúdo atual do Treeview
+    for row in tabela.get_children():
+        tabela.delete(row)
+
+    # Abrir o arquivo CSV
+    with open("Apostas.csv", "r", newline="") as csvfile:
+        reader = csv.DictReader(csvfile)
+
+        # Configurar cores de fundo alternadas para as linhas
+        tabela.tag_configure("linha_par", background="#F0F0F0")
+        tabela.tag_configure("linha_impar", background="white")
+
+        # Preencher o Treeview com os dados do arquivo
+        for i, row in enumerate(reader):
+            ID = row['id']
+            jogo = f"{row['time_casa']}\n{row['time_fora']}"
+            data = "{:02d} / {} / {}\n{:02d}:{:02d}".format(int(row['dia']), (row['mes']), row['ano'], int(row['hora']), int(row['minuto']))
+            bethouses = "{}({} × R$ {:.2f})\n{}({} × R$ {:.2f})".format(row['bethouse1'], float(row['odd1']), float(row['aposta1']),row['bethouse2'], float(row['odd2']), float(row['aposta2']))
+            if row['bethouse3']:
+                bethouses += "\n{}({} × R$ {:.2f})".format(row['bethouse3'], float(row['odd3']), float(row['aposta3']))
+
+            # Add alternating background colors to rows
+            if i % 2 == 0:
+                tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_par",))
+            else:
+                tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_impar",))
+
+# Definir estilo para o Treeview
+style = ttk.Style()
+style.configure("Treeview", rowheight=60)
+
+# Criar o Treeview com as colunas desejadas
+tabela = ttk.Treeview(frameTabela, columns=("ID", "jogo", "data", "betHouses"), show="headings", style="Treeview")
+tabela.heading("ID", text="ID")
+tabela.heading("jogo", text="Jogo")
+tabela.heading("data", text="Data")
+tabela.heading("betHouses", text="BetHouses")
+tabela.grid(row=0, column=0)
+
+
+
+
+# Chamar a função para preencher o Treeview
+if len(tabela.get_children()) == 0:
+    preencher_treeview()
+    print("minha ideia não deu certo")
 
 # inicia o loop da janela
 janela.mainloop()

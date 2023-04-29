@@ -1,94 +1,71 @@
-odd1 = 1.74
-odd2 = 2.5
-odd3 = 3.5
-aposta1 = 34.26
-bethouse_options1 = 0.0
-bethouse_options2 = 0.0
-arred_var = 0.01
-mercado1 = "TO"
-class GerenciadorDeJogo:
-    def __init__(self, aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, bethouse_options1, bethouse_options2, bethouse_options3, arred_var):
-        self.aposta1 = aposta1
-        self.aposta2 = aposta2
-        self.aposta3 = aposta3
-        self.odd1 = odd1
-        self.odd2 = odd2
-        self.odd3 = odd3
-        self.mercado1 = mercado1
-        self.mercado2 = mercado2
-        self.bethouse_options1 = bethouse_options1
-        self.bethouse_options2 = bethouse_options2
-        self.bethouse_options3 = bethouse_options3
-        self.arred_var = arred_var
+import tkinter as tk
+import csv
 
-    def atualizar(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-    #Para Calcular apostas
-    def calc_apostas(self):
-        if self.odd3 is not None and self.odd3 != "":
-            if self.mercado1 == "TO" or self.mercado1 == "TU" or self.mercado1 == "AH1" or self.mercado1 == "AH2":
-                odd_1 = ((self.odd1 - 1) * (1 - self.bethouse_options1)+1)
-                odd_2 = ((self.odd2 - 1) * (1 - self.bethouse_options2)+1)
-                odd_3 = ((self.odd3 - 1) * (1 - self.bethouse_options3)+1)
-                if self.aposta1 != "" and self.aposta1 is not None:
-                    self.aposta3 = round(self.aposta1 / self.odd3, 2)
-                    self.aposta2 = round((odd_1 * self.aposta1 - odd_3 * self.aposta3) / odd_2, 2)
-                elif self.aposta2 != "" and self.aposta2 is not None:
-                    self.aposta3 = round(self.aposta2, 2)
-                    while True:
-                        if self.aposta3 * odd_3 + self.aposta2 * odd_2 >= self.aposta3 * odd_3 * odd_1:
-                            self.aposta3 = round(self.aposta3, 2)
-                            break
-                        self.aposta3 -= 0.01
-                    self.aposta1 = round(self.aposta3 * odd_3, 2)
-                elif self.aposta3 != "" and self.aposta3 is not None:
-                    self.aposta1 = round(self.aposta3 * odd_3, 2)
-                    self.aposta2 = round((odd_1 * self.aposta1 - odd_3 * self.aposta3) / odd_2, 2)
-                percent1 = self.aposta1 / (self.aposta1 + self.aposta2 + self.aposta3)
-                percent2 = self.aposta2 / (self.aposta1 + self.aposta2 + self.aposta3)
-                percent3 = self.aposta3 / (self.aposta1 + self.aposta2 + self.aposta3)
-            else:
-                percent1 = (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) / ((((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1))
-                percent2 = (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) / ((((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1))
-                percent3 = (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1) / ((((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1)) / ((self.odd3 - 1) * (1 - self.bethouse_options3) + 1))
-        else:
-            percent3 = 0
-            if self.mercado2 == "Lay":
-                if self.mercado1 == "Lay":
-                    percent1 = ((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2) + 1) / (((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1)+1))
-                    percent2 = ((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1) + 1) / (((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2)+1))
-                else:
-                    percent1 = ((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2) + 1) / (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2) + 1))
-                    percent2 = ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) / (((self.odd1 - 1) * (1 - self.bethouse_options1) + 1) + ((self.odd2 / (self.odd2 - 1) - 1) * (1 - self.bethouse_options2) + 1))
-            elif self.mercado1 == "Lay":
-                percent1 = ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) / (((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1) + 1))
-                percent2 = ((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1) + 1) / (((self.odd2 - 1) * (1 - self.bethouse_options2) + 1) + ((self.odd1 / (self.odd1 - 1) - 1) * (1 - self.bethouse_options1) + 1))
-            else:
-                percent1 = ((self.odd2 - 1)*(1 - self.bethouse_options2) + 1) / (((self.odd2 - 1)*(1-self.bethouse_options2) + 1) + ((self.odd1 - 1) * (1 - self.bethouse_options1) + 1))
-                percent2 = ((self.odd1 - 1)*(1 - self.bethouse_options1) + 1) / (((self.odd1 - 1)*(1-self.bethouse_options1) + 1) + ((self.odd2 - 1) * (1 - self.bethouse_options2) + 1))
-        if self.aposta2 != 0 and self.aposta2 is not None:
-            self.aposta1 = round(((self.aposta2 * percent1) / percent2) / self.arred_var) * self.arred_var
-            self.aposta3 = round(((self.aposta2 * percent3) / percent2) / self.arred_var) * self.arred_var
-        elif self.aposta1 != 0 and self.aposta1 is not None:
-            self.aposta2 = round(((self.aposta1 * percent2) / percent1) / self.arred_var) * self.arred_var
-            self.aposta3 = round(((self.aposta2 * percent3) / percent2) / self.arred_var) * self.arred_var
-        elif self.aposta3 != 0 and self.aposta3 is not None:
-            self.aposta1 = round(((self.aposta2 * percent1) / percent2) / self.arred_var) * self.arred_var
-            self.aposta2 = round(((self.aposta1 * percent2) / percent1) / self.arred_var) * self.arred_var
-        lucro1 = round(((self.aposta1 * self.odd1 - self.aposta1) * (1 - self.bethouse_options1) + self.aposta1) - self.aposta1 - self.aposta2 - self.aposta3, 2)
-        lucro2 = round(((self.aposta2 * self.odd2 - self.aposta2) * (1 - self.bethouse_options2) + self.aposta2) - self.aposta1 - self.aposta2 - self.aposta3, 2)
-        if self.mercado2 == "Lay":
-            liability = round((self.aposta2 * (self.odd2 / (self.odd2 - 1)) - self.aposta2), 2)
-        elif self.mercado1 == "Lay":
-            liability = round((self.aposta1 * (self.odd1 / (self.odd1 - 1)) - self.aposta1), 2)
-        else:
-            liability = None
-        if self.odd3 != "" and self.odd3 is not None:
-            lucro3 = round(((self.aposta3 * self.odd3 - self.aposta3) * (1 - self.bethouse_options3) + self.aposta3) - self.aposta1 - self.aposta2 - self.aposta3, 2)
-            lucro_percent = round(((lucro1 + lucro2 + lucro3) / 3) / (self.aposta1 + self.aposta2 + self.aposta3) * 100, 2)
-        else: lucro3 = 0
-        lucro_percent = round(((lucro1 + lucro2) / 2) / (self.aposta1 + self.aposta2) * 100, 2)
-        return self.aposta1, self.aposta2, self.aposta3, liability, lucro1, lucro2, lucro3, lucro_percent
-resultado = calc_apostas(aposta_var, aposta_var2, aposta_var3, odd_var, odd_var2, odd_var3, mercado_var, mercado_var2, bethouse_options[bethouse_var], bethouse_options[bethouse_var2], bethouse_options[bethouse_var3], self.arred_var)
-print(resultado)
+# Create the root window
+root = tk.Tk()
+
+# Create a Canvas widget
+canvas = tk.Canvas(root)
+canvas.pack()
+
+# Set the row height
+row_height = 60
+
+# Set the column widths
+col_widths = [100, 100, 200]
+
+# Set the initial x and y coordinates
+x, y = 0, 0
+
+# Draw the column headers
+headers = ['Jogo', 'Data', 'BetHouses']
+for i, header in enumerate(headers):
+    canvas.create_text(x + col_widths[i] / 2, y + row_height / 2, text=header)
+    x += col_widths[i]
+x, y = 0, row_height
+
+# Create a list to store the row IDs
+row_ids = []
+
+# Open the CSV file
+with open("Apostas.csv", "r", newline="") as csvfile:
+    reader = csv.DictReader(csvfile)
+
+    # Draw the data rows
+    for row in reader:
+        # Draw the cells
+        canvas.create_text(x + col_widths[0] / 2, y + row_height / 2, text=f"{row['time_casa']}\n{row['time_fora']}")
+        x += col_widths[0]
+        canvas.create_text(x + col_widths[1] / 2, y + row_height / 2, text=f"{row['dia']} / {row['mes']} / {row['ano']}\n{row['hora']}:{row['minuto']}")
+        x += col_widths[1]
+        bethouses = f"{row['bethouse1']}({row['odd1']} × R$ {row['aposta1']})\n{row['bethouse2']}({row['odd2']} × R$ {row['aposta2']})"
+        if row['bethouse3']:
+            bethouses += f"\n{row['bethouse3']}({row['odd3']} × R$ {row['aposta3']})"
+        canvas.create_text(x + col_widths[2] / 2, y + row_height / 2, text=bethouses)
+        x = 0
+
+        # Draw a rectangle around the row and store its ID
+        row_id = canvas.create_rectangle(0, y, sum(col_widths), y + row_height, outline="black", fill="", tags="row")
+        row_ids.append(row_id)
+
+        y += row_height
+
+# Function to handle row clicks
+def on_row_click(event):
+    # Get the ID of the clicked item
+    item_id = canvas.find_withtag("current")[0]
+
+    # Check if the item is a row
+    if item_id in row_ids:
+        # Deselect all rows
+        for row_id in row_ids:
+            canvas.itemconfigure(row_id, fill="")
+
+        # Select the clicked row
+        canvas.itemconfigure(item_id, fill="lightblue")
+
+# Bind the left mouse button click event to the on_row_click function
+canvas.tag_bind("row", "<Button-1>", on_row_click)
+
+# Run the main loop
+root.mainloop()
