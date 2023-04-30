@@ -1,2 +1,6 @@
 id,time_casa,time_fora,dia,mes,ano,hora,minuto,bethouse1,mercado1,valor1,odd1,aposta1,resultado1,bethouse2,mercado2,valor2,odd2,aposta2,resultado2,bethouse3,mercado3,valor3,odd3,aposta3,resultado3,lucro_estimado,lucro_per_estimado,lucroReal,lucro_perReal
-#000001,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,00,VBet,TU,4,1.57,19.3,,BetFair,TO,3.5,2.1,5.22,,BetFair,TO,4.5,4,4.81,,0.93,0.0318,,
+#000001,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.47,0.0,win,BetFair,TO,3.5,2.15,0.0,win,BetFair,TO,4.5,4.0,6.76,win,0.93,0.0318,,
+#000002,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.86,23.48,win,BetFair,TO,3.5,1.7,11.88,win,BetFair,TO,4.5,4.0,5.87,win,0.93,0.0318,,
+#000003,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.57,19.3,win,BetFair,TO,3.5,2.1,5.22,half-win,BetFair,TO,4.5,4.0,4.81,win,0.93,0.0318,,
+#000004,oi,tb,29,Abr,2023,12,0,Pinnacle,,,1.5,10.0,win,b,,,3.24,4.63,win,,,,0.0,0.0,,0.25,0.0253,,
+#000005,oiyt,sdjn,29,Abr,2023,12,0,Pinnacle,,,2.5,15.23,win,VBet,,,2.0,19.04,loss,,,,0.0,0.0,,2.54,0.1112,,
