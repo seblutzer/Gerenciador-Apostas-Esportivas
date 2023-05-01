@@ -4,7 +4,7 @@ from tkinter import messagebox
 from tkinter import *
 from tkintertable import TableCanvas, TableModel
 import datetime
-from datetime import datetime, date
+from datetime import datetime, timedelta, date
 import json
 import csv
 import os.path
@@ -28,6 +28,7 @@ def fechar_programa():
 
         if resposta == "yes":
             # Salva as alterações no arquivo Apostas.csv
+            df_tabela.update(df_filtrado)
             df_tabela.to_csv('Apostas.csv', index=False)
 
     # Fecha o programa
@@ -57,13 +58,15 @@ settings_button = tk.Button(frameJogo, image=settings_icon, bd=0) # Ajustes Inic
 # Verifica se o arquivo CSV existe
 if not os.path.isfile("Apostas.csv"):
     with open("Apostas.csv", "w", newline="") as f:
-        colunas = ["id", "add", "time_casa", "time_fora", "dia", "mes", "ano", "hora", "minuto", "bethouse1", "mercado1", "valor1", "odd1", "aposta1", "resultado1", "bethouse2", "mercado2", "valor2", "odd2", "aposta2", "resultado2", "bethouse3", "mercado3", "valor3", "odd3", "aposta3", "resultado3", "lucro_estimado", "lucro_per_estimado", "lucroReal", "lucro_perReal"]
+        colunas = ["id", "add", "time_casa", "time_fora", "dia", "mes", "mes_id", "ano", "hora", "minuto", "bethouse1", "mercado1", "valor1", "odd1", "aposta1", "resultado1", "bethouse2", "mercado2", "valor2", "odd2", "aposta2", "resultado2", "bethouse3", "mercado3", "valor3", "odd3", "aposta3", "resultado3", "lucro_estimado", "lucro_per_estimado", "lucroReal", "lucro_perReal"]
         csv.writer(f).writerow(colunas)
 
 df_tabela = pd.read_csv("Apostas.csv")
+df_filtrado = df_tabela.copy()
 df_resultados_copy = df_tabela[["resultado1", "resultado2", "resultado3"]].copy()
 df_resultados = df_tabela[["resultado1", "resultado2", "resultado3"]] # Configurações iniciais
 
+# Filtros
 def toggle_order():
     current_order = order_button["text"]
     if current_order == "Crescente de Datas":
@@ -74,29 +77,25 @@ def toggle_order():
         order_button["text"] = "Decrescente de Adição"
     else:
         order_button["text"] = "Crescente de Datas"
+    on_filters_change()
+
 
 def toggle_time():
     current_time = time_button["text"]
     if current_time == "Próximos":
         time_button["text"] = "Últimos"
-        timeframe_combobox["values"] = ["dia", "2 dias", "semana", "mês", "30 dias", "esse ano", "1 ano", "sempre"]
+        timeframe_combobox["values"] = ["hoje", "dia", "semana", "mês", "30 dias", "6 meses", "ano", "365 dias", "sempre"]
     else:
         time_button["text"] = "Próximos"
-        timeframe_combobox["values"] = ["dia", "2 dias", "semana", "mês"]
+        timeframe_combobox["values"] = ["hoje", "dia", "semana", "mês"]
         if timeframe_options.index(timeframe_combobox.get()) > 3:
             timeframe_combobox.current(3)
+    on_filters_change()
 
-def filter_selection():
-    selected_time = time_button["text"]
-    selected_timeframe = timeframe_combobox.get()
-    selected_situations = [var.get() for var in situation_vars]
-    save_bethouse_options()
-    print("Ordem:", order_button["text"])
-    print("Tempo:", selected_time, selected_timeframe)
-    print("Situação:", selected_situations)
-
-# Filtros
 # Ordenação
+def on_filters_change():
+    df_filtrado = filter_selection()
+
 ordem_label = tk.Label(frameTabela, text="Ordem:")
 ordem_label.grid(row=0, column=0)
 
@@ -110,10 +109,11 @@ time_label.grid(row=0, column=2)
 time_button = tk.Button(frameTabela, text="Último", width=5, command=toggle_time)
 time_button.grid(row=0, column=3)
 
-timeframe_options = ["dia", "2 dias", "semana", "mês", "30 dias", "esse ano", "1 ano", "sempre"]
+timeframe_options = ["hoje", "dia", "semana", "mês", "30 dias", "6 meses", "ano", "365 dias", "sempre"]
 timeframe_combobox = ttk.Combobox(frameTabela, values=timeframe_options, state="readonly", width=5)
 timeframe_combobox.current(0)
 timeframe_combobox.grid(row=0, column=4)
+timeframe_combobox.bind("<<ComboboxSelected>>", lambda event: on_filters_change())
 
 # Situação
 def show_menu(event):
@@ -123,92 +123,118 @@ situations = ["Vencidas", "Abertas", "Fechadas"]
 situation_vars = [tk.IntVar() for _ in situations]
 situation_menu = tk.Menu(frameTabela, tearoff=0)
 for situation, var in zip(situations, situation_vars):
-    situation_menu.add_checkbutton(label=situation, variable=var)
+    situation_menu.add_checkbutton(label=situation, variable=var, command=on_filters_change)
 
 situation_button = tk.Button(frameTabela, text="Situação")
 situation_button.grid(row=0, column=5)
 situation_button.bind("<Button-1>", show_menu)
 
+def preencher_treeview():
+    # Limpar o conteúdo atual do Treeview
+    tabela.delete(*tabela.get_children())
+
+    # Configurar cores de fundo alternadas para as linhas
+    tabela.tag_configure("linha_par", background="#F0F0F0")
+    tabela.tag_configure("linha_impar", background="white")
+
+    # Preencher o Treeview com os dados do arquivo
+    for i, row in df_filtrado.iterrows():
+        ID = row['id']
+        jogo = f"{row['time_casa']}\n{row['time_fora']}"
+        data = "{:02d} / {} / {}\n{:02d}:{:02d}".format(int(row['dia']), (row['mes']), row['ano'], int(row['hora']), int(row['minuto']))
+        bethouses = "{}({} × R$ {:.2f})\n{}({} × R$ {:.2f})".format(row['bethouse1'], float(row['odd1']), float(row['aposta1']),row['bethouse2'], float(row['odd2']), float(row['aposta2']))
+        if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
+            bethouses += "\n{}({} × R$ {:.2f})".format(row['bethouse3'], float(row['odd3']), float(row['aposta3']))
+
+        # Add alternating background colors to rows
+        if i % 2 == 0:
+            tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_par",))
+        else:
+            tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_impar",))
 
 def filter_selection():
-    selected_order = order_button["text"]
-    selected_time = time_button["text"]
-    selected_timeframe = timeframe_combobox.get()
-    selected_situations = [var.get() for var in situation_vars]
-
-    # Aplicar os filtros
+    global df_filtrado
+    # Cria uma cópia do dataframe para não modificar o original
     df_filtrado = df_tabela.copy()
+    df_filtrado = df_filtrado.rename(columns={'ano': 'year', 'mes_id': 'month', 'dia': 'day', 'hora': 'hour', 'minuto': 'minute'})
+    df_filtrado['datetime'] = pd.to_datetime(df_filtrado[['year', 'month', 'day', 'hour', 'minute']])
+    # Cria máscaras booleanas para cada situação
+    mask_vencidas = ((df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna()) & ((df_filtrado['bethouse3'].notna() & (df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna() | df_filtrado[ 'resultado3'].isna())) | (df_filtrado['bethouse3'].isna())) & (df_filtrado['datetime'] < datetime.now()))
 
-    # Filtro de situação
-    if selected_situations[0] == 1:
-        # Vencidas
-        df_filtrado = df_filtrado[
-            (df_filtrado['dia'] < datetime.now().day) & (df_filtrado['mês'] < datetime.now().month) & (
-                        df_filtrado['ano'] < datetime.now().year) & (df_filtrado['hora'] < datetime.now().hour + 2) & (
-                        df_filtrado['minuto'] < datetime.now().minute)]
-    if selected_situations[1] == 1:
-        # Abertas
-        if 'bethouse3' in df_filtrado.columns:
-            df_filtrado = df_filtrado[(df_filtrado['bethouse3'] == '') & (
-                        (df_filtrado['resultado1'] == '') | (df_filtrado['resultado2'] == '') | (
-                            (df_filtrado['resultado1'] != '') & (df_filtrado['resultado2'] != '') & (
-                                df_filtrado['resultado3'] == '')))]
-        else:
-            df_filtrado = df_filtrado[((df_filtrado['resultado1'] == '') | (df_filtrado['resultado2'] == ''))]
-    if selected_situations[2] == 1:
-        # Fechadas
-        if 'bethouse3' in df_filtrado.columns:
-            df_filtrado = df_filtrado[(df_filtrado['bethouse3'] == '') & (df_filtrado['resultado1'] != '') & (
-                        df_filtrado['resultado2'] != '') & ((df_filtrado['resultado3'] != '') | (
-                        df_filtrado['resultado3'] == ''))]
-        else:
-            df_filtrado = df_filtrado[(df_filtrado['resultado1'] != '') & (df_filtrado['resultado2'] != '')]
+    mask_abertas = ((df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna()) & ((df_filtrado['bethouse3'].notna() & (df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna() | df_filtrado[ 'resultado3'].isna())) | (df_filtrado['bethouse3'].isna())))
+
+    mask_fechadas = ((df_filtrado['resultado1'].notna() & df_filtrado['resultado2'].notna()) & ((df_filtrado['bethouse3'].notna() & df_filtrado['resultado3'].notna()) | (df_filtrado['bethouse3'].isna())))
+
+    # Aplica as máscaras de acordo com as opções selecionadas pelo usuário
+    if situation_vars[0].get() and situation_vars[1].get() and situation_vars[2].get():
+        pass
+    elif situation_vars[0].get() and situation_vars[1].get():
+        df_filtrado = df_filtrado[mask_vencidas | mask_abertas]
+    elif situation_vars[0].get() and situation_vars[2].get():
+        df_filtrado = df_filtrado[mask_vencidas | mask_fechadas]
+    elif situation_vars[1].get() and situation_vars[2].get():
+        df_filtrado = df_filtrado[mask_abertas | mask_fechadas]
+    elif situation_vars[0].get():
+        df_filtrado = df_filtrado[mask_vencidas]
+    elif situation_vars[1].get():
+        df_filtrado = df_filtrado[mask_abertas]
+    elif situation_vars[2].get():
+        df_filtrado = df_filtrado[mask_fechadas]
+    df_filtrado = df_filtrado.rename(columns={'year': 'ano', 'month': 'mes_id', 'day': 'dia', 'hour': 'hora', 'minute': 'minuto'})
 
     # Ordenação
-    if selected_order == "Crescente de Datas":
-        df_filtrado = df_filtrado.sort_values(by=['ano', 'mês', 'dia', 'hora', 'minuto'])
-    elif selected_order == "Decrescente de Datas":
-        df_filtrado = df_filtrado.sort_values(by=['ano', 'mês', 'dia', 'hora', 'minuto'], ascending=False)
-    elif selected_order == "Crescente de Adição":
+    if order_button["text"] == "Crescente de Datas":
+        df_filtrado = df_filtrado.sort_values(by=['ano', 'mes_id', 'dia', 'hora', 'minuto'])
+    elif order_button["text"] == "Decrescente de Datas":
+        df_filtrado = df_filtrado.sort_values(by=['ano', 'mes_id', 'dia', 'hora', 'minuto'], ascending=False)
+    elif order_button["text"] == "Crescente de Adição":
         df_filtrado = df_filtrado.sort_values(by=['add'])
-    elif selected_order == "Decrescente de Adição":
+    elif order_button["text"] == "Decrescente de Adição":
         df_filtrado = df_filtrado.sort_values(by=['add'], ascending=False)
 
     # Filtro de tempo
-    if selected_time == "Próximos":
-        if selected_timeframe == "dia":
+    df_filtrado['add'] = pd.to_datetime(df_filtrado['add'])
+    if time_button["text"] == "Próximos":
+        if timeframe_combobox.get() == "hoje":
+            end_date = datetime.now() + timedelta(days=1)
             df_filtrado = df_filtrado[
-                (df_filtrado['dia'] >= datetime.now().day) & (df_filtrado['mês'] >= datetime.now().month) & (
-                            df_filtrado['ano'] >= datetime.now().year)]
-        elif selected_timeframe == "2 dias":
-            end_date = datetime.now() + timedelta(days=2)
-            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mês'] <= end_date.month) & (
+                (df_filtrado['dia'] == datetime.now().day) &
+                (df_filtrado['mes_id'] == datetime.now().month) &
+                (df_filtrado['ano'] == datetime.now().year)]
+        elif timeframe_combobox.get() == "dia":
+            end_date = datetime.now() + timedelta(days=1)
+            df_filtrado = df_filtrado[
+                (df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
                         df_filtrado['ano'] <= end_date.year)]
-        elif selected_timeframe == "semana":
+        elif timeframe_combobox.get() == "semana":
             end_date = datetime.now() + timedelta(weeks=1)
-            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mês'] <= end_date.month) & (
+            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
                         df_filtrado['ano'] <= end_date.year)]
-        elif selected_timeframe == "mês":
+        elif timeframe_combobox.get() == "mês":
             end_date = datetime.now() + timedelta(days=30)
-            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mês'] <= end_date.month) & (
+            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
                         df_filtrado['ano'] <= end_date.year)]
     else:
-        if selected_timeframe == "dia":
-            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now() - timedelta(days=1))]
-        elif selected_timeframe == "2 dias":
-            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now() - timedelta(days=2))]
-        elif selected_timeframe == "semana":
-            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now() - timedelta(weeks=1))]
-        elif selected_timeframe == "mês":
-            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now() - timedelta(days=30))]
+        if timeframe_combobox.get() == "hoje":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0))]
+        elif timeframe_combobox.get() == "dia":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(days=1))]
+        elif timeframe_combobox.get() == "semana":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(weeks=1))]
+        elif timeframe_combobox.get() == "mês":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(day=1, hour=0, minute=0))]
+        elif timeframe_combobox.get() == "30 dias":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(days=30))]
+        elif timeframe_combobox.get() == "6 meses":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(months=6))]
+        elif timeframe_combobox.get() == "ano":
+            df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(day=1, month=1, hour=0, minute=0))]
+        elif timeframe_combobox.get() == "365 dias":
+            df_filtrado = df_filtrado[(df_filtrado['add'] <= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(days=365))]
 
+    preencher_treeview()
     # Exibir o resultado
-    print(df_filtrado)
-
-
-# Botão de Filtrar
-filter_button = tk.Button(frameTabela, text="Filtrar", command=filter_selection)
-filter_button.grid(row=0, column=6, padx=10) #Filtros
+    return df_filtrado
 
 def load_options():
     global bethouse_options, mercado_options, arred_var
@@ -1199,10 +1225,11 @@ def resetar_variaveis():
     preencher_treeview()
 
 def gravar():
-    global df_tabela
+    global df_tabela, df_filtrado
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
     if (len([odd for odd in odds if odd != 0.0]) >= 2) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1) and jogo_entry != "":
+        mes_id_map = {'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12}
         dados = {
             'id': len(df_tabela) + 1,
             'add': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -1210,6 +1237,7 @@ def gravar():
             'time_fora': jogo_entry.get().split(" - ")[1],
             'dia': dia_entry.get(),
             'mes': mes_combobox.get(),
+            'mes_id': mes_id_map[mes_combobox.get().lower()],
             'ano': ano_combobox.get(),
             'hora': hora_entry.get(),
             'minuto': minuto_entry.get(),
@@ -1234,42 +1262,20 @@ def gravar():
         }
 
         df_tabela.loc[len(df_tabela)] = dados
+        df_filtrado.loc[len(df_filtrado)] = dados
         # Gravação dos dados no arquivo CSV
 
         with open("Apostas.csv", "a", newline="") as f:
             csv.writer(f).writerow(dados.values())
         resetar_variaveis()
     else:
-        messagebox.showwarning("Aviso", "Preencha o jogo, as odds e uma aposta.")
+        messagebox.showwarning("Aviso", "Preencha o jogo, as BetHouses, as odds e uma aposta.")
 
 gravar_button = tk.Button(frameGravar, text="Gravar", command=gravar)
 gravar_button.grid(row=0, column=0)
 clear_button = tk.Button(frameGravar, text="Limpar", command=resetar_variaveis)
 clear_button.grid(row=0, column=1) # Gravar
 
-def preencher_treeview():
-    # Limpar o conteúdo atual do Treeview
-    tabela.delete(*tabela.get_children())
-
-    # Configurar cores de fundo alternadas para as linhas
-    tabela.tag_configure("linha_par", background="#F0F0F0")
-    tabela.tag_configure("linha_impar", background="white")
-
-    # Preencher o Treeview com os dados do arquivo
-    for i, row in df_tabela.iterrows():
-        ID = row['id']
-        jogo = f"{row['time_casa']}\n{row['time_fora']}"
-        data = "{:02d} / {} / {}\n{:02d}:{:02d}".format(int(row['dia']), (row['mes']), row['ano'], int(row['hora']), int(row['minuto']))
-        bethouses = "{}({} × R$ {:.2f})\n{}({} × R$ {:.2f})".format(row['bethouse1'], float(row['odd1']), float(row['aposta1']),row['bethouse2'], float(row['odd2']), float(row['aposta2']))
-        print(row['bethouse3'])
-        if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
-            bethouses += "\n{}({} × R$ {:.2f})".format(row['bethouse3'], float(row['odd3']), float(row['aposta3']))
-
-        # Add alternating background colors to rows
-        if i % 2 == 0:
-            tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_par",))
-        else:
-            tabela.insert("", "end", values=(ID, jogo, data, bethouses), tags=("linha_impar",))
 def select_bets(event):
     # Obter o item selecionado na tabela
     item_id = tabela.focus()
@@ -1312,8 +1318,8 @@ def select_bets(event):
     full_clear_button = tk.Button(frameGravar, text="Limpar", command=reset_all)
     full_clear_button.grid(row=0, column=1)
 
-    # Buscar as informações da linha correspondente ao ID no DataFrame df_tabela
-    row = df_tabela[df_tabela['id'] == id_selecionado].iloc[0]
+    # Buscar as informações da linha correspondente ao ID no DataFrame df_filtrado
+    row = df_filtrado[df_filtrado['id'] == id_selecionado].iloc[0]
 
     jogo_entry.delete(0, 'end')
     jogo_entry.insert(0, f"{row['time_casa']} - {row['time_fora']}")
@@ -1357,41 +1363,42 @@ def select_bets(event):
         # Obter o ID da linha selecionada
         id_selecionado = item_values[0]  # Índice 0 corresponde ao campo 'ID'
 
-        # Atualizar os valores da linha correspondente no DataFrame df_tabela
-        mask = df_tabela['id'] == id_selecionado
-        df_tabela.loc[mask, 'time_casa'] = jogo_entry.get().split(" - ")[0]
-        df_tabela.loc[mask, 'time_fora'] = jogo_entry.get().split(" - ")[1]
-        df_tabela.loc[mask, 'dia'] = dia_entry.get()
-        df_tabela.loc[mask, 'mes'] = mes_combobox.get()
-        df_tabela.loc[mask, 'ano'] = ano_combobox.get()
-        df_tabela.loc[mask, 'hora'] = hora_entry.get()
-        df_tabela.loc[mask, 'minuto'] = minuto_entry.get()
-        df_tabela.loc[mask, 'bethouse1'] = bethouse_combobox.get()
-        df_tabela.loc[mask, 'bethouse2'] = bethouse_combobox2.get()
-        df_tabela.loc[mask, 'bethouse3'] = bethouse_combobox3.get()
-        df_tabela.loc[mask, 'mercado1'] = mercado_combobox.get()
-        df_tabela.loc[mask, 'mercado2'] = mercado_combobox2.get()
-        df_tabela.loc[mask, 'mercado3'] = mercado_combobox3.get()
-        df_tabela.loc[mask, 'valor1'] = valor_entry.get()
-        df_tabela.loc[mask, 'valor2'] = valor_entry2.get()
-        df_tabela.loc[mask, 'valor3'] = valor_entry3.get()
-        df_tabela.loc[mask, 'odd1'] = odd_entry.get()
-        df_tabela.loc[mask, 'odd2'] = odd_entry2.get()
-        df_tabela.loc[mask, 'odd3'] = odd_entry3.get()
-        if float(df_tabela.loc[mask, 'aposta1']) == 0.0:
-            df_tabela.loc[mask, 'aposta1'] = palpite1_label.cget("text").replace("R$", "").strip()
+        # Atualizar os valores da linha correspondente no DataFrame df_filtrado
+        mask = df_filtrado['id'] == id_selecionado
+        df_filtrado.loc[mask, 'time_casa'] = jogo_entry.get().split(" - ")[0]
+        df_filtrado.loc[mask, 'time_fora'] = jogo_entry.get().split(" - ")[1]
+        df_filtrado.loc[mask, 'dia'] = dia_entry.get()
+        df_filtrado.loc[mask, 'mes'] = mes_combobox.get()
+        df_filtrado.loc[mask, 'ano'] = ano_combobox.get()
+        df_filtrado.loc[mask, 'hora'] = hora_entry.get()
+        df_filtrado.loc[mask, 'minuto'] = minuto_entry.get()
+        df_filtrado.loc[mask, 'bethouse1'] = bethouse_combobox.get()
+        df_filtrado.loc[mask, 'bethouse2'] = bethouse_combobox2.get()
+        df_filtrado.loc[mask, 'bethouse3'] = bethouse_combobox3.get()
+        df_filtrado.loc[mask, 'mercado1'] = mercado_combobox.get()
+        df_filtrado.loc[mask, 'mercado2'] = mercado_combobox2.get()
+        df_filtrado.loc[mask, 'mercado3'] = mercado_combobox3.get()
+        df_filtrado.loc[mask, 'valor1'] = valor_entry.get()
+        df_filtrado.loc[mask, 'valor2'] = valor_entry2.get()
+        df_filtrado.loc[mask, 'valor3'] = valor_entry3.get()
+        df_filtrado.loc[mask, 'odd1'] = odd_entry.get()
+        df_filtrado.loc[mask, 'odd2'] = odd_entry2.get()
+        df_filtrado.loc[mask, 'odd3'] = odd_entry3.get()
+        if float(df_filtrado.loc[mask, 'aposta1']) == 0.0:
+            df_filtrado.loc[mask, 'aposta1'] = palpite1_label.cget("text").replace("R$", "").strip()
         else:
-            df_tabela.loc[mask, 'aposta1'] = aposta_var.get()
-        if float(df_tabela.loc[mask, 'aposta2']) == 0.0:
-            df_tabela.loc[mask, 'aposta2'] = palpite2_label.cget("text").replace("R$", "").strip()
+            df_filtrado.loc[mask, 'aposta1'] = aposta_var.get()
+        if float(df_filtrado.loc[mask, 'aposta2']) == 0.0:
+            df_filtrado.loc[mask, 'aposta2'] = palpite2_label.cget("text").replace("R$", "").strip()
         else:
-            df_tabela.loc[mask, 'aposta2'] = aposta_var2.get()
-        if float(df_tabela.loc[mask, 'aposta3']) == 0.0:
-            df_tabela.loc[mask, 'aposta3'] = palpite3_label.cget("text").replace("R$", "").strip()
+            df_filtrado.loc[mask, 'aposta2'] = aposta_var2.get()
+        if float(df_filtrado.loc[mask, 'aposta3']) == 0.0:
+            df_filtrado.loc[mask, 'aposta3'] = palpite3_label.cget("text").replace("R$", "").strip()
         else:
-            df_tabela.loc[mask, 'aposta3'] = aposta_var3.get()
+            df_filtrado.loc[mask, 'aposta3'] = aposta_var3.get()
 
         # Salvar o DataFrame atualizado no arquivo Apostas.csv
+        df_tabela.update(df_filtrado)
         df_tabela.to_csv("Apostas.csv", index=False)
 
         # Limpar as variáveis e atualizar a tabela
@@ -1420,11 +1427,11 @@ class MyTreeview(ttk.Treeview):
         self.current_icons = {}
         self.clicked_row = None
 
-    def update_icons(self, df_tabela):
+    def update_icons(self, df_filtrado):
         for row in self.get_children():
             item = self.item(row)
             id = item['values'][0]
-            df_row = df_tabela.loc[df_tabela['ID'] == id]
+            df_row = df_filtrado.loc[df_filtrado['id'] == id]
             for i in range(1, 4):
                 resultado = df_row[f'resultado{i}'].values[0]
                 icon = self.get_icon_from_result(resultado)
@@ -1445,13 +1452,12 @@ class MyTreeview(ttk.Treeview):
         else:
             return self.icons[0]
 
-
     def on_click(self, event):
         row = self.identify_row(event.y)
         column = self.identify_column(event.x)
         item = self.item(row)  # Get the item data for the clicked row
         id = item['values'][0]
-        df_row = df_tabela.loc[df_tabela['id'] == id]
+        df_row = df_filtrado.loc[df_filtrado['id'] == id]
         icons = []
         for i in range(1, 4):
             resultado = df_row[f'resultado{i}'].values[0]
@@ -1490,6 +1496,8 @@ class MyTreeview(ttk.Treeview):
         self.master.bind_all("<Button-1>", self.on_master_click)
 
     def on_master_click(self, event):
+        if event.widget == self.canvas or self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
+            return
         self.canvas.place_forget()
         self.master.unbind_all("<Button-1>")
 
@@ -1497,17 +1505,19 @@ class MyTreeview(ttk.Treeview):
         global df_resultados
         def save_results():
             id = item['values'][0]
-            df_row = df_tabela.loc[df_tabela['id'] == id]
+            df_row = df_filtrado.loc[df_filtrado['id'] == id]
             if pd.isna(df_row['resultado1'].values[0]) or pd.isna(df_row['resultado2'].values[0]) or (
                     len(item['values'][3].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
                 messagebox.showinfo("Aviso", "Preencha todos os resultados do jogo!")
             else:
+                df_tabela.update(df_filtrado)
                 df_tabela.to_csv('Apostas.csv', index=False)
+                on_filters_change()
                 messagebox.showinfo("Aviso", "Resultados salvos com sucesso!")
         row = self.clicked_row  # Get the clicked row
         item = self.item(row)  # Get the item data for the clicked row
         id = item['values'][0]
-        df_row = df_tabela.loc[df_tabela['id'] == id]
+        df_row = df_filtrado.loc[df_filtrado['id'] == id]
         if event.y <= 20:
             # The first icon was clicked
             resultado = df_row['resultado1'].values[0]
@@ -1515,7 +1525,7 @@ class MyTreeview(ttk.Treeview):
                 next_resultado = self.get_next_result('')
             else:
                 next_resultado = self.get_next_result(resultado)
-            df_tabela.loc[df_tabela['id'] == id, 'resultado1'] = next_resultado
+            df_filtrado.loc[df_filtrado['id'] == id, 'resultado1'] = next_resultado
             icon1 = self.get_icon_from_result(next_resultado)
             resultado = df_row['resultado2'].values[0]
             icon2 = self.get_icon_from_result(resultado)
@@ -1538,7 +1548,7 @@ class MyTreeview(ttk.Treeview):
                 next_resultado = self.get_next_result('')
             else:
                 next_resultado = self.get_next_result(resultado)
-            df_tabela.loc[df_tabela['id'] == id, 'resultado2'] = next_resultado
+            df_filtrado.loc[df_filtrado['id'] == id, 'resultado2'] = next_resultado
             icon1 = self.get_icon_from_result(df_row['resultado1'].values[0])
             icon2 = self.get_icon_from_result(next_resultado)
             if len(item['values'][3].split("\n")) > 2:
@@ -1561,7 +1571,7 @@ class MyTreeview(ttk.Treeview):
                     next_resultado = self.get_next_result('')
                 else:
                     next_resultado = self.get_next_result(resultado)
-                df_tabela.loc[df_tabela['id'] == id, 'resultado3'] = next_resultado
+                df_filtrado.loc[df_filtrado['id'] == id, 'resultado3'] = next_resultado
                 icon3 = self.get_icon_from_result(next_resultado)
             else:
                 icon3 = None
@@ -1578,7 +1588,7 @@ class MyTreeview(ttk.Treeview):
                 save_results()
         else:
             save_results()
-        df_resultados = df_tabela[["resultado1", "resultado2", "resultado3"]]
+        df_resultados = df_filtrado[["resultado1", "resultado2", "resultado3"]]
     def get_next_result(self, resultado):
         # Aqui você pode definir a ordem dos resultados
         resultados = ['', 'win', 'loss', 'return', 'half-win', 'half-loss']
@@ -1603,7 +1613,7 @@ tabela.column("data", width=100)
 tabela.column("betHouses", width=150)
 tabela.grid(row=2, column=0, columnspan=10, rowspan= 10)
 tabela.bind('<Double-Button-1>', select_bets) # Tabela
-
+filter_selection()
 
 # Chamar a função para preencher o Treeview
 if len(tabela.get_children()) == 0:
