@@ -1,0 +1,10 @@
+id,time_casa,time_fora,dia,mes,ano,hora,minuto,bethouse1,mercado1,valor1,odd1,aposta1,resultado1,bethouse2,mercado2,valor2,odd2,aposta2,resultado2,bethouse3,mercado3,valor3,odd3,aposta3,resultado3,lucro_estimado,lucro_per_estimado,lucroReal,lucro_perReal
+#000001,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.47,27.04,loss,BetFair,TO,3.5,2.15,5.91,win,BetFair,TO,4.5,4.0,6.76,loss,0.93,0.0318,,
+#000002,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.86,23.48,win,BetFair,TO,3.5,1.7,11.88,win,BetFair,TO,4.5,4.0,5.87,win,0.93,0.0318,,
+#000003,Northcote City U21,Dandenong City SC U21,28,Abr,2023,5,0,VBet,TU,4.0,1.57,19.3,,BetFair,TO,3.5,2.1,5.22,,BetFair,TO,4.5,4.0,4.81,,0.93,0.0318,,
+#000004,oi,tb,29,Abr,2023,12,0,Pinnacle,,,1.5,10.0,,Bet365,,,3.24,4.63,,,,,0.0,0.0,,0.25,0.0253,,
+#000005,oiyt,sdjn,29,Abr,2023,12,0,Pinnacle,,,2.5,15.23,,VBet,,,2.0,19.04,,,,,0.0,0.0,,2.54,0.1112,,
+#000006,dsnk,ajksj,30,Abr,2023,12,0,Pinnacle,,,12.0,10.0,,VBet,,,1.15,104.35,,,,,0.0,0.0,,3.77,0.0494,,
+#000007,Grêmio PA,Internacional,31,Jun,2023,14,6,Pinnacle,TU,2.5,2.5,1.0,,VBet,TO,2.5,1.8,1.4,,,,,0.0,0.0,,0.07,0.0458,,
+#000008,Grêmio humilha SP,São Paulo,30,Abr,2023,12,0,Pinnacle,1,,1.5,10.0,return,VBet,X2,,3.5,0.0,half-win,,,,0.0,0.0,,,,,
+#000009,Grêmio destrói,São Paulo,30,Abr,2023,12,0,VBet,,,1.5,10.0,half-win,Pinnacle,,,3.8,0.0,half-loss,,,,0.0,0.0,,,,,
