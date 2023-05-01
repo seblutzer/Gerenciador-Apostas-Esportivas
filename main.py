@@ -28,7 +28,7 @@ def fechar_programa():
 
         if resposta == "yes":
             # Salva as alterações no arquivo Apostas.csv
-            df_tabela.update(df_filtrado)
+            df_tabela.update(df_filtrado.loc[:, df_filtrado.columns != 'add'])
             df_tabela.to_csv('Apostas.csv', index=False)
 
     # Fecha o programa
@@ -1365,6 +1365,7 @@ def select_bets(event):
 
         # Atualizar os valores da linha correspondente no DataFrame df_filtrado
         mask = df_filtrado['id'] == id_selecionado
+        df_filtrado.loc[mask, 'add'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         df_filtrado.loc[mask, 'time_casa'] = jogo_entry.get().split(" - ")[0]
         df_filtrado.loc[mask, 'time_fora'] = jogo_entry.get().split(" - ")[1]
         df_filtrado.loc[mask, 'dia'] = dia_entry.get()
@@ -1398,7 +1399,7 @@ def select_bets(event):
             df_filtrado.loc[mask, 'aposta3'] = aposta_var3.get()
 
         # Salvar o DataFrame atualizado no arquivo Apostas.csv
-        df_tabela.update(df_filtrado)
+        df_tabela.update(df_filtrado.loc[:, df_filtrado.columns != 'add'])
         df_tabela.to_csv("Apostas.csv", index=False)
 
         # Limpar as variáveis e atualizar a tabela
@@ -1510,7 +1511,7 @@ class MyTreeview(ttk.Treeview):
                     len(item['values'][3].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
                 messagebox.showinfo("Aviso", "Preencha todos os resultados do jogo!")
             else:
-                df_tabela.update(df_filtrado)
+                df_tabela.update(df_filtrado.loc[:, df_filtrado.columns != 'add'])
                 df_tabela.to_csv('Apostas.csv', index=False)
                 on_filters_change()
                 messagebox.showinfo("Aviso", "Resultados salvos com sucesso!")
