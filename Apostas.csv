@@ -1,10 +1,10 @@
 id,add,time_casa,time_fora,dia,mes,mes_id,ano,hora,minuto,bethouse1,mercado1,valor1,odd1,aposta1,resultado1,bethouse2,mercado2,valor2,odd2,aposta2,resultado2,bethouse3,mercado3,valor3,odd3,aposta3,resultado3,lucro_estimado,lucro_per_estimado,lucroReal,lucro_perReal,esporte
 1,2023-05-01 05:45:35,PAS Giannina,Asteras Tripolis,6,Mai,5,2023,14,0,FavBet,TO,1.0,3.35,14.46,,VBet,TU,1.0,1.51,32.1,,,,,0.0,0.0,,,,,,
 2,2023-05-01 05:50:35,PAS Giannina,Asteras Tripolis,6,Mai,5,2023,14,0,FavBet,ScoreBoth,,2.48,22.8,,VBet,Not,,1.78,31.75,,,,,0.0,0.0,,,,,,
-3,2023-05-01 05:55:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,1,,1.58,18.7,,BetFair,X2,,3.75,7.87,,,,,0.0,0.0,,,,,,
-4,2023-05-01 06:00:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,1,,1.58,20.0,,BetFair,X,,5.0,6.26,,BetFair,2.0,,12.0,2.6,,,,,,
-5,2023-05-01 06:05:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,BetFair,TO,0.5,2.05,9.09,,VBet,TU,0.5,2.23,8.35,,,,,0.0,0.0,,,,,,
-6,2023-05-01 06:15:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,AH1,0.0,1.23,10.5,,BetFair,DNB2,,9.0,1.41,,,,,0.0,0.0,,,,,,
+3,2023-05-01 05:55:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,1,,1.58,18.7,win,BetFair,X2,,3.75,7.87,loss,,,,0.0,0.0,,,,2.98,0.11215656755739556,
+4,2023-05-01 06:00:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,1,,1.58,20.0,win,BetFair,X,,5.0,6.26,loss,BetFair,2.0,,12.0,2.6,loss,,,2.74,0.09494109494109496,
+5,2023-05-01 06:05:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,BetFair,TO,0.5,2.05,9.09,win,VBet,TU,0.5,2.23,8.35,loss,,,,0.0,0.0,,,,1.19,0.06823394495412845,
+6,2023-05-01 06:15:35,Ararat Armenia,FC Ararat Yerevan,3,Mai,5,2023,12,0,VBet,AH1,0.0,1.23,10.5,win,BetFair,DNB2,,9.0,1.41,loss,,,,0.0,0.0,,,,1.01,0.08480268681780016,
 7,2023-05-01 09:45:15,MnM Gaming,Reven Esports,1,Mai,5,2023,15,30,FavBet,2,,5.5,2.5,loss,BetFair,1,,1.32,11.0,win,,,,0.0,0.0,,,,1.02,0.0755555555555555,
 8,2023-05-01 12:45:35,Arsenal,VfL Wolfsburg,30,Mai,4,2023,13,45,Pinnacle,1,,1.925,211.14,loss,FavBet,2,,2.24,181.45,win,,,,0.0,0.0,,,,13.85,0.0352989123513081,
 9,2023-05-01 18:43:58,Eik-Tonsberg,Odds Ballklubb 2,1,Mai,5,2023,11,0,BetFair,1,,1.38,152.39,win,Ex BetFair,X2,,5.97,39.67,loss,,,,0.0,0.0,,,,18.24,0.0949703217744454,
@@ -14,7 +14,7 @@ id,add,time_casa,time_fora,dia,mes,mes_id,ano,hora,minuto,bethouse1,mercado1,val
 13,2023-05-02 01:37:12,Sivasspor,Fenerbahce,3,Mai,5,2023,14,0,FavBet,Q2,,1.34,142.0,,VBet,Q1,,5.1,37.1,,,,,0.0,0.0,,,,,,
 14,2023-05-02 01:41:49,Carlota Martinez Cirez,Jasmine Paolini,2,Mai,5,2023,7,30,FavBet,AH1,5.5,2.74,12.93,loss,VBet,AH2,5.5,1.74,20.4,win,,,,0.0,0.0,loss,,,,,
 15,2023-05-02 01:44:12,Carlota Martinez Cirez,Jasmine Paolini,2,Mai,5,2023,7,30,FavBet,AH1,6.0,2.35,16.17,loss,VBet,AH2,6.0,1.95,19.5,win,,,,0.0,0.0,,,,2.35,0.0658816932996916,
-16,2023-05-02 01:46:31,SC Freiburg,RB Leipzig,2,Mai,5,2023,15,45,FavBet,TO,4.0,2.16,5.82,,Pinnacle,TU,4.0,2.02,0.0,,,,,0.0,0.0,,,,,,
+16,2023-05-02 01:46:31,SC Freiburg,RB Leipzig,2,Mai,5,2023,15,45,FavBet,TO,4.0,2.16,5.82,win,Pinnacle,TU,4.0,2.02,0.0,loss,,,,0.0,0.0,,,,6.75,1.1597938144329896,
 17,2023-05-02 02:01:14,Upfield,Dandenong City,2,Mai,5,2023,7,0,VBet,TO,1.0,3.3,8.9,win,FavBet,TU,1.0,1.62,18.15,loss,,,,0.0,0.0,,,,2.32,0.0857670979667282,
 18,2023-05-02 02:09:52,Upfield,Dandenong City,2,Mai,5,2023,7,0,FavBet,AH2,3.0,2.28,8.79,loss,VBet,AH1,3.0,1.98,10.1,win,,,,0.0,0.0,,,,1.11,0.0587612493382742,
 19,2023-05-02 02:12:53,Carlota Martinez Cirez,Jasmine Paolini,2,Mai,5,2023,7,30,VBet,1,,4.9,6.5,loss,FavBet,2,,1.36,24.0,win,,,,0.0,0.0,,,,2.14,0.0701639344262295,
@@ -25,7 +25,7 @@ id,add,time_casa,time_fora,dia,mes,mes_id,ano,hora,minuto,bethouse1,mercado1,val
 24,2023-05-02 04:37:39,Whittlesea United,St Albans Saints,2,Mai,5,2023,7,0,FavBet,TO,4.0,1.86,13.09,loss,VBet,TU,4.0,2.75,8.85,win,,,,0.0,0.0,,,,2.4,0.1093892433910665,
 25,2023-05-02 04:45:26,Whittlesea Ranges,Ballarat City FC,2,Mai,5,2023,6,30,BetFair,DNB1,,4.75,3.82,win,Pinnacle,AH2,0.0,1.724,11.0,loss,,,,0.0,0.0,,,,3.32,0.224021592442645,
 26,2023-05-02 04:47:50,Whittlesea Ranges,Ballarat City FC,2,Mai,5,2023,6,30,Pinnacle,AH2,0.25,1.787,38.0,loss,BetFair,1,,5.5,16.27,win,BetFair,1X,,3.0,9.67,win,,,54.55,0.8531435720988426,
-27,2023-05-02 04:50:02,Egaleo,Episkopi FC,3,Mai,5,2023,8,45,BetFair,TO,2.5,2.8,6.43,,VBet,TU,2.5,1.7,10.6,,,,,0.0,0.0,,,,,,
+27,2023-05-02 04:50:02,Egaleo,Episkopi FC,3,Mai,5,2023,8,45,BetFair,TO,2.5,2.8,6.43,win,VBet,TU,2.5,1.7,10.6,loss,,,,0.0,0.0,,,,0.97,0.0569583088667058,
 28,2023-05-02 04:51:49,Whittlesea Ranges,Ballarat City FC,2,Mai,5,2023,6,30,Pinnacle,TU,4.75,1.833,20.53,win,BetFair,TO,4.5,2.1,13.03,loss,BetFair,TO,3.5,3.5,2.93,loss,,,1.14,0.0312414360098657,
 29,2023-05-02 04:53:09,Westvale,Northcote City,2,Mai,5,2023,7,0,FavBet,TU,4.0,1.89,21.55,win,BetFair,TO,3.5,1.82,10.53,loss,BetFair,TU,4.5,3.0,7.18,loss,,,1.47,0.0374426897605705,
 30,2023-05-02 06:24:58,"	
@@ -33,18 +33,101 @@ Salernitana",Fiorentina,5,Mai,5,2023,13,0,BetFair,TO,5.5,2.3,10.02,,FavBet,TU,5.
 31,2023-05-02 06:26:44,Peterborough United,Charlton Athletic,2,Mai,5,2023,10,0,Pinnacle,AH2,0.0,2.19,12.49,loss,BetFair,DNB1,,2.1,13.03,win,,,,0.0,0.0,,,,1.84,0.0721003134796238,
 32,2023-05-02 09:43:53,FK Arendal,Valerenga 2,2,Mai,5,2023,12,0,Pinnacle,AH1,3.0,1.99,10.0,win,FavBet,AH2,3.0,2.19,9.45,loss,,,,0.0,0.0,,,,0.45,0.0231362467866323,
 33,2023-05-02 11:21:45,Arendal,Valerenga II,2,Mai,5,2023,12,0,BetFair,TO,5.5,2.8,10.6,win,Pinnacle,TU,5.5,1.68,17.67,loss,,,,0.0,0.0,,,,1.41,0.0498761938450654,
-34,2023-05-02 12:05:52,Brann,Arna Bjornar,2,Mai,5,2023,14,0,Pinnacle,AH2,3.0,2.24,21.0,win,FavBet,AH1,-3.0,1.91,24.73,loss,,,,0.0,0.0,,,,1.31,0.02864640279903783,
-35,2023-05-02 12:09:19,Raluca Georgiana Serban,Patricia Maria Tig,3,Mai,5,2023,4,30,Pinnacle,2,,2.47,23.41,,VBet,1,,1.6,36.15,,,,,0.0,0.0,,,,,,
-36,2023-05-02 12:49:32,Malaysia,Thailand,3,Mai,5,2023,1,55,Pinnacle,1,,5.09,42.1,,VBet,2,,1.31,163.57,,,,,0.0,0.0,,,,,,
+34,2023-05-02 12:05:52,Brann,Arna Bjornar,2,Mai,5,2023,14,0,Pinnacle,AH2,3.0,2.24,21.0,win,FavBet,AH1,-3.0,1.91,24.73,loss,,,,0.0,0.0,,,,1.31,0.0286464027990378,
+35,2023-05-02 12:09:19,Raluca Georgiana Serban,Patricia Maria Tig,3,Mai,5,2023,4,30,Pinnacle,2,,2.47,23.41,loss,VBet,1,,1.6,36.15,win,,,,0.0,0.0,,,,-1.72,-0.0288784419073203,
+36,2023-05-02 12:49:32,Malaysia,Thailand,3,Mai,5,2023,1,55,Pinnacle,1,,5.09,42.1,loss,VBet,2,,1.31,163.57,win,,,,0.0,0.0,,,,8.61,0.0418631788787864,
 37,2023-05-02 13:07:42,Al Hidd,Al-Shabbab,3,Mai,5,2023,13,0,BetFair,DNB1,,2.2,15.92,,Pinnacle,AH2,0.0,2.05,17.08,,,,,0.0,0.0,,,,,,
-38,2023-05-02 13:09:19,Lillestrom SK 2,Gjellerasen,2,Mai,5,2023,14,0,Pinnacle,AH2,0.0,2.33,17.33,loss,BetFair,DNB1,,1.9,21.25,win,,,,0.0,0.0,,,,1.8,0.04665629860031104,
+38,2023-05-02 13:09:19,Lillestrom SK 2,Gjellerasen,2,Mai,5,2023,14,0,Pinnacle,AH2,0.0,2.33,17.33,loss,BetFair,DNB1,,1.9,21.25,win,,,,0.0,0.0,,,,1.8,0.046656298600311,
 39,2023-05-02 15:52:13,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,0,VBet,AH2,3.5,2.05,30.2,,FavBet,AH1,-3.5,2.2,28.12,,,,,0.0,0.0,,,,,,
 40,2023-05-02 15:54:31,La Luz,Danubio,7,Mai,5,2023,15,0,VBet,TO1,1.0,2.12,10.2,,FavBet,TU,1.0,2.09,10.32,,,,,0.0,0.0,,,,,,
-41,2023-05-02 16:05:58,Guerreros de Oaxaca,El Aguila de Veracruz,2,Mai,5,2023,22,30,FavBet,TO,10.5,1.89,12.64,,Pinnacle,TU,10.5,2.4,9.95,,,,,0.0,0.00,,
-42,2023-05-02 16:33:25,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,00,VBet,TO,17,1.96,29.50,,FavBet,TU,17,2.4,24.1,,,,,0.0,0.00,,
-43,2023-05-02 16:38:22,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,00,VBet,to,18,2.43,30.0,,FavBet,TU,18,1.86,39.20,,,,,0.0,0.00,,
-44,2023-05-02 16:40:36,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,00,VBet,TO,17,1.96,30.45,,FavBet,TU,17,2.3,25.96,,,,,0.0,0.00,,
-45,2023-05-02 16:57:18,Sport Recife,Ceara SC,3,Mai,5,2023,21,00,BetFair,Q2,,3.7,8.05,,VBet,Q1,,2.02,14.75,,,,,0.0,0.00,,Football
-46,2023-05-02 18:04:38,SC Dnipro-1,Metalist Kharkiv,3,Mai,5,2023,7,00,FavBet,AH1,-3,1.89,12.64,,Pinnacle,AH2,3,2.63,9.08,,,,,0.0,0.00,,Esporte
-47,2023-05-02 18:06:52,Matheus Pucinelli De Almeida,Francisco Comesana,3,Mai,5,2023,11,00,VBet,2,,1.87,31.00,,FavBet,1,,2.39,24.28,,,,,0.0,0.00,,Tennis
-48,2023-05-02 18:35:45,SC Dnipro-1,Metalist Kharkiv,3,Mai,5,2023,7,00,FavBet,AH1,-3.5,2.05,10.71,,Pinnacle,AH2,3.5,2.25,9.78,,,,,0.0,0.00,,Esporte
+41,2023-05-02 16:05:58,Guerreros de Oaxaca,El Aguila de Veracruz,2,Mai,5,2023,22,30,FavBet,TO,10.5,1.89,12.64,loss,Pinnacle,TU,10.5,2.4,9.95,win,,,,0.0,0.0,,,,1.29,0.0571049136786188,
+42,2023-05-02 16:33:25,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,0,VBet,TO,17.0,1.96,29.5,,FavBet,TU,17.0,2.4,24.1,,,,,0.0,0.0,,,,,,
+43,2023-05-02 16:38:22,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,0,VBet,to,18.0,2.43,30.0,,FavBet,TU,18.0,1.86,39.2,,,,,0.0,0.0,,,,,,
+44,2023-05-02 16:40:36,Sloane Stephens,Freya Christie,4,Mai,5,2023,5,0,VBet,TO,17.0,1.96,30.45,,FavBet,TU,17.0,2.3,25.96,,,,,0.0,0.0,,,,,,
+45,2023-05-02 16:57:18,Sport Recife,Ceara SC,3,Mai,5,2023,21,0,BetFair,Q2,,3.7,8.05,,VBet,Q1,,2.02,14.75,,,,,0.0,0.0,,Football,,,,
+46,2023-05-02 18:04:38,SC Dnipro-1,Metalist Kharkiv,3,Mai,5,2023,7,0,FavBet,AH1,-3.0,1.89,12.64,win,Pinnacle,AH2,3.0,2.63,9.08,loss,,,,0.0,0.0,,Esporte,,2.17,0.0999079189686924,
+47,2023-05-02 18:06:52,Matheus Pucinelli De Almeida,Francisco Comesana,3,Mai,5,2023,11,0,VBet,2,,1.87,31.0,loss,FavBet,1,,2.39,24.28,win,,,,0.0,0.0,,Tennis,,2.75,0.0497467438494934,
+48,2023-05-02 18:35:45,SC Dnipro-1,Metalist Kharkiv,3,Mai,5,2023,7,0,FavBet,AH1,-3.5,2.05,10.71,win,Pinnacle,AH2,3.5,2.25,9.78,loss,,,,0.0,0.0,,Esporte,,1.47,0.0717423133235724,
+49,2023-05-02 20:38:35,Valentine FC (Res),Weston Workers (Res),3,Mai,5,2023,5,15,VBet,1X,,6.4,4.6,loss,BetFair,2,,1.26,24.0,win,,,,0.0,0.0,,Football,,1.64,0.0573426573426573,
+50,2023-05-02 20:49:36,Moreland City,Mooroolbark,3,Mai,5,2023,6,30,Pinnacle,AH2,3.0,2.51,8.25,win,VBet,AH1,-3.0,2.19,9.45,loss,,,,0.0,0.0,,Soccer,,3.01,0.1700564971751412,
+51,2023-05-02 20:51:28,"	
+Moreland City",Mooroolbark,3,Mai,5,2023,6,30,VBet,ScoreBoth,,3.9,6.55,win,FavBet,Not,,1.79,14.24,loss,,,,0.0,0.0,,Soccer,,4.75,0.2284752284752285,
+52,2023-05-02 20:55:45,Moreland City,Mooroolbark,3,Mai,5,2023,6,30,VBet,EH2,2.0,6.2,4.4,loss,VBet,EHX,2.0,4.75,6.0,win,FavBet,AH1,-2.5,1.71,15.85,loss,Soccer,,2.25,0.0857142857142857,
+53,2023-05-03 01:59:48,"
+Bodo Glimt",Odds BK,3,Mai,5,2023,12,59,VBet,TU,3.0,1.85,14.41,,BetFair,TO2,2.5,1.82,6.97,,BetFair,TO2,3.5,3.0,4.8,,"	
+Football",,,,
+54,2023-05-03 02:14:51,Mito HollyHock,Vegalta Sendai,7,Mai,5,2023,3,0,FavBet,TO,2.0,1.69,32.61,,Pinnacle,TU,2.0,2.96,18.62,,,,,0.0,0.0,,"
+Soccer",,,,
+55,2023-05-03 02:16:27,Mito HollyHock,Vegalta SendaiMito HollyHock,7,Mai,5,2023,3,0,FavBet,TO,3.0,3.35,9.57,,Pinnacle,TU,3.0,1.5,21.37,,,,,0.0,0.0,,Soccer,,,,
+56,2023-05-03 02:18:25,Montedio Yamagata,Fujieda MyfcMontedio Yamagata,7,Mai,5,2023,2,0,Pinnacle,AH2,0.0,2.44,20.07,,FavBet,AH1,0.0,1.85,26.47,,,,,0.0,0.0,,"Montedio Yamagata - Fujieda Myfc
+Soccer",,,,
+57,2023-05-03 03:15:17,Moreland City SC,"Mooroolbark SC
+",3,Mai,5,2023,6,30,VBet,ScoreBoth,,2.65,3.85,win,BetFair,Not,,2.2,4.64,loss,,,,0.0,0.0,,Football,,1.71,0.2014134275618374,
+58,2023-05-03 03:17:08,Yokohama F. Marinos,Kyoto Sanga,7,Mai,5,2023,2,0,FavBet,TO,3.0,2.26,44.64,,Pinnacle,TU,3.0,2.02,49.94,,,,,0.0,0.0,,"
+Soccer",,,,
+59,2023-05-03 03:19:10,Kawasaki,"Tosu
+",7,Mai,5,2023,3,0,BetFair,TO1,1.5,2.0,14.36,,Pinnacle,TU1,1.5,2.15,13.36,,,,,0.0,0.0,,Football,,,,
+60,2023-05-03 03:20:58,Hacken,"Djurgardens
+",3,Mai,5,2023,14,0,BetFair,TO,11.5,2.8,19.28,,Pinnacle,TU,11.5,1.68,32.13,,,,,0.0,0.0,,Football,,,,
+61,2023-05-03 03:50:43,Veroia,"Panathinaikos B
+Veroia",4,Mai,5,2023,8,45,FavBet,TO,2.0,1.99,11.36,,VBet,TU,2.0,2.33,9.7,,,,,0.0,0.0,,Soccer,,,,
+62,2023-05-03 05:17:30,Moreland City,"Mooroolbark SC
+",3,Mai,5,2023,6,30,BetFair,Not,,2.2,4.39,loss,Pinnacle,TO2,0.5,2.8,3.45,win,,,,0.0,0.0,,Soccer,,1.82,0.2321428571428571,
+63,2023-05-03 05:19:40,IFK Goteborg,"Degerfors
+",4,Mai,5,2023,14,0,BetFair,TO,11.5,3.1,8.28,,Pinnacle,TU,11.5,1.657,15.5,,,,,0.0,0.0,,Football,,,,
+64,2023-05-03 05:22:12,IFK Goteborg,"Degerfors
+",4,Mai,5,2023,14,0,BetFair,TO,10.5,2.2,14.47,,Pinnacle,TU,10.5,1.99,16.0,,,,,0.0,0.0,,Football,,,,
+65,2023-05-03 08:49:45,Kakamega Homeboyz,"Wazito
+",3,Mai,5,2023,9,0,Pinnacle,AH1,0.0,2.29,11.46,win,BetFair,DNB2,,2.2,11.93,loss,,,,0.0,0.0,,Soccer,,2.85,0.1218469431380932,
+66,2023-05-03 09:14:55,Juventus,"Lecce
+",3,Mai,5,2023,12,59,FavBet,TU,11.0,1.53,89.15,,BetFair,TO,10.5,2.7,17.5,,BetFair,TO,11.5,3.8,23.46,,Soccer,,,,
+67,2023-05-03 09:17:16,Juventus,"Lecce
+",3,Mai,5,2023,12,59,BetFair,TO,9.5,2.05,12.46,,FavBet,TU,9.5,2.12,12.05,,,,,0.0,0.0,,Soccer,,,,
+68,2023-05-03 09:24:47,Arsenal Tivat,Iskra Danilovgrad,3,Mai,5,2023,14,0,Pinnacle,TO,2.0,2.16,19.7,,FavBet,TU,2.0,2.11,20.27,,,,,0.0,0.0,,2.70,6.74,,,
+69,2023-05-03 09:44:18,Great Britain,"Romania
+",3,Mai,5,2023,15,30,FavBet,TO,7.0,2.09,30.96,,Pinnacle,TU,7.0,2.13,30.38,,,,,0.0,0.0,,Hockey,,,,
+70,2023-05-03 09:56:05,Juventus,"Lecce
+",3,Mai,5,2023,12,59,BetFair,TO,10.5,2.8,12.12,,FavBet,TU,10.5,1.66,20.45,,,,,0.0,0.0,,Soccer,,,,
+71,2023-05-03 10:00:57,Monza,"AS Roma
+",3,Mai,5,2023,16,0,FavBet,TO1,4.0,2.22,11.07,,BetFair,TO1,3.5,1.68,8.04,,BetFair,TO1,4.5,2.6,4.26,,Soccer,,,,
+72,2023-05-03 10:05:34,CFR Cluj II,"Csm Sighetu Marmatiei
+",3,Mai,5,2023,12,0,BetFair,DNB1,,1.7,20.5,return,Pinnacle,AH2,0.5,1.952,7.28,win,Pinnacle,2,,3.75,5.41,loss,Soccer,,1.52,0.04579692678517626,
+73,2023-05-03 10:08:12,CFR Cluj II,"Csm Sighetu Marmatiei
+",3,Mai,5,2023,12,0,BetFair,1X,,1.44,73.36,win,Pinnacle,2,,3.79,27.87,loss,,,,0.0,0.0,,Soccer,,4.41,0.04356416082189074,
+74,2023-05-03 11:30:42,Sava Kranj,"NK Sencur
+",3,Mai,5,2023,12,30,VBet,TO1,0.5,2.1,13.3,,BetFair,TU1,0.5,2.05,13.66,loss,,,,0.0,0.0,,0.97,3.73,,,Football
+75,2023-05-03 11:37:49,NK Sava Kranj,"NK Sencur
+",3,Mai,5,2023,12,30,BetFair,TO2,2.5,2.2,11.93,win,Pinnacle,TU2,2.5,2.21,11.88,loss,,,,0.0,0.0,,2.44,10.25,2.44,0.10247795044099117,Soccer
+76,2023-05-03 11:41:01,Vedita Colonesti FC,"CSO Petrolul Potcoava
+",3,Mai,5,2023,12,0,VBet,1,,2.2,20.78,,Pinnacle,AH2,0.5,2.05,22.3,loss,,,,0.0,0.0,,2.64,6.12,,,Soccer
+77,2023-05-03 11:49:03,Nd Primorje,"NK Rogaska
+",3,Mai,5,2023,12,0,BetFair,DNB1,,2.8,10.6,win,Pinnacle,AH2,0.0,1.641,18.09,loss,,,,0.0,0.0,,0.99,3.47,0.99,0.03450679679330777,Soccer
+78,2023-05-03 12:28:36,Juventus,Lecce,3,Mai,5,2023,12,59,BetFair,TO,9.5,2.1,12.16,,FavBet,TU,9.5,2.12,12.05,,,,,0.0,0.0,,1.33,5.51,,,"
+Football"
+79,2023-05-03 12:30:30,Juventus,"Lecce
+",3,Mai,5,2023,12,59,BetFair,TO,10.5,3.0,11.32,,FavBet,TU,10.5,1.66,20.45,,,,,0.0,0.0,,2.19,6.88,,,Soccer
+80,2023-05-03 12:34:47,Liverpool,Fulham,3,Mai,5,2023,16,0,Pinnacle,TO,3.0,1.869,31.15,,FavBet,TU,3.0,2.38,24.46,,,,,0.0,0.0,,2.61,4.68,,,Soccer
+81,2023-05-03 12:43:53,JaPS/47,"TuPS
+",3,Mai,5,2023,13,30,VBet,1,,1.59,25.36,,BetFair,X2,,3.0,13.44,,,,,0.0,0.0,,1.52,3.92,,,Football
+82,2023-05-03 12:46:54,Udinese,"Napoli
+Udinese",4,Mai,5,2023,15,45,BetFair,TO2,6.5,2.8,12.24,,FavBet,TU2,6.5,1.65,20.77,,,,,0.0,0.0,,1.26,3.82,,,Football
+83,2023-05-03 13:58:04,Philip Florig,"Sebastian Prechtel
+",4,Mai,5,2023,8,0,VBet,1,,2.4,53.44,,Pinnacle,2,,1.775,72.26,,,,,0.0,0.0,,2.56,2.04,,,Tennis
+84,2023-05-03 15:15:56,Union Huaral,"Molinos El Pirata
+",3,Mai,5,2023,17,30,BetFair,TO,1.5,2.5,12.74,,FavBet,TU,1.5,1.81,17.60,,,,,0.0,0.00,,1.51,4.99,,,Soccer
+85,2023-05-03 15:32:46,Liverpool,"Fulham
+",3,Mai,5,2023,16,00,FavBet,AH2,0,1.42,43.0,,FavBet,X,,4.3,4.09,,Bet365,EH1,0,7,8.64,,7.72,14.46,,,Soccer
+86,2023-05-03 15:35:23,Liverpool,"Fulham
+",3,Mai,5,2023,16,00,Bet365,TO,3,1.95,18.42,,FavBet,TU,3,2.38,15.10,,,,,0.0,0.00,,2.40,7.19,,,Soccer
+87,2023-05-03 15:36:53,Ugo Blanchet,"Henrique Rocha
+Ugo Blanchet",4,Mai,5,2023,6,00,Pinnacle,1,,1.877,10.30,,FavBet,2,,2.4,8.04,,,,,0.0,0.00,,0.99,5.32,,,Tennis
+88,2023-05-03 15:47:16,Al-Fayha,"Al-Fateh
+Al-Fayha",9,Mai,5,2023,12,00,BetFair,DNB1,,2.4,10.25,,Pinnacle,AH2,0,1.833,13.42,,,,,0.0,0.00,,0.93,3.93,,,Soccer
+89,2023-05-03 16:21:32,Marquense,"Aurora FC
+",3,Mai,5,2023,23,00,Pinnacle,AH2,1.5,2.1,4.70,,BetFair,EH1,-1,2.4,4.11,,,,,0.0,0.00,,1.06,11.98,,,Football
+90,2023-05-03 16:25:49,Club Guarani,"Emelec
+Club Guarani",3,Mai,5,2023,21,00,VBet,TO,1,1.95,30.50,,FavBet,TU,1,2.31,25.76,,,,,0.0,0.00,,3.21,5.74,,,Soccer
+91,2023-05-03 16:35:12,Udinese,"Napoli
+",4,Mai,5,2023,15,45,FavBet,TU,11,1.56,24.11,,BetFair,TO,10.5,2.5,5.40,,BetFair,TO,11.5,3.5,6.89,,1.21,3.32,,,Football
+92,2023-05-03 20:25:40,Dominik Palan,"Emilio Gomez
+",3,Mai,5,2023,22,00,Pinnacle,2,,1.429,85.08,,FavBet,1,,3.85,31.58,,,,,0.0,0.00,,4.92,4.22,,,Tennis
