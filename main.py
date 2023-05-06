@@ -13,6 +13,13 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import seaborn as sns
+from PIL import Image, ImageTk
+import numpy as np
+import fileinput
+import io
+from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes
+from Pacotes_Lutzer.validate import validate_num
+
 
 
 
@@ -58,10 +65,10 @@ settings_button = tk.Button(frameJogo, image=settings_icon, bd=0) # Ajustes Inic
 # Verifica se o arquivo CSV existe
 if not os.path.isfile("Apostas.csv"):
     with open("Apostas.csv", "w", newline="") as f:
-        colunas = ["id", "add", "time_casa", "time_fora", "dia", "mes", "mes_id", "ano", "hora", "minuto", "bethouse1", "mercado1", "valor1", "odd1", "aposta1", "resultado1", "bethouse2", "mercado2", "valor2", "odd2", "aposta2", "resultado2", "bethouse3", "mercado3", "valor3", "odd3", "aposta3", "resultado3", "lucro_estimado", "lucro_per_estimado", "lucroReal", "lucro_perReal"]
+        colunas = ["id", "add", "datetime", "time_casa", "time_fora", "bethouse1", "mercado1", "valor1", "odd1", "aposta1", "resultado1", "bethouse2", "mercado2", "valor2", "odd2", "aposta2", "resultado2", "bethouse3", "mercado3", "valor3", "odd3", "aposta3", "resultado3", "lucro_estimado", "lucro_per_estimado", "lucroReal", "lucro_perReal"]
         csv.writer(f).writerow(colunas)
 
-df_tabela = pd.read_csv("Apostas.csv")
+df_tabela = pd.read_csv("Apostas.csv", delimiter=",")
 df_filtrado = df_tabela.copy()
 df_resultados_copy = df_tabela[["resultado1", "resultado2", "resultado3"]].copy()
 df_resultados = df_tabela[["resultado1", "resultado2", "resultado3"]] # Configurações iniciais
@@ -94,7 +101,7 @@ def toggle_time():
 
 # Ordenação
 def on_filters_change():
-    df_filtrado = filter_selection()
+    preencher_treeview()
     save_bethouse_options()
 
 ordem_label = tk.Label(frameTabela, text="Filtros:")
@@ -122,7 +129,7 @@ def toggle_situation(index):
     on_filters_change()
 def show_frame(event):
     situation_frame = tk.Frame(frameTabela, width=200, height=150)
-    situation_frame.place(x=387, y=0)
+    situation_frame.place(x=360, y=0)
     for i, (situation, var) in enumerate(zip(situations, situation_vars)):
         if i in [0, 1]:
             tk.Checkbutton(situation_frame, text=situation, variable=var, command=lambda i=i: toggle_situation(i)).grid(row=i+1, column=0)
@@ -156,13 +163,21 @@ def search_data(*args):
 search_var = tk.StringVar()
 
 # Cria um Entry para a pesquisa
-search_entry = tk.Entry(frameTabela, textvariable=search_var, width=5)
+search_entry = tk.Entry(frameTabela, textvariable=search_var, width=10)
 search_entry.grid(row=0, column=5)
+icon_photo = ImageTk.PhotoImage(Image.open("pesquisa.png").resize((16, 16), Image.LANCZOS))
+search_icon_label = tk.Label(frameTabela, image=icon_photo)
+search_icon_label.place(x=535, y=4)
 
 # Vincula a função de pesquisa ao evento de alteração na variável
 search_var.trace('w', search_data)
 
 def preencher_treeview():
+    global df_filtrado
+
+    df_filtrado = filter_selection()
+
+
     # Limpar o conteúdo atual do Treeview
     tabela.delete(*tabela.get_children())
 
@@ -174,41 +189,41 @@ def preencher_treeview():
     for i, row in df_filtrado.iterrows():
         id = row['id']
         jogo = f"{row['time_casa']}\n{row['time_fora']}"
-        data = "{:02d}/{}\n{:02d}:{:02d}".format(int(row['dia']), (row['mes']), int(row['hora']), int(row['minuto']))
+        data = "{:02d}/{}\n{:02d}:{:02d}".format(row['datetime'].day, convert_mes(row['datetime'].month), row['datetime'].hour,row['datetime'].minute)
         bethouses = f"{row['bethouse1']}\n{row['bethouse2']}"
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             bethouses += f"\n{row['bethouse3']}"
         odds = "{:.3f}".format(float(row['odd1'])).rstrip('0').rstrip('.') + "\n{:.3f}".format(float(row['odd2'])).rstrip('0').rstrip('.')
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             odds += "\n{:.3f}".format(float(row['odd3'])).rstrip('0').rstrip('.')
-        apostas = f"R$ {row['aposta1']:.2f}\nR$ {row['aposta2']:.2f}"
+        apostas = f"R$ {float(row['aposta1']):.2f}" if isinstance(row['aposta1'], (float, int)) else f"\nR$ 0.00"
+        apostas += f"\nR$ {float(row['aposta2']):.2f}" if isinstance(row['aposta2'], (float, int)) else f"\nR$ 0.00"
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
-            apostas += f"\nR$ {row['aposta3']:.2f}"
-        mercados = row['mercado1']
+            apostas += f"\nR$ {float(row['aposta3']):.2f}" if isinstance(row['aposta3'], (float, int)) else ""
+        mercados = str(row['mercado1'])
         if pd.notna(row['valor1']):
             valor1 = row['valor1']
             if isinstance(valor1, (int, float)):
                 mercados += "({:.2f}".format(valor1).rstrip('0').rstrip('.') + ")"
             else:
                 mercados += valor1
-
-        mercados += f"\n{row['mercado2']}"
+        mercados += f"\n{str(row['mercado2'])}"
         if pd.notna(row['valor2']):
             valor2 = row['valor2']
             if isinstance(valor2, (int, float)):
                 mercados += "({:.2f}".format(valor2).rstrip('0').rstrip('.') + ")"
             else:
                 mercados += valor2
-
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
-            mercados += f"\n{row['mercado3']}"
+            mercados += f"\n{str(row['mercado3'])}"
             if pd.notna(row['valor3']):
                 valor3 = row['valor3']
                 if isinstance(valor3, (int, float)):
                     mercados += "({:.2f}".format(valor3).rstrip('0').rstrip('.') + ")"
                 else:
                     mercados += valor3
-        adds = row['add'].strftime("%d/%m")
+        #adds = row['add'].strftime("%d/%m")
+        adds = "{:02d}/{}".format(row['datetime'].day, convert_mes(row['datetime'].month))
 
         # Add alternating background colors to rows
         if index % 2 == 0:
@@ -255,15 +270,16 @@ def filter_selection():
     global df_filtrado
     # Cria uma cópia do dataframe para não modificar o original
     df_filtrado = df_tabela.copy()
-    df_filtrado = df_filtrado.rename(columns={'ano': 'year', 'mes_id': 'month', 'dia': 'day', 'hora': 'hour', 'minuto': 'minute'})
-    df_filtrado['datetime'] = pd.to_datetime(df_filtrado[['year', 'month', 'day', 'hour', 'minute']])
+
+    df_filtrado['add'] = pd.to_datetime(df_filtrado['add'])
+    df_filtrado['datetime'] = pd.to_datetime(df_filtrado['datetime'])
+
     # Cria máscaras booleanas para cada situação
     mask_abertas = ((df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna()) & ((df_filtrado['bethouse3'].notna() & (df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna() | df_filtrado[ 'resultado3'].isna())) | (df_filtrado['bethouse3'].isna())))
 
     mask_vencidas = mask_abertas & (df_filtrado['datetime'].apply(lambda x: x + timedelta(hours=2)) < datetime.now())
 
     mask_fechadas = ((df_filtrado['resultado1'].notna() & df_filtrado['resultado2'].notna()) & ((df_filtrado['bethouse3'].notna() & df_filtrado['resultado3'].notna()) | (df_filtrado['bethouse3'].isna())))
-
     # Aplica as máscaras conforme as opções selecionadas pelo usuário
     if situation_vars[1].get() and situation_vars[2].get():
         pass
@@ -276,13 +292,11 @@ def filter_selection():
     elif situation_vars[2].get():
         df_filtrado = df_filtrado[mask_fechadas]
 
-    df_filtrado = df_filtrado.rename(columns={'year': 'ano', 'month': 'mes_id', 'day': 'dia', 'hour': 'hora', 'minute': 'minuto'})
-
     # Ordenação
     if order_button["text"] == "Crescente de Datas":
-        df_filtrado = df_filtrado.sort_values(by=['ano', 'mes_id', 'dia', 'hora', 'minuto'])
+        df_filtrado = df_filtrado.sort_values(by=['datetime'])
     elif order_button["text"] == "Decrescente de Datas":
-        df_filtrado = df_filtrado.sort_values(by=['ano', 'mes_id', 'dia', 'hora', 'minuto'], ascending=False)
+        df_filtrado = df_filtrado.sort_values(by=['datetime'], ascending=False)
     elif order_button["text"] == "Crescente de Adição":
         df_filtrado = df_filtrado.sort_values(by=['id'])
     elif order_button["text"] == "Decrescente de Adição":
@@ -290,25 +304,20 @@ def filter_selection():
 
     # Filtro de tempo
     df_filtrado['add'] = pd.to_datetime(df_filtrado['add'])
+
     if time_button["text"] == "Vencem até":
         if timeframe_combobox.get() == "hoje":
-            df_filtrado = df_filtrado[
-                (df_filtrado['dia'] == datetime.now().day) &
-                (df_filtrado['mes_id'] == datetime.now().month) &
-                (df_filtrado['ano'] == datetime.now().replace(hour=0, minute=0).year)]
+            current_datetime = datetime.now()
+            df_filtrado = df_filtrado[df_filtrado['datetime'].dt.date == current_datetime.date()]
         elif timeframe_combobox.get() == "amanhã":
-            end_date = datetime.now().replace(hour=0, minute=0) + timedelta(days=1)
-            df_filtrado = df_filtrado[
-                (df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
-                        df_filtrado['ano'] <= end_date.year)]
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(days=1)
+            df_filtrado = df_filtrado[df_filtrado['datetime'] <= end_datetime]
         elif timeframe_combobox.get() == "1 semana":
-            end_date = datetime.now().replace(hour=0, minute=0) + timedelta(weeks=1)
-            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
-                    df_filtrado['ano'] <= end_date.year)]
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(weeks=1)
+            df_filtrado = df_filtrado[df_filtrado['datetime'] <= end_datetime]
         elif timeframe_combobox.get() == "1 mês":
-            end_date = datetime.now().replace(hour=0, minute=0) + timedelta(days=30)
-            df_filtrado = df_filtrado[(df_filtrado['dia'] <= end_date.day) & (df_filtrado['mes_id'] <= end_date.month) & (
-                    df_filtrado['ano'] <= end_date.year)]
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(days=30)
+            df_filtrado = df_filtrado[df_filtrado['datetime'] <= end_datetime]
     else:
         if timeframe_combobox.get() == "hoje":
             df_filtrado = df_filtrado[(df_filtrado['add'] >= datetime.now().replace(hour=0, minute=0))]
@@ -327,15 +336,15 @@ def filter_selection():
         elif timeframe_combobox.get() == "365 dias":
             df_filtrado = df_filtrado[(df_filtrado['add'] <= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(year=1))]
 
-    df_vencidas = df_tabela[((df_tabela['resultado1'].isnull() | df_tabela['resultado2'].isnull()) | (df_tabela['bethouse3'].isin(bethouse_options.keys()) & df_tabela[['resultado1', 'resultado2', 'resultado3']].isnull().any(axis=1))) & ((df_tabela['ano'].astype(int) < datetime.now().year) | (df_tabela['ano'].astype(int) == datetime.now().year) & (df_tabela['mes_id'].astype(int) < datetime.now().month) | (df_tabela['ano'].astype(int) == datetime.now().year) & (df_tabela['mes_id'].astype(int) == datetime.now().month) & (df_tabela['dia'].astype(int) < datetime.now().day) | (df_tabela['ano'].astype(int) == datetime.now().year) & (df_tabela['mes_id'].astype(int) == datetime.now().month) & (df_tabela['dia'].astype(int) == datetime.now().day) & (df_tabela['hora'].astype(int) < (datetime.now() - timedelta(hours=2)).hour) | (df_tabela['ano'].astype(int) == datetime.now().year) & (df_tabela['mes_id'].astype(int) == datetime.now().month) & (df_tabela['dia'].astype(int) == datetime.now().day) & (df_tabela['hora'].astype(int) == (datetime.now() - timedelta(hours=2)).hour) & (df_tabela['minuto'].astype(int) < (datetime.now() - timedelta(hours=2)).minute))]
+    #df_vencidas = df_tabela[((df_tabela['resultado1'].isnull() | df_tabela['resultado2'].isnull()) | (df_tabela['bethouse3'].isin(bethouse_options.keys()) & df_tabela[['resultado1', 'resultado2', 'resultado3']].isnull().any(axis=1))) & ((df_tabela['datetime'].dt.year < datetime.now().year) | (df_tabela['datetime'].dt.year == datetime.now().year) & (df_tabela['datetime'].dt.month < datetime.now().month) | (df_tabela['datetime'].dt.year == datetime.now().year) & (df_tabela['datetime'].dt.month == datetime.now().month) & (df_tabela['datetime'].dt.day < datetime.now().day) | (df_tabela['datetime'].dt.year == datetime.now().year) & (df_tabela['datetime'].dt.month == datetime.now().month) & (df_tabela['datetime'].dt.day == datetime.now().day) & (df_tabela['datetime'].dt.hour < (datetime.now() - timedelta(hours=2)).hour) | (df_tabela['datetime'].dt.year == datetime.now().year) & (df_tabela['datetime'].dt.month == datetime.now().month) & (df_tabela['datetime'].dt.day == datetime.now().day) & (df_tabela['datetime'].dt.hour == (datetime.now() - timedelta(hours=2)).hour) & (df_tabela['datetime'].dt.minute < (datetime.now() - timedelta(hours=2)).minute))].copy()
+
     #linhas_label = tk.Label(frameTabela, text=len(df_filtrado))
     #linhas_label.grid(row=0, column=5)
-    frame = tk.Canvas(frameTabela, width=20, height=20, highlightthickness=0)
-    frame.create_oval(0, 0, 20, 20, fill="red")
-    frame.create_text(10, 10, text=len(df_vencidas), fill="white", font=("Arial", 15, "bold"))
-    frame.place(x=460, y=0)
+    #frame = tk.Canvas(frameTabela, width=20, height=20, highlightthickness=0)
+    #frame.create_oval(0, 0, 20, 20, fill="red")
+    #frame.create_text(10, 10, text=len(df_vencidas), fill="white", font=("Arial", 15, "bold"))
+    #frame.place(x=430, y=0)
 
-    preencher_treeview()
     # Exibir o resultado
     return df_filtrado
 
@@ -1315,10 +1324,11 @@ def resetar_variaveis():
     aposta_var3.set(0.0)
     if num_bets == 3:
         alternar_bets()
+    esporte_entry.delete(0, tk.END)
     preencher_treeview()
 
 def gravar():
-    global df_tabela, df_filtrado
+    global df_tabela
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
 
@@ -1328,18 +1338,12 @@ def gravar():
             and (bethouse_combobox.get() in bethouse_options.keys())\
             and (bethouse_combobox2.get() in bethouse_options.keys())\
             and ((num_bets != 3) or (num_bets == 3 and bethouse_combobox3.get() in bethouse_options.keys())):
-        mes_id_map = {'jan': 1, 'fev': 2, 'mar': 3, 'abr': 4, 'mai': 5, 'jun': 6, 'jul': 7, 'ago': 8, 'set': 9, 'out': 10, 'nov': 11, 'dez': 12}
         dados = {
             'id': len(df_tabela) + 1,
             'add': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'datetime': datetime.strptime(f"{ano_combobox.get()}-{convert_mes([mes_combobox.get()]):02d}-{dia_entry.get()} {hora_entry.get()}:{minuto_entry.get()}", '%Y-%m-%d %H:%M:%S'),
             'time_casa': jogo_entry.get().split(" - ")[0],
             'time_fora': jogo_entry.get().split(" - ")[1],
-            'dia': dia_entry.get(),
-            'mes': mes_combobox.get(),
-            'mes_id': mes_id_map[mes_combobox.get().lower()],
-            'ano': ano_combobox.get(),
-            'hora': hora_entry.get(),
-            'minuto': minuto_entry.get(),
             'bethouse1': bethouse_combobox.get(),
             'mercado1': mercado_combobox.get(),
             'valor1': valor_entry.get(),
@@ -1365,14 +1369,15 @@ def gravar():
             'esporte': esporte_entry.get().split(". ")[0]
         }
 
-        # Gravação dos dados no arquivo CSV
-        dados = {k: v.replace('\n', '') if isinstance(v, str) else v for k, v in dados.items()}
-        with open("Apostas.csv", "a", newline="") as f:
-            csv.writer(f).writerow(dados.values())
-        df_tabela = pd.read_csv("Apostas.csv")
-        resetar_variaveis()
-        filter_selection()
+        # Gravação dos dados no arquivo CSV e atualização da tabela
+        dados = {k: convert_to_numeric(v).strip().split('\n')[0] if isinstance(v, str) and '\n' in v else convert_to_numeric(v) for k, v in dados.items()}
+        with open("Apostas.csv", "a", newline="") as file:
+            csv.writer(file).writerow(list(dados.values()))
+        df_tabela = pd.concat([df_tabela, pd.DataFrame([dados.values()], columns=df_tabela.columns).replace('', np.nan)], ignore_index=False)
+
+        # atualização dos dados
         preencher_treeview()
+        resetar_variaveis()
     else:
         messagebox.showwarning("Aviso", "Preencha o jogo, as BetHouses, as odds e uma aposta.")
 
@@ -1430,13 +1435,13 @@ def select_bets(event):
     jogo_entry.delete(0, 'end')
     jogo_entry.insert(0, f"{row['time_casa']} - {row['time_fora']}")
     dia_entry.delete(0, 'end')
-    dia_entry.insert(0, row['dia'])
-    mes_combobox.set(row['mes'])
-    ano_combobox.set(row['ano'])
+    dia_entry.insert(0, row['datetime'].day)
+    mes_combobox.set(convert_mes(row['datetime'].month))
+    ano_combobox.set(row['datetime'].year)
     hora_entry.delete(0, 'end')
-    hora_entry.insert(0, row['hora'])
+    hora_entry.insert(0, row['datetime'].hour)
     minuto_entry.delete(0, 'end')
-    minuto_entry.insert(0, row['minuto'])
+    minuto_entry.insert(0, row['datetime'].minute)
     if pd.notna(row['bethouse3']) and num_bets == 2:
         alternar_bets()
     bethouse_combobox.set(row['bethouse1'])
@@ -1460,6 +1465,8 @@ def select_bets(event):
     aposta_var.set(row['aposta1'])
     aposta_var2.set(row['aposta2'])
     aposta_var3.set(row['aposta3'])
+    esporte_entry.delete(0, 'end')
+    esporte_entry.insert(0, row['esporte'])
 
     def editar_bets():
         # Obter o item selecionado na tabela
@@ -1471,14 +1478,10 @@ def select_bets(event):
 
         # Atualizar os valores da linha correspondente no DataFrame df_filtrado
         mask = df_filtrado['id'] == id_selecionado
-        df_filtrado.loc[mask, 'add'] = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        #df_filtrado.loc[mask, 'add'] = df_filtrado.loc[mask, 'add']
+        df_filtrado.loc[mask, 'datetime'] = ano_combobox.get() + '-' + f"{convert_mes(mes_combobox.get()):02d}" + '-' + f"{int(dia_entry.get()):02d}" + ' ' + f"{int(hora_entry.get()):02d}" + ':' + f"{int(minuto_entry.get()):02d}" + ":00"
         df_filtrado.loc[mask, 'time_casa'] = jogo_entry.get().split(" - ")[0]
         df_filtrado.loc[mask, 'time_fora'] = jogo_entry.get().split(" - ")[1]
-        df_filtrado.loc[mask, 'dia'] = dia_entry.get()
-        df_filtrado.loc[mask, 'mes'] = mes_combobox.get()
-        df_filtrado.loc[mask, 'ano'] = ano_combobox.get()
-        df_filtrado.loc[mask, 'hora'] = hora_entry.get()
-        df_filtrado.loc[mask, 'minuto'] = minuto_entry.get()
         df_filtrado.loc[mask, 'bethouse1'] = bethouse_combobox.get()
         df_filtrado.loc[mask, 'bethouse2'] = bethouse_combobox2.get()
         df_filtrado.loc[mask, 'bethouse3'] = bethouse_combobox3.get()
@@ -1505,16 +1508,29 @@ def select_bets(event):
             df_filtrado.loc[mask, 'aposta3'] = aposta_var3.get()
         df_filtrado.loc[mask, 'lucro_estimado'] = lucro1_label.cget("text").replace("R$", "").strip()
         df_filtrado.loc[mask, 'lucro_per_estimado'] = float(lucro_percent_label1.cget("text").strip("%"))
-        df_filtrado.loc[mask, 'esporte']: esporte_entry.get().split(". ")[0]
+        df_filtrado.loc[mask, 'esporte']: esporte_entry.get()
 
         # Salvar o DataFrame atualizado no arquivo Apostas.csv
-        df_tabela.update(df_filtrado.replace('\n', '', regex=True).loc[:, df_filtrado.columns != 'add'])
-        linha = df_filtrado.replace('\n', '', regex=True).loc[:, df_filtrado.columns != 'add']
-        linha.to_csv("Apostas.csv", mode="a", header=False, index=False)
+        linha = df_filtrado.loc[mask].replace('\n', '', regex=True)
+        df_tabela.update(linha)
+        mask = df_tabela['id'] == id_selecionado
+        df_tabela.loc[mask, 'add'] = pd.to_datetime(df_tabela.loc[mask, 'add'] / 10 ** 9, unit='s')
+        df_tabela.loc[mask, 'datetime'] = pd.to_datetime(df_tabela.loc[mask, 'datetime'] / 10 ** 9, unit='s')
+        print(df_tabela[['id', 'add', 'datetime']].tail(6))
+        csv_string = io.StringIO()
+        linha.to_csv(csv_string, header=False, index=False, sep=',')
+        novo_conteudo = csv_string.getvalue()
+        with fileinput.FileInput('Apostas.csv', inplace=True) as file:
+            for i, linha in enumerate(file):
+                colunas = linha.split(',')
+                if str(id_selecionado) == colunas[0].strip():
+                    print(novo_conteudo, end='')
+                else:
+                    print(linha, end='')
 
         # Limpar as variáveis e atualizar a tabela
-        resetar_variaveis()
         preencher_treeview()
+        resetar_variaveis()
         edit_button.grid_remove()
 
     # Botão Editar
@@ -1647,7 +1663,6 @@ class MyTreeview(ttk.Treeview):
                 df_filtrado.loc[df_filtrado['id'] == id, 'lucro_perReal'] = lucro_perReal
                 df_tabela.update(df_filtrado.loc[:, df_filtrado.columns != 'add'])
                 df_tabela.to_csv('Apostas.csv', index=False)
-                filter_selection()
                 preencher_treeview()
                 self.canvas.place_forget()
                 def show_message(title, message):
@@ -1763,7 +1778,7 @@ tabela.column("mercados", width=70)
 tabela.column("adds", width=50)
 tabela.grid(row=2, column=0, columnspan=10, rowspan= 10)
 tabela.bind('<Double-Button-1>', select_bets) # Tabela
-filter_selection()
+preencher_treeview()
 
 #Pesquisa
 # Armazena os valores originais da tabela
@@ -1779,11 +1794,11 @@ if len(tabela.get_children()) == 0:
 
 #––––––––––––––––––––––––––––––––––––––# ESTATÍSTICA #––––––––––––––––––––––––––––––––––––––
 
-hoje = date.today()
-df_vence_hoje = df_tabela[(df_tabela['dia'] == hoje.day) & (df_tabela['mes_id'] == hoje.month) & (df_tabela['ano'] == hoje.year)].copy()
-df_hoje = df_tabela[pd.to_datetime(df_tabela['add']).dt.date == hoje].copy()
-bets_hoje = len(df_hoje)
-bets_pra_hoje = len(df_vence_hoje)
+#hoje = date.today()
+#df_vence_hoje = df_tabela[(df_tabela['datetime'].dt.day == hoje.day) & (df_tabela['datetime'].dt.month == hoje.month) & (df_tabela['datetime'].dt.year == hoje.year)].copy()
+#df_hoje = df_tabela[pd.to_datetime(df_tabela['add']).dt.date == hoje].copy()
+#bets_hoje = len(df_hoje)
+#bets_pra_hoje = len(df_vence_hoje)
 
 def calculate_balance(row):
     if row['resultado'] == 'win':
@@ -1803,11 +1818,12 @@ def expand_df(df):
     for index, row in df.iterrows():
         for i in range(1, 4):
             if row[f'bethouse{i}'] == bethouse:
-                new_row = {'data_entrada': pd.to_datetime(row['add']), 'data_fim': pd.to_datetime(row[['year', 'month', 'day', 'hour', 'minute']]), 'bethouse': row[f'bethouse{i}'], 'odd': row[f'odd{i}'], 'aposta': row[f'aposta{i}'], 'resultado': row[f'resultado{i}']}
+                new_row = {'data_entrada': pd.to_datetime(row['add']), 'data_fim': pd.to_datetime(row['datetime']), 'bethouse': row[f'bethouse{i}'], 'odd': row[f'odd{i}'], 'aposta': row[f'aposta{i}'], 'resultado': row[f'resultado{i}']}
                 new_row['balanco'] = calculate_balance(new_row)
                 new_df.loc[new_index] = new_row
                 new_index += 1
     new_df['data_entrada'] = pd.to_datetime(new_df['data_entrada'])
+    new_df['data_fim'] = pd.to_datetime(new_df['data_fim'])
     return new_df
 
 
@@ -1817,7 +1833,7 @@ if not os.path.isfile('movimentacao.csv'):
 
 df_depositos = pd.read_csv("movimentacao.csv")
 for bethouse in bethouse_options.keys():
-    df_saldo = df_tabela[(df_tabela['bethouse1'] == bethouse) | (df_tabela['bethouse2'] == bethouse) | (df_tabela['bethouse3'] == bethouse)].rename(columns={'ano': 'year', 'mes_id': 'month', 'dia': 'day', 'hora': 'hour', 'minuto': 'minute'})
+    df_saldo = df_tabela[(df_tabela['bethouse1'] == bethouse) | (df_tabela['bethouse2'] == bethouse) | (df_tabela['bethouse3'] == bethouse)]
     df_saldo = expand_df(df_saldo)
     df_deposito = df_depositos[df_depositos['BetHouse'] == bethouse].copy()
     globals()[f'df_saldo_{bethouse}'] = df_saldo
