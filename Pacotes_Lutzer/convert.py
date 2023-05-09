@@ -1,3 +1,6 @@
+import pandas as pd
+
+
 def convert_to_numeric(value):
     try:
         return int(value)
@@ -35,3 +38,10 @@ def convert_mes(valor, extenso=False):
         else:
             return list(mes_id_map.keys())[valor - 1]
     return None
+
+def convert_ms_to_datetime(file, column):
+    dataframe = pd.read_csv(file, parse_dates=[column])
+    dataframe[column] = dataframe[column].apply(
+        lambda x: pd.to_datetime(int(x)/10**9, unit='s') if str(x).startswith("16") else x)
+    dataframe.to_csv("Apostas.csv", index=False)
+    return dataframe

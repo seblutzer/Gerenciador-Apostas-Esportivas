@@ -1,45 +1,67 @@
-import pandas as pd
-import tkinter as tk
-from tkinter import ttk
+import numpy as np
 
-def search_data(*args):
-    keyword = search_var.get().lower()  # Obtém o texto digitado e converte para minúsculas
+odd1 = 1.492
+odd2 = 2.12
+odd3 = 5.6
+aposta1 = 0
+aposta2 = 0
+aposta3 = 4.89
+mercado1 = "AH1"
+mercado2 = "AH2"
+mercado3 = "2"
+valor1 = 0
+valor2 = -0.5
+valor3 = ""
+def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var):
+    odd_1 = ((odd1 - 1) * (1 - bethouse_options1) +1)
+    odd_2 = ((odd2 - 1) * (1 - bethouse_options2) +1)
+    odd_3 = ((odd3 - 1) * (1 - bethouse_options3) +1)
+    if aposta1 > 0.0:
+        aposta2 = odd_1 * aposta1 / odd_2
+        aposta3 = odd_1 * aposta1 / odd_3
+    elif aposta2 > 0.0:
+        aposta1 = odd_2 * aposta2 / odd_1
+        aposta3 = odd_2 * aposta2 / odd_3
+    elif aposta3 > 0.0:
+        aposta1 = odd_3 * aposta3 / odd_1
+        aposta2 = odd_3 * aposta3 / odd_2
+    retorno1 = odd_1 * aposta1
+    retorno2 = odd_2 * aposta2
+    retorno3 = odd_3 * aposta3
+    retornos = [retorno1, retorno2, retorno3]
+    max_retorno = max(retornos)
+    seg_retorno = max([r for r in retornos if r != max_retorno])
+    min_retorno = min(retornos)
+    if max_retorno == retorno1:
+        max_odd = odd_1
+        max_aposta = max_retorno / odd_1
+    elif max_retorno == retorno2:
+        max_odd = odd_2
+        max_aposta = max_retorno / odd_2
+    else:
+        max_odd = odd_3
+        max_aposta = max_retorno / odd_3
+    if min_retorno == retorno1:
+        min_odd = odd_1
+        min_aposta = max_retorno / odd_1
+    elif min_retorno == retorno2:
+        min_odd = odd_2
+        min_aposta = max_retorno / odd_2
+    else:
+        min_odd = odd_3
+        min_aposta = max_retorno / odd_3
+    if seg_retorno == retorno1:
+        seg_odd = odd_1
+        seg_aposta = max_retorno / odd_1
+    elif seg_retorno == retorno2:
+        seg_odd = odd_2
+        seg_aposta = max_retorno / odd_2
+    else:
+        seg_odd = odd_3
+        seg_aposta = max_retorno / odd_3
+    mean_return = np.mean([retorno1, retorno2, retorno3])
+    if abs(retorno1 - mean_return) <= 0.01 * mean_return and abs(retorno2 - mean_return) <= 0.05 * mean_return and abs(retorno3 - mean_return) <= 0.05 * mean_return:
+        tipo = "padrão"
+    return max_retorno, seg_retorno, min_retorno, mean_return
 
-    # Limpa a exibição atual do TreeView
-    tree.delete(*tree.get_children())
-
-    # Filtra os dados com base na palavra-chave digitada
-    for index, row in df.iterrows():
-        if any(keyword in str(value).lower() for value in row):
-            tree.insert('', 'end', values=row.tolist())
-
-# Cria a janela principal
-root = tk.Tk()
-df = pd.read_csv("Apostas.csv")
-
-# Cria uma variável de controle para rastrear as alterações no Entry
-search_var = tk.StringVar()
-
-# Cria um Entry para a pesquisa
-search_entry = tk.Entry(root, textvariable=search_var)
-search_entry.pack()
-
-# Vincula a função de pesquisa ao evento de alteração na variável
-search_var.trace('w', search_data)
-
-# Cria um TreeView para exibir os dados filtrados
-tree = ttk.Treeview(root, columns=df.columns, show='headings')
-tree.pack()
-
-# Define os cabeçalhos das colunas
-for col in df.columns:
-    if col in tree['columns']:
-        tree.heading(col, text=col)
-
-
-# Insere os dados iniciais no TreeView
-for index, row in df.iterrows():
-    tree.insert('', 'end', values=row.tolist())
-
-# Inicia o loop principal da janela
-root.mainloop()
+print(calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, 0.0, 0.0, 0.0, 0.01))

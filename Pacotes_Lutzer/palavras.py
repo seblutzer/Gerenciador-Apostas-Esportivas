@@ -1,5 +1,5 @@
 def pesquisar_palavras_letras(letras, ordem=False, range=(0, 0), inicial=False, ordem_arranjo=False, ordem_formato="abc"):
-    with open("br_sem_acentos", "r") as arquivo:
+    with open("br-sem-acentos.txt", "r") as arquivo:
         palavras_encontradas = []
 
         for linha in arquivo:
@@ -32,5 +32,5 @@ def pesquisar_palavras_letras(letras, ordem=False, range=(0, 0), inicial=False, 
 
     return palavras_encontradas
 
-resultado = pesquisar_palavras_letras("mga")
-print(resultado)
+resultado = pesquisar_palavras_letras("hfu", inicial=False, ordem=True, ordem_arranjo=True)
+print(len(resultado), resultado)
