@@ -41,7 +41,7 @@ def fechar_programa():
 
 janela = ThemedTk(theme="marine")
 janela.protocol("WM_DELETE_WINDOW", fechar_programa)
-janela.wm_title('Controle de Apostas Esportivas (Sure Bets)')
+janela.wm_title('teste')
 
 # Cria o frame
 frameOpcoes = tk.Frame(janela, padx=10, pady=10)
@@ -95,6 +95,7 @@ botao_tabelas = Button(frameOpcoes, text="Ocultar Tabelas", command=alternar_tab
 botao_stats = Button(frameOpcoes, text="Mostrar Gráficos", command=alternar_graficos)
 botao_tabelas.grid(row=0, column=1)
 botao_stats.grid(row=0, column=2)
+
 
 # Define uma imagem para o botão de configurações
 settings_icon = tk.PhotoImage(file="/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/engrenagens.png").subsample(20, 20)
@@ -1246,16 +1247,17 @@ for bethouse in bethouse_options.keys():
     df_depositos_bethouses[bethouse] = df_deposito_bethouse
 
 tabela_bethouses(frameSaldos, df_saldos_bethouses, bethouse_options, df_depositos_bethouses, "movimentacao.csv")
+#df_saldos_bethouses['Bet365'].at[625, 'aposta'] = 9.5
+#new_row = pd.DataFrame({'data_entrada': pd.to_datetime('2023-05-16'), 'data_fim': pd.to_datetime('2023-05-17'), 'bethouse': 'Bet365', 'odd': 2.0, 'aposta': 100, 'resultado': 'win', 'balanco': 100}, index=[0])
+#max_index = max([df.index.max() for df in df_saldos_bethouses.values()])
+#new_index = max_index + 1
+#new_row.index = [new_index]
+#df_saldos_bethouses['Bet365'] = pd.concat([df_saldos_bethouses['Bet365'], new_row], ignore_index=False)
+
 
 #––––––––––––––––––––––––––––––––––––––# GRÁFICOS #––––––––––––––––––––––––––––––––––––––
 
 
-
-
-
-
-
-#––––––––––––––––––––––––––––––––––––––# RODAR PROGRAMA #––––––––––––––––––––––––––––––––––––––
 # Chamar a função para preencher o Treeview
 if len(tabela.get_children()) == 0:
     preencher_treeview(tabela, bethouse_options, df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela)

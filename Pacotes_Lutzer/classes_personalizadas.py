@@ -9,9 +9,10 @@ import pandas as pd
 from Pacotes_Lutzer.convert import convert_mes
 from Pacotes_Lutzer.validate import validate_num, on_entry_change
 import os
+import numpy as np
 
 
-def preencher_treeview(tabela, bethouse_options, df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela, frameSaldos, df_saldos, df_depositos, arquivo_deposito):
+def preencher_treeview(tabela, bethouse_options, df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela):
     global df_filtrado
     df_filtrado = filter_selection(df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela)
 
@@ -171,7 +172,7 @@ def filter_selection(df_tabela, situation_vars, order_button1, order_button2, ti
     # Exibir o resultado
     return df_filtrado
 class BetHistTreeview(ttk.Treeview):
-    def __init__(self, master=None, tabela_base=None, bethouse_options=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, frameTabela=None, **kw):
+    def __init__(self, master=None, tabela_base=None, bethouse_options=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, frameTabela=None, frameSaldos=None, arquivo_depositos=None, **kw):
         ttk.Treeview.__init__(self, master, **kw)
         self.tabela_base = tabela_base
         self.bethouse_options = bethouse_options
@@ -181,6 +182,8 @@ class BetHistTreeview(ttk.Treeview):
         self.time_button = time_button
         self.timeframe_combobox = timeframe_combobox
         self.frameTabela = frameTabela
+        self.frameSaldos = frameSaldos
+        self.arquivo_depositos = arquivo_depositos
         self.bind("<<TreeviewSelect>>", self.on_select)
         self.canvas1 = Canvas(self, width=300, height=40, bg="#b3d7fe", highlightthickness=0) #bg="#b3d7fe"
         image = PhotoImage(file='save.png').subsample(10, 10)
@@ -250,14 +253,14 @@ class BetHistTreeview(ttk.Treeview):
         self.canvas1.create_text(30, 10, text=df_row['bethouse1'].values[0], anchor = W, fill = fg_color1)
         self.canvas1.create_text(105, 10, text=df_row['odd1'].values[0], anchor = W, fill = fg_color1)
         self.canvas1.create_text(155, 10, text=f"R$ {float(df_row['aposta1'].values[0]):.2f}", anchor = W, fill = fg_color1)
-        formatted_valor1 = "" if pd.isna(df_row['valor1'].values[0]) else f"{float(df_row['valor1'].values[0]):.2f}"
+        formatted_valor1 = "" if pd.isna(df_row['valor1'].values[0]) else "(" + f"{float(df_row['valor1'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
         self.canvas1.create_text(225, 10, text="{}{}".format(df_row['mercado1'].values[0], formatted_valor1), anchor=W, fill=fg_color1)
         self.canvas1.create_rectangle(30, 40, 300, 20, fill=bg_color2)
         self.canvas1.create_image(0, 20, image=icons[1], anchor=NW, tags='imagem')
         self.canvas1.create_text(30, 30, text=df_row['bethouse2'].values[0], anchor=W, fill=fg_color2)
         self.canvas1.create_text(105, 30, text=df_row['odd2'].values[0], anchor=W, fill=fg_color2)
         self.canvas1.create_text(155, 30, text=f"R$ {float(df_row['aposta2'].values[0]):.2f}", anchor=W, fill=fg_color2)
-        formatted_valor2 = "" if pd.isna(df_row['valor2'].values[0]) else f"{float(df_row['valor2'].values[0]):.2f}"
+        formatted_valor2 = "" if pd.isna(df_row['valor2'].values[0]) else "(" + f"{float(df_row['valor2'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
         self.canvas1.create_text(225, 30, text="{}{}".format(df_row['mercado2'].values[0], formatted_valor2), anchor=W, fill=fg_color2)
 
         if df_row['bethouse3'].values[0] in self.bethouse_options.keys():  # Check the value of bethouse3
@@ -269,7 +272,7 @@ class BetHistTreeview(ttk.Treeview):
             self.canvas1.create_text(30, 50, text=df_row['bethouse3'].values[0], anchor=W, fill=fg_color3)
             self.canvas1.create_text(105, 50, text=df_row['odd3'].values[0], anchor=W, fill=fg_color3)
             self.canvas1.create_text(155, 50, text=f"R$ {df_row['aposta3'].values[0]:.2f}", anchor=W, fill=fg_color3)
-            formatted_valor3 = "" if pd.isna(df_row['valor3'].values[0]) else f"{float(df_row['valor3'].values[0]):.2f}"
+            formatted_valor3 = "" if pd.isna(df_row['valor3'].values[0]) else "(" + f"{float(df_row['valor3'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
             self.canvas1.create_text(225, 50, text="{}{}".format(df_row['mercado3'].values[0], f"{formatted_valor3}" if pd.notna(df_row['valor3'].values[0]) else ""),anchor=W, fill=fg_color3)
         else:
             self.canvas1.config(height=40)
@@ -359,6 +362,7 @@ class BetHistTreeview(ttk.Treeview):
         df_row = df_filtrado.loc[df_filtrado['id'] == id]
 
         def save_results():
+            global df_saldos_bethouses
             if pd.isna(df_row['resultado1'].values[0]) or pd.isna(df_row['resultado2'].values[0]) or (
                     len(item['values'][3].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
                 messagebox.showinfo("Aviso", "Preencha todos os resultados do jogo!")
@@ -381,6 +385,16 @@ class BetHistTreeview(ttk.Treeview):
                 retorno1 = round(float(df_row['aposta1'].values[0]) * float(df_row['odd1'].values[0]) * calculate_fator_resultado(df_row['resultado1'].values[0], df_row['odd1'].values[0]), 2)
                 retorno2 = round(float(df_row['aposta2'].values[0]) * float(df_row['odd2'].values[0]) * calculate_fator_resultado(df_row['resultado2'].values[0], df_row['odd2'].values[0]), 2)
                 retorno3 = round(float(df_row['aposta3'].values[0]) * float(df_row['odd3'].values[0]) * calculate_fator_resultado(df_row['resultado3'].values[0], df_row['odd3'].values[0]) if df_row['bethouse3'].values[0] in self.bethouse_options.keys() else 0, 2)
+
+                mask = df_saldos_bethouses[df_row['bethouse1'].values[0]]['id'] == df_row['id'].values[0]
+                df_saldos_bethouses[df_row['bethouse1'].values[0]].loc[mask, 'resultado'] = df_row['resultado1'].values[0]
+
+                mask = df_saldos_bethouses[df_row['bethouse2'].values[0]]['id'] == df_row['id'].values[0]
+                df_saldos_bethouses[df_row['bethouse2'].values[0]].loc[mask, 'resultado'] = df_row['resultado2'].values[0]
+
+                mask = df_saldos_bethouses[df_row['bethouse3'].values[0]]['id'] == df_row['id'].values[0]
+                df_saldos_bethouses[df_row['bethouse3'].values[0]].loc[mask, 'resultado'] = df_row['resultado3'].values[0]
+                tabela_bethouses(self.frameSaldos, df_saldos_bethouses, self.bethouse_options, df_depositos_bethouses, self.arquivo_depositos)
                 somaRetornos = round(retorno1 + retorno2 + retorno3, 2)
                 lucroReal = round(somaRetornos - somaApostas, 2)
                 lucro_perReal = round(lucroReal / somaApostas, 4)
@@ -411,6 +425,9 @@ class BetHistTreeview(ttk.Treeview):
         return resultados[next_index]
 
 def tabela_bethouses(parent, dataframes, bethouse_options, dataframes_deposito, arquivo_depositos):
+    global df_saldos_bethouses, df_depositos_bethouses
+    df_saldos_bethouses = dataframes
+    df_depositos_bethouses = dataframes_deposito
     treeview = ttk.Treeview(parent, style='Normal.Treeview', height=len(bethouse_options.keys()) + 1)
     treeview.grid(row=0, column=0)
 
@@ -514,4 +531,89 @@ def tabela_bethouses(parent, dataframes, bethouse_options, dataframes_deposito, 
 
     # Adicionando o evento de clique com o botão direito do mouse ao treeview
     treeview.bind('<Button-2>', show_menu)
+
+def add_aposta(dados, df_saldos_bethouses, id=None):
+    # Extrair dados para 'bethouse1'
+    new_row = {
+        'id': dados['id'],
+        'data_entrada': pd.to_datetime(dados['add']),
+        'data_fim': pd.to_datetime(dados['datetime']),
+        'bethouse': dados['bethouse1'],
+        'odd': dados['odd1'],
+        'aposta': dados['aposta1'],
+        'resultado': np.nan,# if dados['aposta1'] == "" else dados['aposta1'],
+        'balanco': -float(dados['aposta1'])
+    }
+
+    bethouse1 = dados['bethouse1']
+    if id:
+        mask = df_saldos_bethouses[bethouse1]['id'] == id
+        df_saldos_bethouses[bethouse1].at[mask, 'resultado'] = 'resultado'
+        df_saldos_bethouses[bethouse1].at[mask, 'data_fim'] = 'data_fim'
+        df_saldos_bethouses[bethouse1].at[mask, 'odd'] = 'odd'
+        df_saldos_bethouses[bethouse1].at[mask, 'aposta'] = 'aposta'
+        df_saldos_bethouses[bethouse1].at[mask, 'balanco'] = 'balanco'
+    else:
+        if bethouse1 in df_saldos_bethouses:
+            max_index = df_saldos_bethouses[bethouse1].index.max()
+            new_index = max_index + 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse1] = pd.concat(
+                [df_saldos_bethouses[bethouse1], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    # Extrair dados para 'bethouse2'
+    new_row = {
+        'id': dados['id'],
+        'data_entrada': pd.to_datetime(dados['add']),
+        'data_fim': pd.to_datetime(dados['datetime']),
+        'bethouse': dados['bethouse2'],
+        'odd': dados['odd2'],
+        'aposta': dados['aposta2'],
+        'resultado': np.nan,# if dados['aposta2'] == "" else dados['aposta2'],
+        'balanco': -float(dados['aposta2'])
+    }
+
+    bethouse2 = dados['bethouse2']
+    if id:
+        mask = df_saldos_bethouses[bethouse2]['id'] == id
+        df_saldos_bethouses[bethouse2].at[mask, 'resultado'] = 'resultado'
+        df_saldos_bethouses[bethouse2].at[mask, 'data_fim'] = 'data_fim'
+        df_saldos_bethouses[bethouse2].at[mask, 'odd'] = 'odd'
+        df_saldos_bethouses[bethouse2].at[mask, 'aposta'] = 'aposta'
+        df_saldos_bethouses[bethouse2].at[mask, 'balanco'] = 'balanco'
+    else:
+        if bethouse2 in df_saldos_bethouses:
+            new_index += 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse2] = pd.concat(
+                [df_saldos_bethouses[bethouse2], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    # Extrair dados para 'bethouse3' (se existir)
+    bethouse3 = dados['bethouse3']
+
+    if bethouse3 in df_saldos_bethouses:
+        new_row = {
+            'id': dados['id'],
+            'data_entrada': pd.to_datetime(dados['add']),
+            'data_fim': pd.to_datetime(dados['datetime']),
+            'bethouse': bethouse3,
+            'odd': dados['odd3'],
+            'aposta': dados['aposta3'],
+            'resultado': np.nan,# if dados['aposta3'] == "" else dados['aposta3'],
+            'balanco': -float(dados['aposta3'])
+        }
+        if id:
+            mask = df_saldos_bethouses[bethouse3]['id'] == id
+            df_saldos_bethouses[bethouse3].at[mask, 'resultado'] = 'resultado'
+            df_saldos_bethouses[bethouse3].at[mask, 'data_fim'] = 'data_fim'
+            df_saldos_bethouses[bethouse3].at[mask, 'odd'] = 'odd'
+            df_saldos_bethouses[bethouse3].at[mask, 'aposta'] = 'aposta'
+            df_saldos_bethouses[bethouse3].at[mask, 'balanco'] = 'balanco'
+        else:
+            new_index += 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse3] = pd.concat(
+                [df_saldos_bethouses[bethouse3], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    return df_saldos_bethouses
 
