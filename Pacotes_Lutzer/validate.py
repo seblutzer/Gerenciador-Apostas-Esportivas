@@ -29,7 +29,7 @@ def validate_num(var, dig=4, dec=2, negative=True, restrict=None):
     elif restrict == 'quarter':
         dec = 2
         if len(str(num).split('.')[1]) > dec or (num * 100) % 25 != 0:
-            if (num * 100 + 5) % 25 != 0:
+            if int(str(num).split('.')[1][0]) not in [2, 5, 7] or len(str(num).split('.')[1]) > dec:
                 return False
     elif dec > 0 and len(str(num).split('.')[1]) > dec:
         return False

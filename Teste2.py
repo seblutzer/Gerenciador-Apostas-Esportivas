@@ -1,99 +1,67 @@
-from Pacotes_Lutzer.filtros import agregar_datas
-import pandas as pd
-import plotly.express as px
-import tkinter as tk
-from plotly import figure_factory as ff
-import seaborn as sns
-import numpy as np
-import matplotlib.pyplot as plt
-from PIL import Image
-import tempfile
-from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import math
+import pandas as pd
+import matplotlib.pyplot as plt
+from tkinter import Tk, Button, Frame
+from main import df_saldos_bethouses
 
+# Função para atualizar o gráfico com base nos filtros selecionados
+def update_graph():
+    range_val = int(range_val_entry.get())
+    periodo_tempo = periodo_tempo_var.get()
 
+    filtered_dfs = {}
+    for bethouse, df in df_saldos_bethouses.items():
+        if periodo_tempo == 'dia':
+            filtered_df = df.tail(range_val)
+        elif periodo_tempo == 'semana':
+            filtered_df = df.resample('W').last().tail(range_val)
+        elif periodo_tempo == 'mês':
+            filtered_df = df.resample('M').last().tail(range_val)
+        elif periodo_tempo == 'ano':
+            filtered_df = df.resample('Y').last().tail(range_val)
+        filtered_dfs[bethouse] = filtered_df
 
-# Crie uma janela do tkinter
-janela = tk.Tk()
+    # Criar o gráfico de linhas
+    plt.figure(figsize=(10, 6))
+    for bethouse, df in filtered_dfs.items():
+        plt.plot(df.index, df['saldo_diario'], label=bethouse)
+    plt.xlabel('Data')
+    plt.ylabel('Saldo Diário')
+    plt.legend()
 
-# Defina o dataframe df_tabela (substitua com seu próprio dataframe)
-df_tabela = pd.read_csv("Apostas.csv")
+    # Atualizar o gráfico no frameStats
+    canvas = FigureCanvasTkAgg(plt.gcf(), master=frameStats)
+    canvas.draw()
+    canvas.get_tk_widget().grid(row=2, column=0, padx=10, pady=10)
 
-# Defina as colunas_agg, colun_data e metodos
-colunas_agg = ['lucro_estimado', 'lucroReal']
-colun_data = 'add'
-metodos = ['sum', 'sum']
+# Criar a window
+window = Tk()
 
+# Criar o frameStats
+frameStats = Frame(window)
+frameStats.grid(row=0, column=0)
 
+# Criar o entry e o label para range_val
+range_val_label = Label(frameStats, text="range_val:")
+range_val_label.grid(row=0, column=0)
+range_val_entry = Entry(frameStats)
+range_val_entry.grid(row=0, column=1)
 
-# Função para atualizar o gráfico interativamente
-def atualizar_grafico():
-    # Obtenha os valores selecionados dos widgets de entrada
-    range_val = int(range_entry.get())
-    periodo_tempo = periodo_var.get()
+# Criar o radio button para periodo_tempo
+periodo_tempo_var = StringVar()
+dia_radio = Radiobutton(frameStats, text="Dia", variable=periodo_tempo_var, value="dia")
+dia_radio.grid(row=1, column=0)
+semana_radio = Radiobutton(frameStats, text="Semana", variable=periodo_tempo_var, value="semana")
+semana_radio.grid(row=1, column=1)
+mes_radio = Radiobutton(frameStats, text="Mês", variable=periodo_tempo_var, value="mês")
+mes_radio.grid(row=1, column=2)
+ano_radio = Radiobutton(frameStats, text="Ano", variable=periodo_tempo_var, value="ano")
+ano_radio.grid(row=1, column=3)
 
-    # Chame a função agregação de datas para obter os dados agregados
-    estim_x_real = agregar_datas(df_tabela, colun_data, periodo_tempo, colunas_agg, metodos, range_val=range_val)
+# Criar o botão para atualizar o gráfico
+update_button = Button(frameStats, text="Atualizar Gráfico", command=update_graph)
+update_button.grid(row=1, column=4)
 
-    # Crie um DataFrame apenas com as colunas necessárias
-    dados = pd.DataFrame({'periodo': estim_x_real.index,
-                          'lucro_estimado': estim_x_real['lucro_estimado'],
-                          'lucroReal': estim_x_real['lucroReal']})
+# Iniciar a window
+window.mainloop()
 
-    # Crie um gráfico de linha usando o Seaborn
-    fig = plt.Figure(figsize=(4, 2.7))
-    ax = fig.add_subplot(1, 1, 1)
-    sns.lineplot(data=dados, x=dados['periodo'], y='lucro_estimado', errorbar=None, ax=ax, label='Lucro Estimado')
-    sns.lineplot(data=dados, x=dados['periodo'], y='lucroReal', errorbar=None, ax=ax, label='Lucro Real')
-
-    # Adicione os valores acima de cada ponto
-    for i, valor in enumerate(dados['lucroReal']):
-        ax.annotate(f"R$ {valor:.2f}", (dados['periodo'][i], valor), textcoords="offset points", xytext=(0, 10),
-                    ha='center', color='black')
-
-    # Determine o número máximo de ticks no eixo x
-    max_ticks = 6
-
-    # Verifique o número total de dados no eixo x
-    total_data = len(dados['periodo'])
-
-    # Calcule o passo necessário para pular labels, se houver mais de 6 dados
-    if total_data > max_ticks:
-        step = math.ceil(total_data / max_ticks)
-    else:
-        step = 1
-
-    # Defina os ticks do eixo x usando o passo calculado
-    ax.set_xticks(range(0, total_data, step))
-    for i in range(0, total_data, step):
-        if i > 0:
-            ax.axvline(i, color='#E5E5E5', linestyle='-')
-    ax.grid(True)
-
-    # Crie um widget de canvas para exibir o gráfico
-    canvas = FigureCanvasTkAgg(fig, master=janela)
-    canvas.get_tk_widget().grid(row=1, column=0, columnspan=5)
-
-
-# Crie uma caixa de entrada para o range_val
-range_label = tk.Label(janela, text="Range:")
-range_label.grid(row=0, column=0)
-range_entry = tk.Entry(janela, width=4)
-range_entry.grid(row=0, column=1)
-range_entry.insert(0, 5)
-range_entry.bind("<FocusOut>", lambda event: atualizar_grafico())
-
-# Crie uma caixa de seleção para o período
-periodo_var = tk.StringVar(janela)
-periodo_var.set("dia")  # Valor padrão
-def atualizar_grafico_periodo(*args):
-    atualizar_grafico()
-
-periodo_var.trace("w", atualizar_grafico_periodo)
-periodo_dropdown = tk.OptionMenu(janela, periodo_var, "dia", "semana", "mes", "trimestre", "semestre", "ano")
-periodo_dropdown.grid(row=0, column=3)
-periodo_dropdown.configure(width=4)
-
-# Exiba a janela do tkinter
-janela.mainloop()

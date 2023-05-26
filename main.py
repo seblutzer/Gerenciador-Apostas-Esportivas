@@ -20,8 +20,10 @@ import io
 from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, convert_ms_to_datetime
 from Pacotes_Lutzer.validate import create_float_entry, create_combobox
 from Pacotes_Lutzer.calc_apostas import calc_apostas
-from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, tabela_bethouses, add_aposta, filter_selection
+from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, add_aposta, filter_selection, gerar_saldos
+from Pacotes_Lutzer.filtros import agregar_datas
 import _tkinter
+import math
 
 
 def fechar_programa():
@@ -63,7 +65,7 @@ frameSaldos = tk.Frame(janela, padx=10, pady=10)
 frameSaldos.grid(row=10, column=0)
 
 frameStatus = tk.Frame(janela)
-frameStatus.grid(row=0, column=1)
+frameStatus.grid(row=0, column=1, rowspan=12)
 
 def alternar_tabelas():
     global tabela_visivel
@@ -72,7 +74,7 @@ def alternar_tabelas():
         frameTabela.grid(row=9, column=0)
         frameSaldos.grid(row=10, column=0)
         botao_tabelas["text"] = "Ocultar Tabelas"
-        botao_stats.grid(row=0, column=2, columnspan=4)
+        botao_stats.grid(row=0, column=2)
     else:
         frameTabela.grid_remove()
         frameSaldos.grid_remove()
@@ -83,18 +85,19 @@ def alternar_graficos():
     global stats_visivel
     stats_visivel = not stats_visivel
     if stats_visivel:
-        frameStatus.grid(row=0, column=1)
+        frameStatus.grid(row=0, column=1, rowspan=8)
         botao_stats["text"] = "Ocultar Gráficos"
     else:
         frameStatus.grid_remove()
         botao_stats["text"] = "Mostrar Gráficos"
 
 tabela_visivel = True
-stats_visivel = False
+stats_visivel = True
 botao_tabelas = Button(frameOpcoes, text="Ocultar Tabelas", command=alternar_tabelas)
 botao_stats = Button(frameOpcoes, text="Mostrar Gráficos", command=alternar_graficos)
 botao_tabelas.grid(row=0, column=1)
 botao_stats.grid(row=0, column=2)
+alternar_graficos()
 
 # Define uma imagem para o botão de configurações
 settings_icon = tk.PhotoImage(file="/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/engrenagens.png").subsample(20, 20)
@@ -345,7 +348,7 @@ def open_bethouses():
 
     # Cria a lista de BetHouses
     configStyle = ttk.Style()
-    configStyle.configure("Normal.Treeview", rowheight=20)
+    configStyle.configure("Normal.Treeview", rowheight=2)
     bethouses_list = sorted(bethouse_options.keys())
     bethouses_tree = ttk.Treeview(bethouses_frame, columns=('Bethouse', 'Taxa'), show='headings', style="Normal.Treeview")
     bethouses_tree.grid(row=5, column=0, columnspan=2, padx=5, pady=5)
@@ -502,10 +505,10 @@ def arredondamento_changed(event):
     save_bethouse_options()
 
 arred_label = tk.Label(frameJogo, text="Arred.:")
-arred_label.grid(row=3, column=2, columnspan=2)
+arred_label.grid(row=2, column=2, columnspan=2)
 arred_options = [0.01, 0.05, 0.1, 0.5, 1]
 arred_combobox = ttk.Combobox(frameJogo, textvariable=arred_var, values=arred_options, width=3, state="readonly")
-arred_combobox.grid(row=3, column=4, columnspan=2, padx=5, pady=5, sticky=tk.W)
+arred_combobox.grid(row=2, column=4, columnspan=2, padx=5, pady=5, sticky=tk.W)
 arred_combobox.bind("<<ComboboxSelected>>", arredondamento_changed) # Arredondar
 
 #Adicionar Ano
@@ -546,7 +549,7 @@ opcoes_anos = [datetime.now().date().year - 1, datetime.now().date().year, datet
 ano_var = tk.StringVar(value=datetime.now().year)
 ano_combobox = ttk.Combobox(frameJogo, textvariable=ano_var, values=opcoes_anos, width=4)
 ano_combobox.bind('<KeyRelease>', update_year_combobox)
-ano_combobox.grid(row=2, column=4, padx=5, pady=5, sticky=tk.W) # Ano
+ano_combobox.grid(row=1, column=4, padx=5, pady=5, sticky=tk.W) # Ano
 def set_placeholder_text(entry, placeholder):
     entry.insert(0, placeholder)
     entry.bind('<FocusIn>', lambda event: on_entry_click(entry, placeholder))
@@ -564,14 +567,14 @@ def on_focus_out(entry, placeholder):
 
 esporte_entry = tk.Entry(frameJogo, foreground='gray')
 set_placeholder_text(esporte_entry, "Esporte")
-esporte_entry.grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
+esporte_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
 # Adiciona campo Jogo
 jogo_label = tk.Label(frameJogo, text="Jogo")
-jogo_label.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+jogo_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
 jogo_entry = tk.Entry(frameJogo)
 set_placeholder_text(jogo_entry, "Jogo (Equipe 1 - Equipe 2)")
-jogo_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W) # Jogo
+jogo_entry.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W) # Jogo
 
 # Adiciona campo Data
 def validate_day(text):
@@ -586,13 +589,13 @@ def validate_day(text):
         return False
     return True
 data_label = tk.Label(frameJogo, text="Data")
-data_label.grid(row=1, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
+data_label.grid(row=0, column=1, columnspan=3, padx=5, pady=5, sticky=tk.W)
 
 # Configurar o box dia
 dia_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_day), "%P"))
 dia_atual = datetime.now().day
 dia_entry.insert(0, dia_atual)
-dia_entry.grid(row=2, column=1, padx=5, pady=5, sticky=tk.W) # Dia
+dia_entry.grid(row=1, column=1, padx=5, pady=5, sticky=tk.W) # Dia
 
 # Configurar o box mês
 def validate_month(text):
@@ -619,7 +622,7 @@ if mes_atual_pt in mes_options:
 else:
     mes_combobox.set(mes_options[0])
 mes_combobox.bind("<KeyRelease>", update_combobox)
-mes_combobox.grid(row=2, column=3, padx=5, pady=5, sticky=tk.W) # Mês
+mes_combobox.grid(row=1, column=3, padx=5, pady=5, sticky=tk.W) # Mês
 
 def validate_hour(text):
     if text.isdigit() or text == "":
@@ -634,12 +637,12 @@ def validate_hour(text):
     return True
 # Configurar o box Hora
 hora_label = tk.Label(frameJogo, text="Hora")
-hora_label.grid(row=1, column=5)
+hora_label.grid(row=0, column=5)
 hora_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_hour), "%P"))
 hora_entry.insert(0, 12)
-hora_entry.grid(row=2, column=5, padx=5, pady=5, sticky=tk.W)
+hora_entry.grid(row=1, column=5, padx=5, pady=5, sticky=tk.W)
 doispontos_label = tk.Label(frameJogo, text=":")
-doispontos_label.grid(row=2, column=6) # Hora
+doispontos_label.grid(row=1, column=6) # Hora
 
 def validate_minute(text):
     if text.isdigit() or text == "":
@@ -655,7 +658,7 @@ def validate_minute(text):
 # Configurar o box minuto
 minuto_entry = tk.Entry(frameJogo, width=2, validate="key", validatecommand=(frameJogo.register(validate_minute), "%P"), justify="right")
 minuto_entry.insert(0, "00")
-minuto_entry.grid(row=2, column=7, padx=5, pady=5, sticky=tk.W) # Data
+minuto_entry.grid(row=1, column=7, padx=5, pady=5, sticky=tk.W) # Data
 
 # Adiciona campo BetHouse
 # BetHouse 1
@@ -712,7 +715,7 @@ def alternar_bets():
         lucro3_label.grid_remove()
 
 alternar_bets_btn = tk.Button(frameJogo, text="Triplo", command=alternar_bets)
-alternar_bets_btn.grid(row=3, column=5, columnspan=4) # Add 3ª Aposta
+alternar_bets_btn.grid(row=2, column=5, columnspan=4) # Add 3ª Aposta
 
 def on_select3(value):
     selected_bethouse = bethouse_var3.get()
@@ -726,19 +729,126 @@ bethouse_combobox3.grid_remove()
 bethouse_combobox3.bind("<<ComboboxSelected>>", on_select3)
 # BetHouses
 
+def on_mercado_combobox_selected(event):
+    if mercado_var.get() == 'TO':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TU')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TU')
+            mercado_var3.set('TU')
+    elif mercado_var.get() == 'TO1':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TU1')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TU1')
+            mercado_var3.set('TU1')
+    elif mercado_var.get() == 'TO2':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TU2')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TU2')
+            mercado_var3.set('TU2')
+    elif mercado_var.get() == 'TU':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TO')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TO')
+            mercado_var3.set('TO')
+    elif mercado_var.get() == 'TU1':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TO1')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TO1')
+            mercado_var3.set('TO1')
+    elif mercado_var.get() == 'TU2':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('TO2')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('TO2')
+            mercado_var3.set('TO2')
+    elif mercado_var.get() == '1':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('2')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('2')
+    elif mercado_var.get() == '2':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('1')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('1')
+    elif mercado_var.get() == 'DNB1':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('DNB2')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('2')
+    elif mercado_var.get() == 'DNB2':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('DNB1')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('1')
+    elif mercado_var.get() == 'AH1':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('AH2')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('2')
+            valor_var.set(0)
+    elif mercado_var.get() == 'AH2':
+        if num_bets == 2 and mercado_var2.get() == '':
+            mercado_var2.set('AH1')
+        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set('X')
+            mercado_var3.set('1')
+            valor_var.set(0)
+
+def on_valor_combobox_selected(event):
+    def float_error(valor):
+        try:
+            valor_float = valor.get()
+        except _tkinter.TclError:
+            valor_float = ''
+        return valor_float
+    if float_error(valor_var) == 0 and num_bets == 2:
+            valor_var2.set(0)
+    elif mercado_var.get().startswith('T'):
+        if num_bets == 2 and mercado_var2.get().startswith('T'):
+            valor_var2.set(float_error(valor_var))
+        elif num_bets == 3 and float_error(valor_var).is_integer() and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
+            valor_var2.set(valor_var.get() - 0.5)
+            valor_var3.set(valor_var.get() + 0.5)
+    elif mercado_var.get().startswith('AH') and mercado_var2.get().startswith('AH'):
+        if num_bets == 2:
+            valor_var2.set(-valor_var.get())
+        elif num_bets == 3:
+            if mercado_var3.get().startswith('AH') and valor_var.get().is_integer():
+                valor_var2.set(-(valor_var.get() - 0.5))
+                valor_var3.set(-(valor_var.get() + 0.5))
+    elif mercado_var.get().startswith('DNB') and mercado_var2.get().startswith('AH') and num_bets == 2:
+        valor_var2.set(0)
+    elif mercado_var2.get().startswith('DNB') and mercado_var.get().startswith('AH') and num_bets == 2:
+        valor_var.set(0)
+
 # Adiciona campo Mercado
 mercado_label = tk.Label(frameApostas, text="Mercado")
 mercado_label.grid(row=0, column=1)
 mercado_combobox, mercado_var = create_combobox(frameApostas, mercado_options, row=1, column=1, width=7)
 mercado_combobox.bind("<<ComboboxSelected>>", lambda event: update_columns())
+mercado_combobox.bind("<<ComboboxSelected>>", on_mercado_combobox_selected)
 # Adiciona campo Valor
 valor_entry, valor_var = create_float_entry(frameApostas, row=1, column=2, width=4, dig=3, dec=2, restrict="quarter")
+valor_entry.bind("<FocusOut>", on_valor_combobox_selected)
 
 # Adiciona campo Mercado2
 mercado_combobox2, mercado_var2 = create_combobox(frameApostas, mercado_options, row=2, column=1, width=7)
 mercado_combobox2.bind("<<ComboboxSelected>>", lambda event: update_columns())
+
 # Adiciona campo Valor2
 valor_entry2, valor_var2 = create_float_entry(frameApostas, row=2, column=2, width=4, dig=3, dec=2, restrict="quarter")
+valor_entry2.bind("<FocusOut>", on_valor_combobox_selected)
 
 # Adiciona campo Mercado2
 mercado_combobox3, mercado_var3 = create_combobox(frameApostas, mercado_options, row=3, column=1, width=7)
@@ -916,7 +1026,7 @@ def resetar_variaveis():
     aposta_entry3.configure(fg='systemWindowBody', bg='systemWindowBody')
 
 def gravar():
-    global df_tabela, df_saldos_bethouses
+    global df_tabela
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
     if " - " in jogo_entry.get():
@@ -927,6 +1037,28 @@ def gravar():
         time_casa, time_fora = jogo_entry.get().split(" x ")
     else:
         time_casa, time_fora = "", ""
+    def converter_esporte(sport):
+        sport.strip().split('\n')[0]
+        if sport.lower() == 'soccer' or sport.lower() == 'football':
+            return 'Futebol'
+        if sport.lower() == 'basketball' or sport.lower() == 'basket':
+            return 'Basquetebol'
+        if sport.lower() == 'volleyball':
+            return 'Voleibol'
+        if sport.lower() == 'dota2' or sport.lower() == 'esports' or sport.lower() == 'esport' or sport.lower() == 'e-sports' or sport.lower() == 'cybersports' or sport.lower() == 'cybersports':
+            return 'E-Sports'
+        if sport.lower() == 'ice hockey':
+            return 'Hockey'
+        if sport.lower() == 'tennis':
+            return 'Tênis'
+        if sport.lower() == 'darts' or sport.lower() == 'dart':
+            return 'Dardos'
+        if sport.lower() == 'table tennis' or sport.lower() == 'tabletennis':
+            return 'Tênis de Mesa'
+        if sport.lower() == 'boxing':
+            return 'Boxe'
+        return sport
+
     if (len([odd for odd in odds if odd != 0.0]) >= 2)\
             and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1)\
             and time_casa != "" and time_fora != ""\
@@ -957,11 +1089,11 @@ def gravar():
             'odd3': odd_entry3.get(),
             'aposta3': palpite3_label.cget("text").replace("R$", "").strip(),# if aposta_var3.get() == 0.0 or aposta_var3.get() == "" else float(aposta_var3.get()),
             'resultado3': "",
-            'lucro_estimado': round(float(lucro1_label.cget("text").replace("R$", "").strip()), 4),
-            'lucro_per_estimado': round(float(lucro_percent_label1.cget("text").strip("%")), 4),
+            'lucro_estimado': lucro1_label.cget("text").replace("R$", "").strip(),
+            'lucro_per_estimado': lucro_percent_label1.cget("text").strip("%"),
             'lucroReal': "",
             'lucro_perReal': "",
-            'esporte': esporte_entry.get().split(". ")[0]
+            'esporte': converter_esporte(esporte_entry.get().split(". ")[0])
         }
 
         # Gravação dos dados no arquivo CSV e atualização da tabela
@@ -969,10 +1101,9 @@ def gravar():
         with open("Apostas.csv", "a", newline="") as file:
             csv.writer(file).writerow(list(dados.values()))
         df_tabela = pd.concat([df_tabela, pd.DataFrame([dados.values()], columns=df_tabela.columns).replace('', np.nan)], ignore_index=True)
-        df_saldos_bethouses = add_aposta(dados, df_saldos_bethouses)
 
         # atualização dos dados
-        tabela_bethouses(frameSaldos, df_saldos_bethouses, bethouse_options, df_depositos_bethouses, "movimentacao.csv")
+        add_aposta(frameSaldos, dados)
         preencher_treeview(tabela, bethouse_options, df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela)
         resetar_variaveis()
     else:
@@ -1077,7 +1208,6 @@ def select_bets(event):
     esporte_entry.insert(0, row['esporte'])
 
     def editar_bets():
-        global df_saldos_bethouses
         # Obter o item selecionado na tabela
         item_id = tabela.focus()
         item_values = tabela.item(item_id)['values']
@@ -1093,33 +1223,26 @@ def select_bets(event):
         df_filtrado.loc[mask, 'time_fora'] = jogo_entry.get().split(" - ")[1]
         df_filtrado.loc[mask, 'bethouse1'] = bethouse_combobox.get()
         df_filtrado.loc[mask, 'bethouse2'] = bethouse_combobox2.get()
-        df_filtrado.loc[mask, 'bethouse3'] = bethouse_combobox3.get()
+        df_filtrado.loc[mask, 'bethouse3'] = bethouse_combobox3.get() if bethouse_combobox3.get() != '' and bethouse_combobox3.get().lower() != 'nan' else ''
         df_filtrado.loc[mask, 'mercado1'] = mercado_combobox.get()
         df_filtrado.loc[mask, 'mercado2'] = mercado_combobox2.get()
-        df_filtrado.loc[mask, 'mercado3'] = mercado_combobox3.get()
-        df_filtrado.loc[mask, 'valor1'] = valor_entry.get()
-        df_filtrado.loc[mask, 'valor2'] = valor_entry2.get()
-        df_filtrado.loc[mask, 'valor3'] = valor_entry3.get()
+        df_filtrado.loc[mask, 'mercado3'] = mercado_combobox3.get() if mercado_combobox3.get() != '' and mercado_combobox3.get().lower() != 'nan' else ''
+        df_filtrado.loc[mask, 'valor1'] = valor_entry.get() if valor_entry.get().isnumeric() else ''
+        df_filtrado.loc[mask, 'valor2'] = valor_entry2.get() if valor_entry.get().isnumeric() else ''
+        df_filtrado.loc[mask, 'valor3'] = valor_entry3.get() if valor_entry.get().isnumeric() else ''
         df_filtrado.loc[mask, 'odd1'] = odd_entry.get()
         df_filtrado.loc[mask, 'odd2'] = odd_entry2.get()
         df_filtrado.loc[mask, 'odd3'] = odd_entry3.get()
         df_filtrado.loc[mask, 'aposta1'] = palpite1_label.cget("text").replace("R$", "").strip()
         df_filtrado.loc[mask, 'aposta2'] = palpite2_label.cget("text").replace("R$", "").strip()
-        df_filtrado.loc[mask, 'aposta3'] = palpite3_label.cget("text").replace("R$", "").strip()
+        df_filtrado.loc[mask, 'aposta3'] = palpite3_label.cget("text").replace("R$", "").strip() if palpite3_label.cget("text").replace("R$", "").strip().isnumeric() else ''
         df_filtrado.loc[mask, 'lucro_estimado'] = round(float(lucro1_label.cget("text").replace("R$", "").strip()), 4)
         df_filtrado.loc[mask, 'lucro_per_estimado'] = round(float(lucro_percent_label1.cget("text").strip("%")), 4)
-        df_filtrado.loc[mask, 'esporte'] = esporte_entry.get()
+        df_filtrado.loc[mask, 'esporte'] = esporte_entry.get() if esporte_entry.get() != '' and esporte_entry.get().lower() != 'nan' else ''
 
         # Salvar o DataFrame atualizado no arquivo Apostas.csv
         linha = df_filtrado.loc[mask].replace('\n', '', regex=True)
-        dados = df_filtrado.loc[mask].replace('\n', '', regex=True).to_dict(orient='records')[0]
-        #df_saldos_bethouses['Bet365'].at[625, 'aposta'] = 9.5
-        df_saldos_bethouses = add_aposta(dados, df_saldos_bethouses, id_selecionado)
-        tabela_bethouses(frameSaldos, df_saldos_bethouses, bethouse_options, df_depositos_bethouses, "movimentacao.csv")
-        for key, df in df_saldos_bethouses.items():
-            print(f"Última linha de {key}:")
-            print(df.tail(1))
-            print()  # linha em branco para separação
+        add_aposta(frameSaldos, linha, id=id_selecionado)
         df_tabela.update(linha)
         mask_tabela = df_tabela['id'] == id_selecionado
         df_tabela.loc[mask_tabela, 'add'] = df_tabela.loc[mask_tabela, 'add'].apply(lambda x: pd.Timestamp(x).to_pydatetime())
@@ -1150,7 +1273,7 @@ style = ttk.Style()
 style.configure("Treeview", rowheight=60)
 
 # Criar o Treeview com as colunas desejadas
-tabela = BetHistTreeview(frameTabela, df_tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela, frameSaldos, 'movimentacao.csv', columns=("index", "adds", "jogo", "data", "resultados", "bethouses", "odds", "bets", "mercados", "id"), show="headings", style="Treeview", height=6)
+tabela = BetHistTreeview(frameTabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela, frameSaldos, columns=("index", "adds", "jogo", "data", "resultados", "bethouses", "odds", "bets", "mercados", "id"), show="headings", style="Treeview", height=6)
 tabela.heading("index", text="")
 tabela.heading("adds", text="Adição")
 tabela.heading("jogo", text="Jogo")
@@ -1196,61 +1319,155 @@ for item_id in tabela.get_children():
 
 if not os.path.isfile('movimentacao.csv'):
     with open('movimentacao.csv', 'w') as csvfile:
-        csv.writer(csvfile).writerow(['BetHouse', 'Valor', 'Data'])
+        csv.writer(csvfile).writerow(['BetHouse', 'Status', 'Valor', 'Data'])
 
 configStyle = ttk.Style()
 configStyle.configure("Normal.Treeview", rowheight=20)
 
-def calculate_balance(row):
-    if row['resultado'] == 'win':
-        return row['odd'] * row['aposta'] - row['aposta']
-    elif row['resultado'] == 'half-win':
-        return row['aposta'] / 2 + row['aposta'] / 2 * row['odd'] - row['aposta']
-    elif row['resultado'] == 'return':
-        return 0
-    elif row['resultado'] == 'half-loss':
-        return row['aposta'] / 2 - row['aposta']
-    else:
-        return -row['aposta']
-
-def expand_df(df):
-    new_rows = []
-    for i in range(1, 4):
-        mask = df[f'bethouse{i}'].isin(bethouse_options.keys())
-        new_rows.extend(df.loc[mask].apply(lambda row: {
-            'id': row['id'],
-            'data_entrada': pd.to_datetime(row['add']),
-            'data_fim': pd.to_datetime(row['datetime']),
-            'bethouse': row[f'bethouse{i}'],
-            'odd': row[f'odd{i}'],
-            'aposta': row[f'aposta{i}'],
-            'resultado': row[f'resultado{i}'],
-        }, axis=1).tolist())
-
-    new_df = pd.DataFrame(new_rows)
-    new_df['balanco'] = new_df.apply(calculate_balance, axis=1)
-    new_df['data_entrada'] = pd.to_datetime(new_df['data_entrada'])
-    new_df['data_fim'] = pd.to_datetime(new_df['data_fim'])
-    return new_df
-
-df_depositos = pd.read_csv("movimentacao.csv")
-df_saldo = expand_df(df_tabela)
-global df_saldos_bethouses, df_depositos_bethouses
-df_saldos_bethouses = {}
-df_depositos_bethouses = {}
-
-for bethouse in bethouse_options.keys():
-    df_saldo_bethouse = df_saldo[df_saldo['bethouse'] == bethouse].copy()
-    df_deposito_bethouse = df_depositos[df_depositos['BetHouse'] == bethouse].copy()
-    df_saldos_bethouses[bethouse] = df_saldo_bethouse
-    df_depositos_bethouses[bethouse] = df_deposito_bethouse
-
-tabela_bethouses(frameSaldos, df_saldos_bethouses, bethouse_options, df_depositos_bethouses, "movimentacao.csv")
+gerar_saldos(frameSaldos, bethouse_options, df_tabela)
 
 #––––––––––––––––––––––––––––––––––––––# GRÁFICOS #––––––––––––––––––––––––––––––––––––––
+# Defina as colunas_agg, colun_data e metodos
+colunas_agg = ['lucro_estimado', 'lucroReal']
+colun_data = 'add'
+metodos = ['sum', 'sum']
+
+# Função para atualizar o gráfico interativamente
+def atualizar_grafico():
+    # Obtenha os valores selecionados dos widgets de entrada
+    range_val = int(range_entry.get())
+    periodo_tempo = periodo_var.get()
+
+    # Chame a função agregação de datas para obter os dados agregados
+    estim_x_real = agregar_datas(df_tabela, colun_data, periodo_tempo, colunas_agg, metodos, range_val=range_val)
+
+    # Crie um DataFrame apenas com as colunas necessárias
+    dados = pd.DataFrame({'periodo': estim_x_real.index,
+                          'lucro_estimado': estim_x_real['lucro_estimado'],
+                          'lucroReal': estim_x_real['lucroReal']})
+
+    # Crie um gráfico de linha usando o Seaborn
+    fig = plt.Figure(figsize=(4, 2.7))
+    ax = fig.add_subplot(1, 1, 1)
+    sns.lineplot(data=dados, x=dados['periodo'], y='lucro_estimado', errorbar=None, ax=ax, label='Lucro Estimado')
+    sns.lineplot(data=dados, x=dados['periodo'], y='lucroReal', errorbar=None, ax=ax, label='Lucro Real')
+
+    # Adicione os valores acima de cada ponto
+    for i, valor in enumerate(dados['lucroReal']):
+        ax.annotate(f"R$ {valor:.2f}", (dados['periodo'][i], valor), textcoords="offset points", xytext=(0, 10),
+                    ha='center', color='black')
+
+    # Determine o número máximo de ticks no eixo x
+    max_ticks = 6
+
+    # Verifique o número total de dados no eixo x
+    total_data = len(dados['periodo'])
+
+    # Calcule o passo necessário para pular labels, se houver mais de 6 dados
+    if total_data > max_ticks:
+        step = math.ceil(total_data / max_ticks)
+    else:
+        step = 1
+
+    # Defina os ticks do eixo x usando o passo calculado
+    ax.set_xticks(range(0, total_data, step))
+    for i in range(0, total_data, step):
+        if i > 0:
+            ax.axvline(i, color='#E5E5E5', linestyle='-')
+    ax.grid(True)
+
+    # Crie um widget de canvas para exibir o gráfico
+    canvas = FigureCanvasTkAgg(fig, master=frameStatus)
+    canvas.get_tk_widget().grid(row=1, column=0, columnspan=4)
 
 
+# Crie uma caixa de entrada para o range_val
+range_label = tk.Label(frameStatus, text="Range:")
+range_label.grid(row=0, column=0)
+range_entry = tk.Entry(frameStatus, width=4)
+range_entry.grid(row=0, column=1)
+range_entry.insert(0, 5)
+range_entry.bind("<FocusOut>", lambda event: atualizar_grafico())
 
+# Crie uma caixa de seleção para o período
+periodo_var = tk.StringVar(frameStatus)
+periodo_var.set("dia")  # Valor padrão
+def atualizar_grafico_periodo(*args):
+    atualizar_grafico()
+
+periodo_var.trace("w", atualizar_grafico_periodo)
+periodo_dropdown = tk.OptionMenu(frameStatus, periodo_var, "dia", "semana", "mes", "trimestre", "semestre", "ano")
+periodo_dropdown.grid(row=0, column=3)
+periodo_dropdown.configure(width=4)
+atualizar_grafico()
+
+####### GRÁFICO DE HORA ########
+
+# Defina as colunas_agg, colun_data e metodos
+colunas_agg_hora = 'lucro_estimado'
+colun_data_hora = 'add'
+
+# Função para atualizar o gráfico interativamente
+def atualizar_grafico_hora():
+    # Obtenha os valores selecionados dos widgets de entrada
+    range_val = int(range_entry.get())
+    periodo_tempo = periodo_var.get()
+    metodo = metodo_var.get()
+
+    # Define os métodos de acordo com a opção selecionada
+    if metodo == 'total':
+        metodos = 'sum'
+    elif metodo == 'média':
+        metodos = 'mean'
+
+    # Chame a função agregação de datas para obter os dados agregados
+    apostas_hora = agregar_datas(df_tabela, colun_data_hora, periodo_tempo, colunas_agg_hora, metodos=metodos, range_val=range_val, cont_hora=True)
+
+    # Crie um gráfico de barras usando o Matplotlib
+    fig = plt.Figure(figsize=(7, 2.7))
+    ax = fig.add_subplot(1, 1, 1)
+    apostas_hora = apostas_hora.reset_index()
+    sns.barplot(data=apostas_hora, x='hora', y='count', palette='viridis', ax=ax, label='Apostas por Hora')
+
+    # Adicione o gráfico ao frameStatus
+    canvas = FigureCanvasTkAgg(fig, master=frameStatus)
+    canvas.get_tk_widget().grid(row=1, column=4, columnspan=5)
+
+# Crie uma caixa de entrada para o range_val
+range_label = tk.Label(frameStatus, text="Range:")
+range_label.grid(row=0, column=4)
+range_entry = tk.Entry(frameStatus, width=4)
+range_entry.grid(row=0, column=5)
+range_entry.insert(0, 5)
+range_entry.bind("<FocusOut>", lambda event: atualizar_grafico_hora())
+
+# Crie uma caixa de seleção para o período
+periodo_var = tk.StringVar(frameStatus)
+periodo_var.set("dia")  # Valor padrão
+def atualizar_grafico_periodo_hora(*args):
+    atualizar_grafico_hora()
+
+periodo_var.trace("w", atualizar_grafico_periodo_hora)
+periodo_dropdown = tk.OptionMenu(frameStatus, periodo_var, "dia", "semana", "mes", "trimestre", "semestre", "ano")
+periodo_dropdown.grid(row=0, column=6)
+periodo_dropdown.configure(width=7)
+
+# Crie uma caixa de seleção para o método
+metodo_var = tk.StringVar(frameStatus)
+metodo_var.set("total")  # Valor padrão
+def atualizar_grafico_metodo_hora(*args):
+    atualizar_grafico_hora()
+
+metodo_var.trace("w", atualizar_grafico_metodo_hora)
+metodo_dropdown = tk.OptionMenu(frameStatus, metodo_var, "total", "média")
+metodo_dropdown.grid(row=0, column=8)
+metodo_dropdown.configure(width=6)
+atualizar_grafico_hora()
+
+
+######## Balanços BetHouses ##########
+
+# Função para atualizar o gráfico com base nos filtros selecionados
 
 
 
