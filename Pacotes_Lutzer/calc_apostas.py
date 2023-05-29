@@ -1,5 +1,9 @@
 import math
 def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var):
+    if aposta1 == '':
+        aposta1 = 0
+    if aposta2 == '':
+        aposta2 = 0
     odd_1 = (odd1 - 1) * (1 - bethouse_options1) + 1
     odd_2 = (odd2 - 1) * (1 - bethouse_options2) + 1
     odd_3 = (odd3 - 1) * (1 - bethouse_options3) + 1
@@ -25,6 +29,8 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
     if aposta1 + aposta2 + aposta3 == 0.0 or (odd2 == 0.0 and odd3 == 0.0):
         return
     if odd3 > 0.0:
+        if aposta3 == '':
+            aposta3 = 0
         mercados = [mercado1, mercado2, mercado3]
         valores = [valor1, valor2, valor3]
         if (mercado1 == mercado2 and valor1 == valor2) or (mercado1 == mercado3 and valor1 == valor3) or (mercado2 == mercado3 and valor2 == valor3):

@@ -1037,27 +1037,35 @@ def gravar():
         time_casa, time_fora = jogo_entry.get().split(" x ")
     else:
         time_casa, time_fora = "", ""
+
     def converter_esporte(sport):
-        sport.strip().split('\n')[0]
-        if sport.lower() == 'soccer' or sport.lower() == 'football':
+        sport = sport.lower().strip().split('\n')[0]
+        if sport in {'soccer', 'football', 'футбол'}:
             return 'Futebol'
-        if sport.lower() == 'basketball' or sport.lower() == 'basket':
+        elif sport in {'basketball', 'basket', 'баскетбол'}:
             return 'Basquetebol'
-        if sport.lower() == 'volleyball':
+        elif sport == 'volleyball':
             return 'Voleibol'
-        if sport.lower() == 'dota2' or sport.lower() == 'esports' or sport.lower() == 'esport' or sport.lower() == 'e-sports' or sport.lower() == 'cybersports' or sport.lower() == 'cybersports':
+        elif sport == 'бейсбол':
+            return 'Baseball'
+        elif sport in {'handball', 'гандбол'}:
+            return 'Handebol'
+        elif sport in {'dota2', 'esports', 'esport', 'e-sports', 'cybersports'}:
             return 'E-Sports'
-        if sport.lower() == 'ice hockey':
+        elif sport in {'ice hockey', 'хоккей'}:
             return 'Hockey'
-        if sport.lower() == 'tennis':
+        elif sport in {'tennis', 'теннис'}:
             return 'Tênis'
-        if sport.lower() == 'darts' or sport.lower() == 'dart':
+        elif sport in {'darts', 'dart', 'дартс'}:
             return 'Dardos'
-        if sport.lower() == 'table tennis' or sport.lower() == 'tabletennis':
+        elif sport in {'table tennis', 'tabletennis'}:
             return 'Tênis de Mesa'
-        if sport.lower() == 'boxing':
+        elif sport == 'boxing':
             return 'Boxe'
-        return sport
+        elif sport == 'футзал':
+            return 'Futsal'
+        else:
+            return sport.capitalize()
 
     if (len([odd for odd in odds if odd != 0.0]) >= 2)\
             and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1)\
@@ -1098,12 +1106,13 @@ def gravar():
 
         # Gravação dos dados no arquivo CSV e atualização da tabela
         dados = {k: str(v) if isinstance(v, datetime) else convert_to_numeric(v).strip().split('\n')[0] if isinstance(v, str) and '\n' in v else convert_to_numeric(v) for k, v in dados.items()}
+        linha = pd.DataFrame.from_dict(dados, orient='index').T
         with open("Apostas.csv", "a", newline="") as file:
             csv.writer(file).writerow(list(dados.values()))
         df_tabela = pd.concat([df_tabela, pd.DataFrame([dados.values()], columns=df_tabela.columns).replace('', np.nan)], ignore_index=True)
 
         # atualização dos dados
-        add_aposta(frameSaldos, dados)
+        add_aposta(linha)
         preencher_treeview(tabela, bethouse_options, df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela)
         resetar_variaveis()
     else:
@@ -1242,7 +1251,7 @@ def select_bets(event):
 
         # Salvar o DataFrame atualizado no arquivo Apostas.csv
         linha = df_filtrado.loc[mask].replace('\n', '', regex=True)
-        add_aposta(frameSaldos, linha, id=id_selecionado)
+        add_aposta(linha, id=id_selecionado)
         df_tabela.update(linha)
         mask_tabela = df_tabela['id'] == id_selecionado
         df_tabela.loc[mask_tabela, 'add'] = df_tabela.loc[mask_tabela, 'add'].apply(lambda x: pd.Timestamp(x).to_pydatetime())

@@ -406,8 +406,10 @@ class BetHistTreeview(ttk.Treeview):
                 lucro_perReal = round(lucroReal / somaApostas, 4)
                 df_filtrado.loc[df_filtrado['id'] == id, 'lucroReal'] = lucroReal
                 df_filtrado.loc[df_filtrado['id'] == id, 'lucro_perReal'] = lucro_perReal
+                linha = df_filtrado.loc[df_filtrado['id'] == id]
                 df_tabela.update(df_filtrado.loc[df_filtrado.index[df_filtrado['id'] == id], ['resultado1', 'resultado2', 'resultado3', 'lucroReal', 'lucro_perReal']])
                 df_tabela.to_csv('Apostas.csv', index=False)
+                add_aposta(linha, id=linha['id'].values[0])
                 preencher_treeview(self, bethouse_options, df_tabela, self.situation_vars, self.order_button1, self.order_button2, self.time_button, self.timeframe_combobox, self.frameTabela)
                 self.canvas1.place_forget()
 
@@ -556,25 +558,39 @@ def tabela_bethouses(parent, dataframes, dataframes_deposito):
     # Adicionando o evento de clique com o botão direito do mouse ao treeview
     treeview.bind('<Button-2>', show_menu)
 
-def add_aposta(frameSaldos, dados, id=None):
-    global df_saldos_bethouses, df_depositos_bethouses, bethouse_options
+def add_aposta(dados, id=None):
+    global df_saldos_bethouses, df_depositos_bethouses, bethouse_options, frameSaldos
+    df_saldos_bethouses['BWin'].tail()
     # Extrair dados para 'bethouse1'
-    try:
-        bethouse1 = dados['bethouse1'].iloc[0]
-    except AttributeError:
-        bethouse1 = dados['bethouse1']
+    bethouse1 = dados['bethouse1'].iloc[0]
+
+    def balance(row, num):
+        odd = float(row[f'odd{num}'].values[0])
+        aposta = float(row[f'aposta{num}'].values[0])
+        taxa = bethouse_options[row[f'bethouse{num}'].values[0]]['taxa']
+        resultado = row[f'resultado{num}'].values[0]
+        odd_real = float((odd - 1) * (1 - taxa) + 1 if row[f'mercado{num}'].values[0] != 'Lay' else (odd / (odd - 1) -1) * (1 - taxa) + 1)
+        if resultado == 'win':
+            return odd_real * aposta - aposta
+        elif resultado == 'half-win':
+            return aposta / 2 + aposta / 2 * odd_real - aposta
+        elif resultado == 'return':
+            return 0
+        elif resultado == 'half-loss':
+            return aposta / 2 - aposta
+        else:
+            return -aposta
 
     new_row = {
-        'id': dados['id'],
-        'data_entrada': pd.to_datetime(dados['add']),
-        'data_fim': pd.to_datetime(dados['datetime']),
+        'id': dados['id'].values[0],
+        'data_entrada': pd.to_datetime(dados['add'].values[0]),
+        'data_fim': pd.to_datetime(dados['datetime'].values[0]),
         'bethouse': bethouse1,
-        'odd': float(dados['odd1']),
-        'aposta': float(dados['aposta1']),
-        'resultado': np.nan,
-        'balanco': -float(dados['aposta1'])
+        'odd': float(dados['odd1'].values[0]),
+        'aposta': float(dados['aposta1'].values[0]),
+        'resultado': dados['resultado1'].values[0],
+        'balanco': balance(dados, num=1)
     }
-
     if id:
         mask = df_saldos_bethouses[bethouse1]['id'] == id
         df_saldos_bethouses[bethouse1].loc[mask, 'resultado'] = new_row['resultado']
@@ -589,11 +605,9 @@ def add_aposta(frameSaldos, dados, id=None):
             new_row_index = [new_index]
             df_saldos_bethouses[bethouse1] = pd.concat(
                 [df_saldos_bethouses[bethouse1], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
     # Extrair dados para 'bethouse2'
-    try:
-        bethouse2 = dados['bethouse2'].iloc[0]
-    except AttributeError:
-        bethouse2 = dados['bethouse2']
+    bethouse2 = dados['bethouse2'].iloc[0]
     new_row = {
         'id': dados['id'],
         'data_entrada': pd.to_datetime(dados['add']),
@@ -601,8 +615,8 @@ def add_aposta(frameSaldos, dados, id=None):
         'bethouse': bethouse2,
         'odd': float(dados['odd2']),
         'aposta': float(dados['aposta2']),
-        'resultado': np.nan,
-        'balanco': -float(dados['aposta2'])
+        'resultado': dados['resultado2'].values[0],
+        'balanco': balance(dados, num=2)
     }
 
     if id:
@@ -620,10 +634,7 @@ def add_aposta(frameSaldos, dados, id=None):
                 [df_saldos_bethouses[bethouse2], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
 
     # Extrair dados para 'bethouse3' (se existir)
-    try:
-        bethouse3 = dados['bethouse3'].iloc[0]
-    except AttributeError:
-        bethouse3 = dados['bethouse3']
+    bethouse3 = dados['bethouse3'].iloc[0]
     if bethouse3 in df_saldos_bethouses:
         new_row = {
             'id': dados['id'],
@@ -632,8 +643,8 @@ def add_aposta(frameSaldos, dados, id=None):
             'bethouse': bethouse3,
             'odd': float(dados['odd3']),
             'aposta': float(dados['aposta3']),
-            'resultado': np.nan,
-            'balanco': -float(dados['aposta3'])
+            'resultado': dados['resultado3'].values[0],
+            'balanco': balance(dados, num=3)
         }
         if id:
             mask = df_saldos_bethouses[bethouse3]['id'] == id
@@ -648,20 +659,31 @@ def add_aposta(frameSaldos, dados, id=None):
             df_saldos_bethouses[bethouse3] = pd.concat(
                 [df_saldos_bethouses[bethouse3], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
 
+    df_saldos_bethouses['BWin'].tail()
     tabela_bethouses(frameSaldos, df_saldos_bethouses, df_depositos_bethouses)
 
-
-def calculate_balance(row):
-    if row['resultado'] == 'win':
-        return row['odd_real'] * row['aposta'] - row['aposta']
-    elif row['resultado'] == 'half-win':
-        return row['aposta'] / 2 + row['aposta'] / 2 * row['odd_real'] - row['aposta']
-    elif row['resultado'] == 'return':
-        return 0
-    elif row['resultado'] == 'half-loss':
-        return row['aposta'] / 2 - row['aposta']
+def calculate_balance(row, num=''):
+    if num == '':
+        aposta = row['aposta']
+        resultado = row['resultado']
+        odd_real = row['odd_real']
     else:
-        return -row['aposta']
+        odd = float(row[f'odd{num}'].values[0])
+        aposta = float(row[f'aposta{num}'].values[0])
+        resultado = row[f'resultado{num}'].values[0]
+        taxa = bethouse_options[row[f'bethouse{num}'].values[0]]['taxa']
+        odd_real = float((odd - 1) * (1 - taxa) + 1 if row[f'mercado{num}'].values[0] != 'Lay' else (odd / (odd - 1) - 1) * (1 - taxa) + 1)
+    if resultado == 'win':
+        return odd_real * aposta - aposta
+    elif resultado == 'half-win':
+        return aposta / 2 + aposta / 2 * odd_real - aposta
+    elif resultado == 'return':
+        return 0
+    elif resultado == 'half-loss':
+        return aposta / 2 - aposta
+    else:
+        return -aposta
+
 
 def expand_df(df):
     global bethouse_options
@@ -685,8 +707,9 @@ def expand_df(df):
     new_df['data_entrada'] = pd.to_datetime(new_df['data_entrada'])
     new_df['data_fim'] = pd.to_datetime(new_df['data_fim'])
     return new_df
-def gerar_saldos(frameSaldos, options, df):
-    global df_tabela, bethouse_options, df_saldos_bethouses, df_depositos_bethouses
+def gerar_saldos(frame, options, df):
+    global df_tabela, bethouse_options, df_saldos_bethouses, df_depositos_bethouses, frameSaldos
+    frameSaldos = frame
     df_tabela = df
     bethouse_options = options
     df_depositos = pd.read_csv("./movimentacao.csv")
