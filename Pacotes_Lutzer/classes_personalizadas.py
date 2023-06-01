@@ -159,15 +159,13 @@ def filter_selection(df_tabela, situation_vars, order_button1, order_button2, ti
             df_filtrado = df_filtrado[(df_filtrado['add'] <= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(year=1))]
 
     df_vencidas = df_tabela[((df_tabela['resultado1'].isna() | df_tabela['resultado2'].isna()) & ((df_tabela['bethouse3'].notna() & (df_tabela['resultado1'].isna() | df_tabela['resultado2'].isna() | df_tabela[ 'resultado3'].isna())) | (df_tabela['bethouse3'].isna()))) & (df_tabela['datetime'].apply(lambda x: x + timedelta(hours=2)) < datetime.now())]
+    frame = tk.Canvas(frameTabela, width=20, height=20, highlightthickness=0)
     if len(df_vencidas) == 0:
-        pass
+        frame.delete()
     else:
-        frame = tk.Canvas(frameTabela, width=20, height=20, highlightthickness=0)
         frame.create_oval(0, 0, 20, 20, fill="red")
         frame.create_text(10, 10, text=len(df_vencidas), fill="white", font=("Arial", 15, "bold"))
         frame.place(x=405, y=0)
-    #linhas_label = tk.Label(frameTabela, text=len(df_filtrado))
-    #linhas_label.grid(row=0, column=5)
 
     # Exibir o resultado
     return df_filtrado

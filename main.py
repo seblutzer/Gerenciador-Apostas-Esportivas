@@ -817,9 +817,10 @@ def on_valor_combobox_selected(event):
     elif mercado_var.get().startswith('T'):
         if num_bets == 2 and mercado_var2.get().startswith('T'):
             valor_var2.set(float_error(valor_var))
-        elif num_bets == 3 and float_error(valor_var).is_integer() and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
-            valor_var2.set(valor_var.get() - 0.5)
-            valor_var3.set(valor_var.get() + 0.5)
+        elif num_bets == 3 and (float_error(valor_var).is_integer() or (float_error(valor_var)-0.25).is_integer() or (float_error(valor_var)-0.75).is_integer()) and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
+            arred_valor = round(valor_var.get(), 0)
+            valor_var2.set(arred_valor - 0.5)
+            valor_var3.set(arred_valor + 0.5)
     elif mercado_var.get().startswith('AH') and mercado_var2.get().startswith('AH'):
         if num_bets == 2:
             valor_var2.set(-valor_var.get())
@@ -1334,6 +1335,9 @@ configStyle = ttk.Style()
 configStyle.configure("Normal.Treeview", rowheight=20)
 
 gerar_saldos(frameSaldos, bethouse_options, df_tabela)
+
+
+
 
 #––––––––––––––––––––––––––––––––––––––# GRÁFICOS #––––––––––––––––––––––––––––––––––––––
 # Defina as colunas_agg, colun_data e metodos
