@@ -1,13 +1,12 @@
 import pandas as pd
 
-
 def convert_to_numeric(value):
     try:
         return int(value)
-    except ValueError:
+    except (TypeError, ValueError):
         try:
             return float(value)
-        except ValueError:
+        except (TypeError, ValueError):
             return value
 
 def convert_mes(valor, extenso=False):
@@ -45,3 +44,33 @@ def convert_ms_to_datetime(file, column):
         lambda x: pd.to_datetime(int(x)/10**9, unit='s') if str(x).startswith("16") else x)
     dataframe.to_csv("Apostas.csv", index=False)
     return dataframe
+
+
+def converter_esporte(sport):
+    sport = sport.lower().strip().split('\n')[0]
+    if sport in {'soccer', 'football', 'футбол'}:
+        return 'Futebol'
+    elif sport in {'basketball', 'basket', 'баскетбол'}:
+        return 'Basquetebol'
+    elif sport == 'volleyball':
+        return 'Voleibol'
+    elif sport == 'бейсбол':
+        return 'Baseball'
+    elif sport in {'handball', 'гандбол'}:
+        return 'Handebol'
+    elif sport in {'dota2', 'esports', 'esport', 'e-sports', 'cybersports'}:
+        return 'E-Sports'
+    elif sport in {'ice hockey', 'хоккей'}:
+        return 'Hockey'
+    elif sport in {'tennis', 'теннис'}:
+        return 'Tênis'
+    elif sport in {'darts', 'dart', 'дартс'}:
+        return 'Dardos'
+    elif sport in {'table tennis', 'tabletennis'}:
+        return 'Tênis de Mesa'
+    elif sport == 'boxing':
+        return 'Boxe'
+    elif sport == 'футзал':
+        return 'Futsal'
+    else:
+        return sport.capitalize()

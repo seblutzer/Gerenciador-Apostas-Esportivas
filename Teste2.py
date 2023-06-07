@@ -1,67 +1,39 @@
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import pandas as pd
-import matplotlib.pyplot as plt
-from tkinter import Tk, Button, Frame
-from main import df_saldos_bethouses
+import tkinter as tk
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import plotly.io as pio
 
-# Função para atualizar o gráfico com base nos filtros selecionados
-def update_graph():
-    range_val = int(range_val_entry.get())
-    periodo_tempo = periodo_tempo_var.get()
+def plot_grafico():
+    # Dados de exemplo
+    x = ['A', 'B', 'C', 'D']
+    y = [10, 20, 30, 40]
 
-    filtered_dfs = {}
-    for bethouse, df in df_saldos_bethouses.items():
-        if periodo_tempo == 'dia':
-            filtered_df = df.tail(range_val)
-        elif periodo_tempo == 'semana':
-            filtered_df = df.resample('W').last().tail(range_val)
-        elif periodo_tempo == 'mês':
-            filtered_df = df.resample('M').last().tail(range_val)
-        elif periodo_tempo == 'ano':
-            filtered_df = df.resample('Y').last().tail(range_val)
-        filtered_dfs[bethouse] = filtered_df
+    # Criar o gráfico de barras
+    fig = go.Figure(data=go.Bar(x=x, y=y))
 
-    # Criar o gráfico de linhas
-    plt.figure(figsize=(10, 6))
-    for bethouse, df in filtered_dfs.items():
-        plt.plot(df.index, df['saldo_diario'], label=bethouse)
-    plt.xlabel('Data')
-    plt.ylabel('Saldo Diário')
-    plt.legend()
+    # Configurar o layout do gráfico
+    fig.update_layout(title="Gráfico de Barras Interativo")
 
-    # Atualizar o gráfico no frameStats
-    canvas = FigureCanvasTkAgg(plt.gcf(), master=frameStats)
-    canvas.draw()
-    canvas.get_tk_widget().grid(row=2, column=0, padx=10, pady=10)
+    # Criar a nova janela
+    window = tk.Toplevel(root)
 
-# Criar a window
-window = Tk()
+    # Converter o gráfico para HTML
+    fig_html = pio.to_html(fig, full_html=False)
 
-# Criar o frameStats
-frameStats = Frame(window)
-frameStats.grid(row=0, column=0)
+    # Exibir o gráfico no componente Plotly
+    plotly_component = tk.Frame(window, width=800, height=600)
+    plotly_component.grid(row=0, column=0, padx=10, pady=10)
+    plotly_component.winfo_toplevel().title("Gráfico Interativo")
 
-# Criar o entry e o label para range_val
-range_val_label = Label(frameStats, text="range_val:")
-range_val_label.grid(row=0, column=0)
-range_val_entry = Entry(frameStats)
-range_val_entry.grid(row=0, column=1)
+    # Carregar o HTML do gráfico no componente Plotly
+    browser = pio.renderers._utils.Browser()
+    browser.open("about:blank")
+    browser.window.document.write(fig_html)
+    plotly_component.bind("<Destroy>", lambda event: browser.close())
 
-# Criar o radio button para periodo_tempo
-periodo_tempo_var = StringVar()
-dia_radio = Radiobutton(frameStats, text="Dia", variable=periodo_tempo_var, value="dia")
-dia_radio.grid(row=1, column=0)
-semana_radio = Radiobutton(frameStats, text="Semana", variable=periodo_tempo_var, value="semana")
-semana_radio.grid(row=1, column=1)
-mes_radio = Radiobutton(frameStats, text="Mês", variable=periodo_tempo_var, value="mês")
-mes_radio.grid(row=1, column=2)
-ano_radio = Radiobutton(frameStats, text="Ano", variable=periodo_tempo_var, value="ano")
-ano_radio.grid(row=1, column=3)
+root = tk.Tk()
 
-# Criar o botão para atualizar o gráfico
-update_button = Button(frameStats, text="Atualizar Gráfico", command=update_graph)
-update_button.grid(row=1, column=4)
+plot_button = tk.Button(root, text="Plotar Gráfico", command=plot_grafico)
+plot_button.pack(pady=10)
 
-# Iniciar a window
-window.mainloop()
-
+root.mainloop()

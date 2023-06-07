@@ -4,25 +4,19 @@ from tkinter import messagebox
 from tkinter import *
 import datetime
 from datetime import datetime, timedelta
+import csv
 import pandas as pd
 from Pacotes_Lutzer.convert import convert_mes
 from Pacotes_Lutzer.validate import validate_num, on_entry_change
 import os
-import re
 import numpy as np
-import sqlite3
 
-def import_df_filtrado():
-    return df_filtrado
-def preencher_treeview(conn, tabela, options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=None):
-    global bethouse_options, df_filtrado
+
+def preencher_treeview(tabela, options, df_base, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela):
+    global df_filtrado, df_tabela, bethouse_options
     bethouse_options = options
-
-    # Montar a consulta SQL com base nas variáveis de situação e filtro
-    query = filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela)
-    # Executar a consulta SQL e obter o resultado como DataFrame
-    df_filtrado = pd.read_sql_query(query, conn)
-
+    df_tabela = df_base
+    df_filtrado = filter_selection(df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela)
     # Limpar o conteúdo atual do Treeview
     tabela.delete(*tabela.get_children())
 
@@ -35,8 +29,7 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
     for i, row in df_filtrado.iterrows():
         id = row['id']
         jogo = f"{row['time_casa']}\n{row['time_fora']}"
-        data_jogo = datetime.strptime(row['data_jogo'], '%Y-%m-%d %H:%M:%S')
-        data = "{:02d}/{}\n{:02d}:{:02d}".format(data_jogo.day, convert_mes(data_jogo.month), data_jogo.hour, data_jogo.minute)
+        data = "{:02d}/{}\n{:02d}:{:02d}".format(row['data_jogo'].day, convert_mes(row['data_jogo'].month), row['data_jogo'].hour,row['data_jogo'].minute)
         def show_results(resultados):
             if resultados == "win":
                 return "W"
@@ -57,13 +50,11 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
         bethouses = f"{row['bethouse1']}\n{row['bethouse2']}"
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             bethouses += f"\n{row['bethouse3']}"
-        odds = "{:.3f}".format(float(row['odd1'])).rstrip('0').rstrip('.') + "\n{:.3f}".format(
-            float(row['odd2'])).rstrip('0').rstrip('.')
+        odds = "{:.3f}".format(float(row['odd1'])).rstrip('0').rstrip('.') + "\n{:.3f}".format(float(row['odd2'])).rstrip('0').rstrip('.')
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             odds += "\n{:.3f}".format(float(row['odd3'])).rstrip('0').rstrip('.')
         apostas = f"R$ {float(row['aposta1']):.2f}" if isinstance(float(row['aposta1']), (float, int)) else f"\nR$ 0.00"
-        apostas += f"\nR$ {float(row['aposta2']):.2f}" if isinstance(float(row['aposta2']),
-                                                                     (float, int)) else f"\nR$ 0.00"
+        apostas += f"\nR$ {float(row['aposta2']):.2f}" if isinstance(float(row['aposta2']), (float, int)) else f"\nR$ 0.00"
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             apostas += f"\nR$ {float(row['aposta3']):.2f}" if isinstance(float(row['aposta3']), (float, int)) else ""
         mercados = str(row['mercado1'])
@@ -88,116 +79,105 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
                     mercados += "({:.2f}".format(valor3).rstrip('0').rstrip('.') + ")"
                 else:
                     mercados += valor3
-        data_entrada = datetime.strptime(row['data_entrada'], '%Y-%m-%d %H:%M:%S')
-        adds = "{:02d}/{}".format(data_entrada.day, convert_mes(data_entrada.month))
+        adds = "{:02d}/{}".format(row['data_entrada'].day, convert_mes(row['data_entrada'].month))
 
         # Add alternating background colors to rows
         if index % 2 == 0:
-            tabela.insert("", "end",
-                          values=(index, adds, jogo, data, resultados, bethouses, odds, apostas, mercados, id),
-                          tags=("linha_par",))
+            tabela.insert("", "end", values=(index, adds, jogo, data, resultados, bethouses, odds, apostas, mercados, id), tags=("linha_par",))
         else:
-            tabela.insert("", "end",
-                          values=(index, adds, jogo, data, resultados, bethouses, odds, apostas, mercados, id),
-                          tags=("linha_impar",))
+            tabela.insert("", "end", values=(index, adds, jogo, data, resultados, bethouses, odds, apostas, mercados, id), tags=("linha_impar",))
         index += 1
 
-    if bethouse_list == set():
+
+def filter_selection(df_tabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, frameTabela):
+    global df_filtrado
+    # Cria uma cópia do dataframe para não modificar o original
+
+    df_filtrado = df_tabela.copy()
+
+    df_filtrado['data_entrada'] = pd.to_datetime(df_filtrado['data_entrada'])
+    df_filtrado['data_jogo'] = pd.to_datetime(df_filtrado['data_jogo'])
+    df_tabela['data_jogo'] = pd.to_datetime(df_tabela['data_jogo'])
+
+    # Cria máscaras booleanas para cada situação
+    mask_abertas = ((df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna()) & ((df_filtrado['bethouse3'].notna() & (df_filtrado['resultado1'].isna() | df_filtrado['resultado2'].isna() | df_filtrado[ 'resultado3'].isna())) | (df_filtrado['bethouse3'].isna())))
+
+    mask_vencidas = mask_abertas & (df_filtrado['data_jogo'].apply(lambda x: x + timedelta(hours=2)) < datetime.now())
+
+    mask_fechadas = ((df_filtrado['resultado1'].notna() & df_filtrado['resultado2'].notna()) & ((df_filtrado['bethouse3'].notna() & df_filtrado['resultado3'].notna()) | (df_filtrado['bethouse3'].isna())))
+    # Aplica as máscaras conforme as opções selecionadas pelo usuário
+    if situation_vars[1].get() and situation_vars[2].get():
         pass
-    else:
-        tabela_bethouses(frameSaldos, conn, bethouse_list=bethouse_list)
-
-def filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela):
-    # Aplicar os filtros diretamente na consulta SQL
-    query = "SELECT * FROM apostas WHERE "
-
-    aberta = "((bethouse3 IS NULL AND (resultado1 IS NULL OR resultado2 IS NULL)) OR (bethouse3 IS NOT NULL AND (resultado1 IS NULL OR resultado2 IS NULL OR resultado3 IS NULL)))"
-    vencida = f"{aberta} AND data_jogo <= datetime('now', '-5 hour')" #horário UTC, então precisa de acrescer -3 para o nosso fuso.
-    fechada = "((bethouse3 IS NULL AND resultado1 IS NOT NULL AND resultado2 IS NOT NULL) OR (bethouse3 IS NOT NULL AND resultado1 IS NOT NULL AND resultado2 IS NOT NULL AND resultado3 IS NOT NULL))"
-    if all(situation_vars[i].get() for i in [1, 2]) or not any(situation_vars[i].get() for i in [0, 1, 2]):
-        query += "1 = 1"  # Nenhum filtro aplicado
     elif situation_vars[0].get() and situation_vars[2].get():
-        query += f"{vencida} OR {fechada}"
+        df_filtrado = df_filtrado[mask_vencidas | mask_fechadas]
     elif situation_vars[0].get():
-        query += vencida
+        df_filtrado = df_filtrado[mask_vencidas]
     elif situation_vars[1].get():
-        query += aberta
+        df_filtrado = df_filtrado[mask_abertas]
     elif situation_vars[2].get():
-        query += fechada
+        df_filtrado = df_filtrado[mask_fechadas]
 
-    count_query = f"SELECT COUNT(*) FROM apostas WHERE {vencida}"
-    c = conn.cursor()
-    c.execute(count_query)
-    result = c.fetchone()
-    num_vencidas = result[0]
+    # Ordenação
+    if order_button1["text"] == "Crescente" and order_button2["text"] == "Data":
+        df_filtrado = df_filtrado.sort_values(by=['data_jogo'])
+    elif order_button1["text"] == "Decrescente" and order_button2["text"] == "Data":
+        df_filtrado = df_filtrado.sort_values(by=['data_jogo'], ascending=False)
+    elif order_button1["text"] == "Crescente" and order_button2["text"] == "Adição":
+        df_filtrado = df_filtrado.sort_values(by=['id'])
+    else:  # Decrescente e Adição
+        df_filtrado = df_filtrado.sort_values(by=['id'], ascending=False)
 
     # Filtro de tempo
     if time_button["text"] == "Vencem até":
         if timeframe_combobox.get() == "hoje":
-            query += " AND (DATE(data_jogo) = DATE('now'))"
+            current_datetime = datetime.now()
+            df_filtrado = df_filtrado[df_filtrado['data_jogo'].dt.date == current_datetime.date()]
         elif timeframe_combobox.get() == "amanhã":
-            query += " AND (DATE(data_jogo) <= DATE('now', '+1 day'))"
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(days=1)
+            df_filtrado = df_filtrado[df_filtrado['data_jogo'] <= end_datetime]
         elif timeframe_combobox.get() == "1 semana":
-            query += " AND (DATE(data_jogo) <= DATE('now', 'weekday 0', '+7 days'))"
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(weeks=1)
+            df_filtrado = df_filtrado[df_filtrado['data_jogo'] <= end_datetime]
         elif timeframe_combobox.get() == "1 mês":
-            query += " AND (DATE(data_jogo) <= DATE('now', 'start of month', '+31 days'))"
+            end_datetime = datetime.now().replace(hour=0, minute=0) + timedelta(days=30)
+            df_filtrado = df_filtrado[df_filtrado['data_jogo'] <= end_datetime]
     else:
         if timeframe_combobox.get() == "hoje":
-            query += " AND (DATE(data_entrada) >= DATE('now'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(hour=0, minute=0))]
         elif timeframe_combobox.get() == "ontem":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-1 day'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(days=1))]
         elif timeframe_combobox.get() == "1 semana":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'weekday 0', '-7 days'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(weeks=1))]
         elif timeframe_combobox.get() == "1 mês":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'start of month'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(day=1, hour=0, minute=0))]
         elif timeframe_combobox.get() == "30 dias":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-30 day'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(days=30))]
         elif timeframe_combobox.get() == "6 meses":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-6 month'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(months=6))]
         elif timeframe_combobox.get() == "esse ano":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'start of year'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] >= datetime.now().replace(day=1, month=1, hour=0, minute=0))]
         elif timeframe_combobox.get() == "365 dias":
-            query += " AND (DATE(data_entrada) <= DATE('now', '-1 year'))"
+            df_filtrado = df_filtrado[(df_filtrado['data_entrada'] <= datetime.now().replace(hour=0, minute=0) - pd.DateOffset(year=1))]
 
-    if search_var.get() == '':
-        pass
+    df_vencidas = df_tabela[((df_tabela['resultado1'].isna() | df_tabela['resultado2'].isna()) & ((df_tabela['bethouse3'].notna() & (df_tabela['resultado1'].isna() | df_tabela['resultado2'].isna() | df_tabela[ 'resultado3'].isna())) | (df_tabela['bethouse3'].isna()))) & (df_tabela['data_jogo'].apply(lambda x: x + timedelta(hours=2)) < datetime.now())]
+    frame = tk.Canvas(frameTabela, width=20, height=20, highlightthickness=0)
+    if len(df_vencidas) == 0:
+        frame.delete()
     else:
-        # Obtém a palavra-chave da variável de controle
-        palavra_chave = search_var.get()
-        # Adiciona o filtro de pesquisa aos campos desejados
-        query += f" AND (id LIKE '%{palavra_chave}%' OR data_entrada LIKE '%{palavra_chave}%' OR data_jogo LIKE '%{palavra_chave}%' OR time_casa LIKE '%{palavra_chave}%' OR time_fora LIKE '%{palavra_chave}%' OR bethouse1 LIKE '%{palavra_chave}%' OR mercado1 LIKE '%{palavra_chave}%' OR valor1 LIKE '%{palavra_chave}%' OR odd1 LIKE '%{palavra_chave}%' OR aposta1 LIKE '%{palavra_chave}%' OR bethouse2 LIKE '%{palavra_chave}%' OR mercado2 LIKE '%{palavra_chave}%' OR valor2 LIKE '%{palavra_chave}%' OR odd2 LIKE '%{palavra_chave}%' OR aposta2 LIKE '%{palavra_chave}%' OR bethouse3 LIKE '%{palavra_chave}%' OR mercado3 LIKE '%{palavra_chave}%' OR valor3 LIKE '%{palavra_chave}%' OR odd3 LIKE '%{palavra_chave}%' OR aposta3 LIKE '%{palavra_chave}%' OR esporte LIKE '%{palavra_chave}%')"
-
-    # Ordenação
-    if order_button1["text"] == "Crescente" and order_button2["text"] == "Data":
-        query += " ORDER BY data_jogo ASC"
-    elif order_button1["text"] == "Decrescente" and order_button2["text"] == "Data":
-        query += " ORDER BY data_jogo DESC"
-    elif order_button1["text"] == "Crescente" and order_button2["text"] == "Adição":
-        query += " ORDER BY id ASC"
-    else:  # Decrescente e Adição
-        query += " ORDER BY id DESC"
-
-    frame = tk.Canvas(frameTabela, width=16, height=16, highlightthickness=0)
-    if num_vencidas == 0:
-        frame.place_forget()
-    else:
-        frame.create_oval(0, 0, 15, 15, fill="red")
-        frame.create_text(8, 8, text=num_vencidas, fill="white", font=("Arial", 12, "bold"))
-        frame.place(x=412, y=0)
+        frame.create_oval(0, 0, 20, 20, fill="red")
+        frame.create_text(10, 10, text=len(df_vencidas), fill="white", font=("Arial", 15, "bold"))
+        frame.place(x=405, y=0)
 
     # Exibir o resultado
-    return query
-
+    return df_filtrado
 class BetHistTreeview(ttk.Treeview):
-    def __init__(self, master=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, search_var=None, frameTabela=None, frameSaldos=None, conn=None, **kw):
+    def __init__(self, master=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, frameTabela=None, frameSaldos=None, **kw):
         ttk.Treeview.__init__(self, master, **kw)
         self.situation_vars = situation_vars
         self.order_button1 = order_button1
         self.order_button2 = order_button2
         self.time_button = time_button
         self.timeframe_combobox = timeframe_combobox
-        self.conn = conn
-        self.search_var = search_var
         self.frameTabela = frameTabela
         self.frameSaldos = frameSaldos
         self.bind("<<TreeviewSelect>>", self.on_select)
@@ -217,11 +197,11 @@ class BetHistTreeview(ttk.Treeview):
         self.current_icons = {}
         self.clicked_row = None
 
-    def update_icons(self):
+    def update_icons(self, tabela_filtrada):
         for row in self.get_children():
             item = self.item(row)
             id = item['values'][9]
-            df_row = df_filtrado.loc[df_filtrado['id'] == id]
+            df_row = tabela_filtrada.loc[tabela_filtrada['id'] == id]
             for i in range(1, 4):
                 resultado = df_row[f'resultado{i}'].values[0]
                 icon = self.get_icon_from_result(resultado)
@@ -379,8 +359,7 @@ class BetHistTreeview(ttk.Treeview):
         df_row = df_filtrado.loc[df_filtrado['id'] == id]
 
         def save_results():
-            global bethouse_options
-            c = self.conn.cursor()
+            global df_saldos_bethouses, bethouse_options
             if pd.isna(df_row['resultado1'].values[0]) or pd.isna(df_row['resultado2'].values[0]) or (
                     len(item['values'][3].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
                 messagebox.showinfo("Aviso", "Preencha todos os resultados do jogo!")
@@ -398,54 +377,39 @@ class BetHistTreeview(ttk.Treeview):
                         return 1 / odd
                     else:
                         return 0
-                odd = {}  # Dicionários para armazenar os valores calculados
-                retornos = []
+
+                somaApostas = float(df_row['aposta1'].values[0]) + float(df_row['aposta2'].values[0]) + (float(df_row['aposta3'].values[0]) if df_row['bethouse3'].values[0] in bethouse_options.keys() else 0)
+                odd = {}  # Dicionário para armazenar os valores calculados
                 for i in range(1, 4 if df_row['bethouse3'].values[0] in bethouse_options.keys() else 3):
                     if df_row[f'mercado{i}'].values[0] == "Lay":
                         odd[i] = (float(df_row[f'odd{i}'].values[0]) / (float(df_row[f'odd{i}'].values[0]) - 1) - 1) * (1 - float(bethouse_options[df_row[f'bethouse{i}'].values[0]]['taxa'])) + 1
                     else:
                         odd[i] = (float(df_row[f'odd{i}'].values[0]) - 1) * (1 - float(bethouse_options[df_row[f'bethouse{i}'].values[0]]['taxa'])) + 1
-                    if f'aposta{i}' in df_row.columns and f'resultado{i}' in df_row.columns:
-                        retorno = round(float(df_row[f'aposta{i}'].values[0]) * odd[i] * calculate_fator_resultado(df_row[f'resultado{i}'].values[0], odd[i]) - float(df_row[f'aposta{i}'].values[0]), 2)
-                        retornos.append(retorno)
-                somaApostas = float(df_row['aposta1'].values[0]) + float(df_row['aposta2'].values[0]) + (float(df_row['aposta3'].values[0]) if df_row['bethouse3'].values[0] in bethouse_options.keys() else 0)
-                lucro_real = round(sum(retornos), 2)
-                lucro_per_real = round(lucro_real / somaApostas, 4)
-                bethouse_list = {valor for valor in [df_row['bethouse1'].values[0], df_row['bethouse2'].values[0],df_row['bethouse3'].values[0]] if valor}
+                retorno1 = round(float(df_row['aposta1'].values[0]) * odd[1] * calculate_fator_resultado(df_row['resultado1'].values[0], odd[1]), 2)
+                retorno2 = round(float(df_row['aposta2'].values[0]) * odd[2] * calculate_fator_resultado(df_row['resultado2'].values[0], odd[2]), 2)
+                retorno3 = round(float(df_row['aposta3'].values[0]) * odd[3] * calculate_fator_resultado(df_row['resultado3'].values[0], odd[3]) if df_row['bethouse3'].values[0] in bethouse_options.keys() else 0, 2)
 
-                # Atualizar a linha correspondente na tabela apostas do dados.db
-                query = f'''
-                UPDATE apostas
-                SET lucro_real = {lucro_real}, 
-                    lucro_per_real = {lucro_per_real},
-                    resultado1 = '{df_row['resultado1'].values[0]}', 
-                    resultado2 = '{df_row['resultado2'].values[0]}',
-                    resultado3 = '{df_row['resultado3'].values[0]}'
-                WHERE id = {df_row['id'].values[0]}
-                '''
-                c.execute(query)
+                mask = df_saldos_bethouses[df_row['bethouse1'].values[0]]['id'] == df_row['id'].values[0]
+                df_saldos_bethouses[df_row['bethouse1'].values[0]].loc[mask, 'resultado'] = df_row['resultado1'].values[0]
 
-                for i in range(1, 4 if df_row['bethouse3'].values[0] in bethouse_options.keys() else 3):
-                    bethouse_key = df_row[f'bethouse{i}'].values[0]
-                    resultado = df_row[f'resultado{i}'].values[0]
-                    # Modificar o nome da tabela substituindo caracteres não permitidos por sublinhado (_)
-                    table_name = f"{bethouse_key}_saldos"
-                    table_name = re.sub(r'\W+', '_', table_name)
-                    # Atualizar a linha correspondente na tabela {bethouse}_saldos do dados.db
-                    query = f'''
-                    UPDATE "{table_name}"
-                    SET resultado = '{resultado}', 
-                        balanco = {retornos[i-1]}, 
-                        dif_real = {retornos[i-1]}
-                    WHERE id = {df_row['id'].values[0]} AND 
-                        odd = {str(df_row[f'odd{i}'].values[0]).rstrip('0').rstrip('.')} AND 
-                        aposta = {str(df_row[f'aposta{i}'].values[0]).rstrip('0').rstrip('.')}
-                    '''
-                    c.execute(query)
+                mask = df_saldos_bethouses[df_row['bethouse2'].values[0]]['id'] == df_row['id'].values[0]
+                df_saldos_bethouses[df_row['bethouse2'].values[0]].loc[mask, 'resultado'] = df_row['resultado2'].values[0]
 
-                # Commit das alterações
-                self.conn.commit()
-                preencher_treeview(self.conn, self, bethouse_options, self.situation_vars, self.order_button1, self.order_button2, self.time_button, self.timeframe_combobox, self.search_var, self.frameTabela, self.frameSaldos, bethouse_list=bethouse_list)
+                if df_row['bethouse3'].values[0] in bethouse_options:
+                    mask = df_saldos_bethouses[df_row['bethouse3'].values[0]]['id'] == df_row['id'].values[0]
+                    df_saldos_bethouses[df_row['bethouse3'].values[0]].loc[mask, 'resultado'] = df_row['resultado3'].values[0]
+
+                tabela_bethouses(self.frameSaldos, df_saldos_bethouses, df_depositos_bethouses)
+                somaRetornos = round(retorno1 + retorno2 + retorno3, 2)
+                lucroReal = round(somaRetornos - somaApostas, 2)
+                lucro_perReal = round(lucroReal / somaApostas, 4)
+                df_filtrado.loc[df_filtrado['id'] == id, 'lucroReal'] = lucroReal
+                df_filtrado.loc[df_filtrado['id'] == id, 'lucro_perReal'] = lucro_perReal
+                linha = df_filtrado.loc[df_filtrado['id'] == id]
+                df_tabela.update(df_filtrado.loc[df_filtrado.index[df_filtrado['id'] == id], ['resultado1', 'resultado2', 'resultado3', 'lucroReal', 'lucro_perReal']])
+                df_tabela.to_csv('Apostas.csv', index=False)
+                add_aposta(linha, id=linha['id'].values[0])
+                preencher_treeview(self, bethouse_options, df_tabela, self.situation_vars, self.order_button1, self.order_button2, self.time_button, self.timeframe_combobox, self.frameTabela)
                 self.canvas1.place_forget()
 
                 def show_message(title, message):
@@ -467,12 +431,10 @@ class BetHistTreeview(ttk.Treeview):
         next_index = (index + 1) % len(resultados)
         return resultados[next_index]
 
-def tabela_bethouses(parent, conn, bethouse_list=None):
-    global bethouse_options, cache
-    if bethouse_list is None:
-        bethouse_list = bethouse_options.keys()
-        cache = {}
-    c = conn.cursor()
+def tabela_bethouses(parent, dataframes, dataframes_deposito):
+    global df_saldos_bethouses, df_depositos_bethouses, bethouse_options
+    df_saldos_bethouses = dataframes
+    df_depositos_bethouses = dataframes_deposito
     treeview = ttk.Treeview(parent, style='Normal.Treeview', height=8)
     treeview.grid(row=0, column=0)
 
@@ -486,68 +448,43 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
             treeview.column(column, width=65)
         elif column == 'Diário':
             treeview.column(column, width=70)
-        else:
+        else :
             treeview.column(column, width=85)
     treeview['show'] = 'headings'
 
-    for bethouse in bethouse_list:
-        table_name = f"{bethouse}_saldos"
-        table_name = re.sub(r'\W+', '_', table_name)
+    total_abertas = 0
+    total_vitórias = 0
+    total_derrotas = 0
+    total_saldo_atual = 0
+    total_montante_aberto = 0
+    total_montante_total = 0
+    total_diferença_diária = 0
+    total_diferênça_mensal = 0
 
-        # Consulta para obter os valores
-        query = f'''
-        SELECT resultado, balanco, data_fim
-        FROM "{table_name}"
-        WHERE data_fim > DATE('now', 'start of month')
-        '''
-        c.execute(query)
-        rows = c.fetchall()
-
-        abertas = sum(result[0] is None for result in rows)
-        vitorias = sum(result[0] in ['win', 'half-win'] for result in rows) // 2
-        derrotas = sum(result[0] in ['loss', 'half-loss'] for result in rows) // 2
-        saldo_atual = c.execute(f"SELECT SUM(balanco) FROM {table_name}").fetchone()[0]
-        saldo_atual = float(saldo_atual) if saldo_atual is not None else 0
-        montante_aberto = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NULL").fetchone()
-        montante_aberto = -float(montante_aberto[0] if montante_aberto[0] is not None else 0)
-        montante_total = float(saldo_atual + montante_aberto)
-        dif_diaria = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (data_fim = date('now'))").fetchone()[0]
-        dif_diaria = float(dif_diaria) if dif_diaria is not None else 0
-        dif_mensal = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (data_fim >= DATE('now', 'start of month'))").fetchone()[0]
-        dif_mensal = float(dif_mensal) if dif_mensal is not None else 0
-
-        cache[bethouse] = {
-            'abertas': abertas,
-            'vitorias': vitorias,
-            'derrotas': derrotas,
-            'saldo_atual': saldo_atual,
-            'montante_aberto': montante_aberto,
-            'montante_total': montante_total,
-            'dif_diaria': dif_diaria,
-            'dif_mensal': dif_mensal
-        }
-
-    # Calcular valores totais
-    chaves = ['abertas', 'vitorias', 'derrotas', 'saldo_atual', 'montante_aberto', 'montante_total', 'dif_diaria', 'dif_mensal']
-    cache.pop('Total', None)  # Remover a chave 'Total' do dicionário cache
-    cache['Total'] = {chave: sum(data[chave] for data in cache.values()) for chave in chaves}
-
-    for bethouse, data in cache.items():
-        abertas = data['abertas']
-        vitorias = data['vitorias']
-        derrotas = data['derrotas']
-        saldo_atual = data['saldo_atual']
-        montante_aberto = data['montante_aberto']
-        montante_total = data['montante_total']
-        dif_diaria = data['dif_diaria']
-        dif_mensal = data['dif_mensal']
-
-        values = [bethouse, abertas, vitorias, derrotas, f"R$ {saldo_atual:.2f}", f"R$ {montante_aberto:.2f}", f"R$ {montante_total:.2f}", f"R$ {dif_diaria:.2f}", f"R$ {dif_mensal:.2f}"]
+    for bethouse, df in dataframes.items():
+        abertas = int(df['resultado'].isna().sum())
+        vitórias = int((df['resultado'] == 'win').sum() + (df['resultado'] == 'half-win').sum() / 2)
+        derrotas = int((df['resultado'] == 'loss').sum() + (df['resultado'] == 'half-loss').sum() / 2)
+        saldo_atual = dataframes_deposito[bethouse]['Valor'].sum() + df['balanco'].sum()
+        montante_aberto = -df.loc[df['resultado'].isna(), 'balanco'].sum()
+        montante_total = saldo_atual + montante_aberto
+        diferença_diária = df.loc[(df['data_fim'].dt.date == pd.to_datetime('today').date()) & ~df['resultado'].isna(), 'balanco'].sum()
+        diferença_mensal = df.loc[(df['data_fim'].dt.month == pd.to_datetime('today').month) & (df['data_fim'].dt.year == pd.to_datetime('today').year) & ~df['resultado'].isna(), 'balanco'].sum()
+        values = [bethouse, abertas, vitórias, derrotas, f"R$ {saldo_atual:.2f}", f"R$ {montante_aberto:.2f}", f"R$ {montante_total:.2f}", f"R$ {diferença_diária:.2f}", f"R$ {diferença_mensal:.2f}"]
         treeview.insert('', 'end', values=values, tags=(bethouse,))
-        if bethouse == 'Total':
-            treeview.tag_configure(bethouse, background='white', foreground='black')
-        else:
-            treeview.tag_configure(bethouse, background=bethouse_options[bethouse]['background_color'], foreground=bethouse_options[bethouse]['text_color'])
+        treeview.tag_configure(bethouse, background=bethouse_options[bethouse]['background_color'], foreground=bethouse_options[bethouse]['text_color'])
+
+        total_abertas += abertas
+        total_saldo_atual += saldo_atual
+        total_montante_aberto += montante_aberto
+        total_montante_total += montante_total
+        total_diferença_diária += diferença_diária
+        total_diferênça_mensal += diferença_mensal
+        total_vitórias += vitórias
+        total_derrotas += derrotas
+
+    values = ['Total', total_abertas, total_vitórias, total_derrotas, f"R$ {total_saldo_atual:.2f}", f"R$ {total_montante_aberto:.2f}", f"R$ {total_montante_total:.2f}", f"R$ {total_diferença_diária:.2f}", f"R$ {total_diferênça_mensal:.2f}"]
+    treeview.insert('', 'end', values=values)
 
     class MyDialog(tk.Toplevel):
         def __init__(self, parent, title, labeltext):
@@ -576,7 +513,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         value = dialog.result
         status = 'deposito'
         if value is not None:
-            add_to_database(bethouse_saldo, status, value)
+            add_to_csv(bethouse_saldo, status, value)
 
     def withdraw():
         dialog = MyDialog(parent, "Saque", f"Valor a sacar de {bethouse_saldo}:")
@@ -584,7 +521,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         value = dialog.result
         status = 'saque'
         if value is not None:
-            add_to_database(bethouse_saldo, status, -value)
+            add_to_csv(bethouse_saldo, status, -value)
 
     def ajuste_saldo(saldo):
         dialog = MyDialog(parent, "Novo Saldo", f"Novo Saldo atual em {bethouse_saldo}:")
@@ -593,17 +530,14 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         montante = round(-saldo + value, 2)
         status = 'ajuste'
         if montante is not None:
-            add_to_database(bethouse_saldo, status, montante)
+            add_to_csv(bethouse_saldo, status, montante)
 
-    def add_to_database(bethouse, status, value):
-        table_name = f"{bethouse}_saldos"
-        table_name = re.sub(r'\W+', '_', table_name)
-        data = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        query = f"INSERT INTO {table_name} (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real) VALUES (NULL, '{data}', '{data}', '{bethouse}', NULL, NULL, NULL, '{status}', {value}, {value})"
-        conn.execute(query, data)
-        conn.commit()
-        bethouse_list = set(bethouse)
-        tabela_bethouses(parent, conn, bethouse_list = bethouse_list)
+    def add_to_csv(bethouse, status, value):
+        global df_tabela
+        data = [bethouse, status, value, datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+        with open('./movimentacao.csv', 'a') as csvfile:
+            csv.writer(csvfile).writerow(data)
+        gerar_saldos(parent, bethouse_options, df_tabela)
 
     # Criando o menu de contexto
     menu = Menu(parent, tearoff=0)
@@ -622,6 +556,113 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
 
     # Adicionando o evento de clique com o botão direito do mouse ao treeview
     treeview.bind('<Button-2>', show_menu)
+
+def add_aposta(dados, id=None):
+    global df_saldos_bethouses, df_depositos_bethouses, bethouse_options, frameSaldos
+    df_saldos_bethouses['BWin'].tail()
+    # Extrair dados para 'bethouse1'
+    bethouse1 = dados['bethouse1'].values[0]
+
+    def balance(row, num):
+        odd = float(row[f'odd{num}'].values[0])
+        aposta = float(row[f'aposta{num}'].values[0])
+        taxa = bethouse_options[row[f'bethouse{num}'].values[0]]['taxa']
+        resultado = row[f'resultado{num}'].values[0]
+        odd_real = float((odd - 1) * (1 - taxa) + 1 if row[f'mercado{num}'].values[0] != 'Lay' else (odd / (odd - 1) -1) * (1 - taxa) + 1)
+        if resultado == 'win':
+            return odd_real * aposta - aposta
+        elif resultado == 'half-win':
+            return aposta / 2 + aposta / 2 * odd_real - aposta
+        elif resultado == 'return':
+            return 0
+        elif resultado == 'half-loss':
+            return aposta / 2 - aposta
+        else:
+            return -aposta
+
+    new_row = {
+        'id': dados['id'].values[0],
+        'data_entrada': pd.to_datetime(dados['data_entrada'].values[0]),
+        'data_fim': pd.to_datetime(dados['data_jogo'].values[0]),
+        'bethouse': bethouse1,
+        'odd': float(dados['odd1'].values[0]),
+        'aposta': float(dados['aposta1'].values[0]),
+        'resultado': dados['resultado1'].values[0],
+        'balanco': balance(dados, num=1)
+    }
+    print(new_row)
+    if id:
+        mask = df_saldos_bethouses[bethouse1]['id'] == id
+        df_saldos_bethouses[bethouse1].loc[mask, 'resultado'] = new_row['resultado']
+        df_saldos_bethouses[bethouse1].loc[mask, 'data_fim'] = new_row['data_fim']
+        df_saldos_bethouses[bethouse1].loc[mask, 'odd'] = new_row['odd']
+        df_saldos_bethouses[bethouse1].loc[mask, 'aposta'] = new_row['aposta']
+        df_saldos_bethouses[bethouse1].loc[mask, 'balanco'] = new_row['balanco']
+        print(df_saldos_bethouses[bethouse1])
+    else:
+        if bethouse1 in df_saldos_bethouses:
+            max_index = df_saldos_bethouses[bethouse1].index.max()
+            new_index = max_index + 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse1] = pd.concat(
+                [df_saldos_bethouses[bethouse1], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    # Extrair dados para 'bethouse2'
+    bethouse2 = dados['bethouse2'].iloc[0]
+    new_row = {
+        'id': dados['id'].values[0],
+        'data_entrada': pd.to_datetime(dados['data_entrada'].values[0]),
+        'data_fim': pd.to_datetime(dados['data_jogo'].values[0]),
+        'bethouse': bethouse2,
+        'odd': float(dados['odd2'].values[0]),
+        'aposta': float(dados['aposta2'].values[0]),
+        'resultado': dados['resultado2'].values[0],
+        'balanco': balance(dados, num=2)
+    }
+
+    if id:
+        mask = df_saldos_bethouses[bethouse2]['id'] == id
+        df_saldos_bethouses[bethouse2].loc[mask, 'resultado'] = new_row['resultado']
+        df_saldos_bethouses[bethouse2].loc[mask, 'data_fim'] = new_row['data_fim']
+        df_saldos_bethouses[bethouse2].loc[mask, 'odd'] = new_row['odd']
+        df_saldos_bethouses[bethouse2].loc[mask, 'aposta'] = new_row['aposta']
+        df_saldos_bethouses[bethouse2].loc[mask, 'balanco'] = new_row['balanco']
+    else:
+        if bethouse2 in df_saldos_bethouses:
+            new_index += 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse2] = pd.concat(
+                [df_saldos_bethouses[bethouse2], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    # Extrair dados para 'bethouse3' (se existir)
+    bethouse3 = dados['bethouse3'].iloc[0]
+    if bethouse3 in df_saldos_bethouses:
+        new_row = {
+            'id': dados['id'].values[0],
+            'data_entrada': pd.to_datetime(dados['data_entrada'].values[0]),
+            'data_fim': pd.to_datetime(dados['data_jogo'].values[0]),
+            'bethouse': bethouse3,
+            'odd': float(dados['odd3'].values[0]),
+            'aposta': float(dados['aposta3'].values[0]),
+            'resultado': dados['resultado3'].values[0],
+            'balanco': balance(dados, num=3)
+        }
+        if id:
+            mask = df_saldos_bethouses[bethouse3]['id'] == id
+            df_saldos_bethouses[bethouse3].loc[mask, 'resultado'] = new_row['resultado']
+            df_saldos_bethouses[bethouse3].loc[mask, 'data_fim'] = new_row['data_fim']
+            df_saldos_bethouses[bethouse3].loc[mask, 'odd'] = new_row['odd']
+            df_saldos_bethouses[bethouse3].loc[mask, 'aposta'] = new_row['aposta']
+            df_saldos_bethouses[bethouse3].loc[mask, 'balanco'] = new_row['balanco']
+        else:
+            new_index += 1
+            new_row_index = [new_index]
+            df_saldos_bethouses[bethouse3] = pd.concat(
+                [df_saldos_bethouses[bethouse3], pd.DataFrame(new_row, index=new_row_index)], ignore_index=False)
+
+    df_saldos_bethouses['BWin'].tail()
+    tabela_bethouses(frameSaldos, df_saldos_bethouses, df_depositos_bethouses)
+
 
 def calculate_balance(row, num=''):
     if num == '':
@@ -647,158 +688,30 @@ def calculate_balance(row, num=''):
     else:
         return -aposta
 
-def save_apostas(dados, conn, linha_antiga=None, tipo='a'):
-    c = conn.cursor()
-    if tipo == 'add' or tipo == 'a' or tipo == 'append':
-        # Montar a query de inserção
-        insert_query = "INSERT INTO apostas ({}) VALUES ({})".format(
-            ', '.join(dados.keys()),
-            ', '.join(['?' for _ in range(len(dados))])
-        )
-        # Executar a query de inserção
-        c.execute(insert_query, list(dados.values()))
+def gerar_saldos(frame, options):
+    global df_saldos_bethouses, df_depositos_bethouses, bethouse_options, frameSaldos
 
-        dados_saldos = {}
-        for j in range(1, 4 if dados['bethouse3'] in bethouse_options.keys() else 3):
-            bethouse_key = dados[f'bethouse{j}']
-            table_name = f"{bethouse_key}_saldos"
-            table_name = re.sub(r'\W+', '_', table_name)
+    frameSaldos = frame
+    bethouse_options = options
 
-            check_table_query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
-            c.execute(check_table_query)
-            result = c.fetchone()
+    df_saldos_bethouses = {}
+    df_depositos_bethouses = {}
+    for bethouse in bethouse_options.keys():
+        # Ler o arquivo CSV do saldo
+        saldo_file = os.path.join("./dados_bethouses", f"{bethouse}_apostas.csv")
+        df_saldo_bethouse = pd.read_csv(saldo_file)
+        df_saldo_bethouse['data_fim'] = pd.to_datetime(df_saldo_bethouse['data_fim'])
+        df_saldo_bethouse['data_entrada'] = pd.to_datetime(df_saldo_bethouse['data_entrada'])
 
-            if result is None:
-                # A tabela não existe, criar a tabela
-                create_table_query = f'''
-                        CREATE TABLE "{table_name}" (
-                            id INTEGER,
-                            data_entrada TEXT,
-                            data_fim TEXT,
-                            odd REAL,
-                            aposta REAL,
-                            resultado TEXT,
-                            balanco REAL,
-                            dif_real REAL
-                        )
-                        '''
-                c.execute(create_table_query)
-            odd = dados[f'odd{j}']
-            dados_saldos = {
-                'id': dados['id'],
-                'data_entrada': dados['data_entrada'],
-                'data_fim': dados['data_jogo'],
-                'odd': float(odd),
-                'aposta': dados[f'aposta{j}'],
-                'resultado': dados[f'resultado{j}'],
-                'balanco': -dados[f'aposta{j}'],
-                'dif_real': 0
-            }
+        # Ler o arquivo CSV do depósito
+        deposito_file = os.path.join("./dados_bethouses", f"{bethouse}_movimento.csv")
+        df_deposito_bethouse = pd.read_csv(deposito_file)
+        df_deposito_bethouse['Data'] = pd.to_datetime(df_deposito_bethouse['Data'])
 
-            # Montar a query de inserção
-            insert_query = "INSERT INTO " + f"{table_name} " + "({}) VALUES ({})".format(
-                ', '.join(dados_saldos.keys()),
-                ', '.join(['?' for _ in range(len(dados_saldos))])
-            )
-            # Executar a query de inserção
-            c.execute(insert_query, list(dados_saldos.values()))
+        df_saldos_bethouses[bethouse] = df_saldo_bethouse
+        df_depositos_bethouses[bethouse] = df_deposito_bethouse
+    tabela_bethouses(frameSaldos, df_saldos_bethouses, df_depositos_bethouses)
 
-
-    elif tipo == 'edit' or tipo == 'e':
-        query = """
-            UPDATE apostas
-            SET data_entrada = ?,
-                data_jogo = ?,
-                time_casa = ?,
-                time_fora = ?,
-                bethouse1 = ?,
-                bethouse2 = ?,
-                bethouse3 = ?,
-                mercado1 = ?,
-                mercado2 = ?,
-                mercado3 = ?,
-                valor1 = ?,
-                valor2 = ?,
-                valor3 = ?,
-                odd1 = ?,
-                odd2 = ?,
-                odd3 = ?,
-                aposta1 = ?,
-                aposta2 = ?,
-                aposta3 = ?,
-                lucro_estimado = ?,
-                lucro_per_estimado = ?,
-                esporte = ?
-            WHERE id = ?
-        """
-
-        params = (
-            dados["data_entrada"],
-            dados["data_jogo"],
-            dados["time_casa"],
-            dados["time_fora"],
-            dados["bethouse1"],
-            dados["bethouse2"],
-            dados["bethouse3"],
-            dados["mercado1"],
-            dados["mercado2"],
-            dados["mercado3"],
-            dados["valor1"],
-            dados["valor2"],
-            dados["valor3"],
-            dados["odd1"],
-            dados["odd2"],
-            dados["odd3"],
-            dados["aposta1"],
-            dados["aposta2"],
-            dados["aposta3"],
-            dados["lucro_estimado"],
-            dados["lucro_per_estimado"],
-            dados["esporte"],
-            dados["id"]
-        )
-        # Executar a query de atualização
-        c.execute(query, params)
-
-        # Deletar entradas anteriores
-        for bethouse in linha_antiga:
-            table_name = f"{bethouse}_saldos"
-            table_name = re.sub(r'\W+', '_', table_name)
-            delete_query = f"DELETE FROM {table_name} WHERE id = {dados['id']}"
-            c.execute(delete_query)
-
-        # Iterar sobre os dados
-        for j in range(1, 4 if dados['bethouse3'] in bethouse_options.keys() else 3):
-            bethouse_key = dados[f'bethouse{j}']
-            if bethouse_key in bethouse_options.keys():
-                odd = float(dados[f'odd{j}'])
-                odd_real = round((odd - 1) * (1 - bethouse_options[bethouse_key]['taxa']) + 1, 2) if dados[f'mercado{j}'] != 'Lay' else round((odd / (odd - 1) - 1) * (1 - bethouse_options[bethouse_key]['taxa']) + 1, 3)
-                aposta = float(dados[f'aposta{j}'])
-
-                # Modificar o nome da tabela substituindo caracteres não permitidos por sublinhado (_)
-                table_name = f"{bethouse_key}_saldos"
-                table_name = re.sub(r'\W+', '_', table_name)
-
-                # Inserir os valores na tabela
-                insert_query = f'''
-                    INSERT INTO "{table_name}" (id, data_entrada, data_fim, odd, aposta, resultado, balanco, dif_real)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                '''
-                values = (
-                    int(dados['id']),
-                    dados['data_entrada'],
-                    dados['data_jogo'],
-                    odd,
-                    aposta,
-                    dados[f'resultado{j}'],
-                    -aposta,
-                    0.0
-                )
-
-                c.execute(insert_query, values)
-
-    # Commit das alterações e fechamento da conexão
-    conn.commit()
 
 def graph():
     def update_graph():
@@ -848,5 +761,3 @@ def graph():
     # Criar o botão para atualizar o gráfico
     update_button = Button(frameStatus, text="Atualizar Gráfico", command=update_graph)
     update_button.grid(row=3, column=3)
-
-
