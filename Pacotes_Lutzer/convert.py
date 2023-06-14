@@ -9,6 +9,38 @@ def convert_to_numeric(value):
         except (TypeError, ValueError):
             return value
 
+def convert_dia(dia, ext=False):
+    if ext:
+        if dia == 'Sun':
+            return 'Domingo'
+        elif dia == 'Mon':
+            return 'Segunda'
+        elif dia == 'Tue':
+            return 'Terça'
+        elif dia == 'Wed':
+            return 'Quarta'
+        elif dia == 'Thu':
+            return 'Quinta'
+        elif dia == 'Fri':
+            return 'Sexta'
+        elif dia == 'Sat':
+            return 'Sábado'
+    else:
+        if dia == 'Sun':
+            return 'Dom'
+        elif dia == 'Mon':
+            return 'Seg'
+        elif dia == 'Tue':
+            return 'Ter'
+        elif dia == 'Wed':
+            return 'Qua'
+        elif dia == 'Thu':
+            return 'Qui'
+        elif dia == 'Fri':
+            return 'Sex'
+        elif dia == 'Sat':
+            return 'Sáb'
+
 def convert_mes(valor, extenso=False):
     mes_id_map = {
         'Jan': ('Janeiro', 1),
@@ -57,7 +89,7 @@ def converter_esporte(sport):
     elif sport == 'бейсбол':
         return 'Baseball'
     elif sport in {'handball', 'гандбол'}:
-        return 'Handebol'
+        return 'Handball'
     elif sport in {'dota2', 'esports', 'esport', 'e-sports', 'cybersports'}:
         return 'E-Sports'
     elif sport in {'ice hockey', 'хоккей'}:
@@ -68,6 +100,8 @@ def converter_esporte(sport):
         return 'Dardos'
     elif sport in {'table tennis', 'tabletennis'}:
         return 'Tênis de Mesa'
+    elif sport in {'mma', 'ufc', 'mixed martial arts'}:
+        return 'MMA'
     elif sport == 'boxing':
         return 'Boxe'
     elif sport == 'футзал':

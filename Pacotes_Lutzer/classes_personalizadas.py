@@ -5,13 +5,17 @@ from tkinter import *
 import datetime
 from datetime import datetime, timedelta
 import pandas as pd
-from Pacotes_Lutzer.convert import convert_mes
+from Pacotes_Lutzer.convert import convert_mes, convert_dia
 from Pacotes_Lutzer.validate import validate_num, on_entry_change
 import os
 import re
 import numpy as np
 import sqlite3
+from pandastable import Table
+import webbrowser
 
+global contador
+contador = 0
 def import_df_filtrado():
     return df_filtrado
 def preencher_treeview(conn, tabela, options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=None):
@@ -36,7 +40,9 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
         id = row['id']
         jogo = f"{row['time_casa']}\n{row['time_fora']}"
         data_jogo = datetime.strptime(row['data_jogo'], '%Y-%m-%d %H:%M:%S')
-        data = "{:02d}/{}\n{:02d}:{:02d}".format(data_jogo.day, convert_mes(data_jogo.month), data_jogo.hour, data_jogo.minute)
+        data = "  {}\n{:02d}/{}\n {:02d}:{:02d}".format(convert_dia(data_jogo.strftime('%a')), data_jogo.day,
+                                                      convert_mes(data_jogo.month), data_jogo.hour, data_jogo.minute)
+
         def show_results(resultados):
             if resultados == "win":
                 return "W"
@@ -68,14 +74,14 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
             apostas += f"\nR$ {float(row['aposta3']):.2f}" if isinstance(float(row['aposta3']), (float, int)) else ""
         mercados = str(row['mercado1'])
         if pd.notna(row['valor1']):
-            valor1 = row['valor1']
+            valor1 = float(row['valor1'])
             if isinstance(valor1, (int, float)):
                 mercados += "({:.2f}".format(valor1).rstrip('0').rstrip('.') + ")"
             else:
                 mercados += valor1
         mercados += f"\n{str(row['mercado2'])}"
         if pd.notna(row['valor2']):
-            valor2 = row['valor2']
+            valor2 = float(row['valor2'])
             if isinstance(valor2, (int, float)):
                 mercados += "({:.2f}".format(valor2).rstrip('0').rstrip('.') + ")"
             else:
@@ -83,7 +89,7 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             mercados += f"\n{str(row['mercado3'])}"
             if pd.notna(row['valor3']):
-                valor3 = row['valor3']
+                valor3 = float(row['valor3'])
                 if isinstance(valor3, (int, float)):
                     mercados += "({:.2f}".format(valor3).rstrip('0').rstrip('.') + ")"
                 else:
@@ -108,11 +114,14 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
         tabela_bethouses(frameSaldos, conn, bethouse_list=bethouse_list)
 
 def filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela):
+    global contador, frame_vencidas
+    contador += 1 if contador < 2 else 0
+
     # Aplicar os filtros diretamente na consulta SQL
     query = "SELECT * FROM apostas WHERE "
-
+    data = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     aberta = "((bethouse3 IS NULL AND (resultado1 IS NULL OR resultado2 IS NULL)) OR (bethouse3 IS NOT NULL AND (resultado1 IS NULL OR resultado2 IS NULL OR resultado3 IS NULL)))"
-    vencida = f"{aberta} AND data_jogo <= datetime('now', '-5 hour')" #horário UTC, então precisa de acrescer -3 para o nosso fuso.
+    vencida = f"{aberta} AND data_jogo <= datetime('{data}', '-2 hour')" #horário UTC, então precisa de acrescer -3 para o nosso fuso.
     fechada = "((bethouse3 IS NULL AND resultado1 IS NOT NULL AND resultado2 IS NOT NULL) OR (bethouse3 IS NOT NULL AND resultado1 IS NOT NULL AND resultado2 IS NOT NULL AND resultado3 IS NOT NULL))"
     if all(situation_vars[i].get() for i in [1, 2]) or not any(situation_vars[i].get() for i in [0, 1, 2]):
         query += "1 = 1"  # Nenhum filtro aplicado
@@ -134,30 +143,30 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
     # Filtro de tempo
     if time_button["text"] == "Vencem até":
         if timeframe_combobox.get() == "hoje":
-            query += " AND (DATE(data_jogo) = DATE('now'))"
+            query += f" AND (DATE(data_jogo) = DATE('{data}'))"
         elif timeframe_combobox.get() == "amanhã":
-            query += " AND (DATE(data_jogo) <= DATE('now', '+1 day'))"
+            query += f" AND (DATE(data_jogo) <= DATE('{data}', '+1 day'))"
         elif timeframe_combobox.get() == "1 semana":
-            query += " AND (DATE(data_jogo) <= DATE('now', 'weekday 0', '+7 days'))"
+            query += f" AND (DATE(data_jogo) <= DATE('{data}', 'weekday 0', '+7 days'))"
         elif timeframe_combobox.get() == "1 mês":
-            query += " AND (DATE(data_jogo) <= DATE('now', 'start of month', '+31 days'))"
+            query += f" AND (DATE(data_jogo) <= DATE('{data}', 'start of month', '+31 days'))"
     else:
         if timeframe_combobox.get() == "hoje":
-            query += " AND (DATE(data_entrada) >= DATE('now'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}'))"
         elif timeframe_combobox.get() == "ontem":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-1 day'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', '-1 day'))"
         elif timeframe_combobox.get() == "1 semana":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'weekday 0', '-7 days'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', 'weekday 0', '-7 days'))"
         elif timeframe_combobox.get() == "1 mês":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'start of month'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', 'start of month'))"
         elif timeframe_combobox.get() == "30 dias":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-30 day'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', '-30 day'))"
         elif timeframe_combobox.get() == "6 meses":
-            query += " AND (DATE(data_entrada) >= DATE('now', '-6 month'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', '-6 month'))"
         elif timeframe_combobox.get() == "esse ano":
-            query += " AND (DATE(data_entrada) >= DATE('now', 'start of year'))"
+            query += f" AND (DATE(data_entrada) >= DATE('{data}', 'start of year'))"
         elif timeframe_combobox.get() == "365 dias":
-            query += " AND (DATE(data_entrada) <= DATE('now', '-1 year'))"
+            query += f" AND (DATE(data_entrada) <= DATE('{data}', '-1 year'))"
 
     if search_var.get() == '':
         pass
@@ -177,13 +186,24 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
     else:  # Decrescente e Adição
         query += " ORDER BY id DESC"
 
-    frame = tk.Canvas(frameTabela, width=16, height=16, highlightthickness=0)
-    if num_vencidas == 0:
-        frame.place_forget()
+    if contador == 1:
+        frame_vencidas = tk.Canvas(frameTabela, width=16, height=16, highlightthickness=0)
+        frame_vencidas.create_oval(0, 0, 15, 15, fill="red", tags='frame')
+        frame_vencidas.create_text(8, 8, text=num_vencidas, fill="white", font=("Arial", 12, "bold"),tags=('count', 'frame'))
+        frame_vencidas.place(x=412, y=0)
+    if num_vencidas > 0:
+        if not frame_vencidas.winfo_viewable():
+            frame_vencidas.place(x=412, y=0)
+        frame_vencidas.itemconfigure('count', text=num_vencidas)
     else:
-        frame.create_oval(0, 0, 15, 15, fill="red")
-        frame.create_text(8, 8, text=num_vencidas, fill="white", font=("Arial", 12, "bold"))
-        frame.place(x=412, y=0)
+        frame_vencidas.place_forget()
+
+
+    #if num_vencidas > 0:
+    #    frame_vencidas.itemconfigure('count', text=num_vencidas)
+    #else:
+    #    frame_vencidas.delete('frame')
+    #    frame_vencidas.place_forget()
 
     # Exibir o resultado
     return query
@@ -265,32 +285,32 @@ class BetHistTreeview(ttk.Treeview):
         fg_color1 = bethouse_options[df_row['bethouse1'].values[0]]['text_color']
         bg_color2 = bethouse_options[df_row['bethouse2'].values[0]]['background_color']
         fg_color2 = bethouse_options[df_row['bethouse2'].values[0]]['text_color']
-        self.canvas1.create_rectangle(30, 20, 300, 0, fill=bg_color1)
+        self.canvas1.create_rectangle(28, 20, 300, 0, fill=bg_color1)
         self.canvas1.create_image(0, 0, image=icons[0], anchor=NW, tags='imagem')
-        self.canvas1.create_text(30, 10, text=df_row['bethouse1'].values[0], anchor = W, fill = fg_color1)
-        self.canvas1.create_text(105, 10, text=df_row['odd1'].values[0], anchor = W, fill = fg_color1)
-        self.canvas1.create_text(155, 10, text=f"R$ {float(df_row['aposta1'].values[0]):.2f}", anchor = W, fill = fg_color1)
+        self.canvas1.create_text(28, 10, text=df_row['bethouse1'].values[0], anchor = W, fill = fg_color1)
+        self.canvas1.create_text(100, 10, text=df_row['odd1'].values[0], anchor = W, fill = fg_color1)
+        self.canvas1.create_text(150, 10, text=f"R$ {float(df_row['aposta1'].values[0]):.2f}", anchor = W, fill = fg_color1)
         formatted_valor1 = "" if pd.isna(df_row['valor1'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor1'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
-        self.canvas1.create_text(225, 10, text="{}{}".format(df_row['mercado1'].values[0], formatted_valor1), anchor=W, fill=fg_color1)
-        self.canvas1.create_rectangle(30, 40, 300, 20, fill=bg_color2)
+        self.canvas1.create_text(219, 10, text="{}{}".format(df_row['mercado1'].values[0], formatted_valor1), anchor=W, fill=fg_color1)
+        self.canvas1.create_rectangle(28, 40, 300, 20, fill=bg_color2)
         self.canvas1.create_image(0, 20, image=icons[1], anchor=NW, tags='imagem')
-        self.canvas1.create_text(30, 30, text=df_row['bethouse2'].values[0], anchor=W, fill=fg_color2)
-        self.canvas1.create_text(105, 30, text=df_row['odd2'].values[0], anchor=W, fill=fg_color2)
-        self.canvas1.create_text(155, 30, text=f"R$ {float(df_row['aposta2'].values[0]):.2f}", anchor=W, fill=fg_color2)
+        self.canvas1.create_text(28, 30, text=df_row['bethouse2'].values[0], anchor=W, fill=fg_color2)
+        self.canvas1.create_text(100, 30, text=df_row['odd2'].values[0], anchor=W, fill=fg_color2)
+        self.canvas1.create_text(150, 30, text=f"R$ {float(df_row['aposta2'].values[0]):.2f}", anchor=W, fill=fg_color2)
         formatted_valor2 = "" if pd.isna(df_row['valor2'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor2'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
-        self.canvas1.create_text(225, 30, text="{}{}".format(df_row['mercado2'].values[0], formatted_valor2), anchor=W, fill=fg_color2)
+        self.canvas1.create_text(219, 30, text="{}{}".format(df_row['mercado2'].values[0], formatted_valor2), anchor=W, fill=fg_color2)
 
         if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
             self.canvas1.config(height=60)  # Increase the height of the canvas
             bg_color3 = bethouse_options[df_row['bethouse3'].values[0]]['background_color']
             fg_color3 = bethouse_options[df_row['bethouse3'].values[0]]['text_color']
-            self.canvas1.create_rectangle(30, 60, 300, 40, fill=bg_color3)
+            self.canvas1.create_rectangle(28, 60, 300, 40, fill=bg_color3)
             self.canvas1.create_image(0, 40, image=icons[2], anchor=NW, tags='imagem')  # Create the third icon
-            self.canvas1.create_text(30, 50, text=df_row['bethouse3'].values[0], anchor=W, fill=fg_color3)
-            self.canvas1.create_text(105, 50, text=df_row['odd3'].values[0], anchor=W, fill=fg_color3)
-            self.canvas1.create_text(155, 50, text=f"R$ {df_row['aposta3'].values[0]:.2f}", anchor=W, fill=fg_color3)
+            self.canvas1.create_text(28, 50, text=df_row['bethouse3'].values[0], anchor=W, fill=fg_color3)
+            self.canvas1.create_text(100, 50, text=df_row['odd3'].values[0], anchor=W, fill=fg_color3)
+            self.canvas1.create_text(150, 50, text=f"R$ {float(df_row['aposta3'].values[0]):.2f}", anchor=W, fill=fg_color3)
             formatted_valor3 = "" if pd.isna(df_row['valor3'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor3'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
-            self.canvas1.create_text(225, 50, text="{}{}".format(df_row['mercado3'].values[0], f"{formatted_valor3}" if pd.notna(df_row['valor3'].values[0]) else ""),anchor=W, fill=fg_color3)
+            self.canvas1.create_text(219, 50, text="{}{}".format(df_row['mercado3'].values[0], f"{formatted_valor3}" if pd.notna(df_row['valor3'].values[0]) else ""),anchor=W, fill=fg_color3)
         else:
             self.canvas1.config(height=40)
             self.canvas1.place(x=x, y=y+10)
@@ -310,66 +330,94 @@ class BetHistTreeview(ttk.Treeview):
         item = self.item(selected_item)  # Get the item data for the clicked row
         id = item['values'][9]
         df_row = df_filtrado.loc[df_filtrado['id'] == id]
-        if event.y <= 20 and event.x <= 30:
-            # The first icon was clicked
-            resultado = df_row['resultado1'].values[0]
-            if pd.isna(resultado):
-                next_resultado = self.get_next_result('')
-            else:
-                next_resultado = self.get_next_result(resultado)
-            df_filtrado.loc[df_filtrado['id'] == id, 'resultado1'] = next_resultado
-            icon1 = self.get_icon_from_result(next_resultado)
-            resultado = df_row['resultado2'].values[0]
-            icon2 = self.get_icon_from_result(resultado)
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():
-                resultado = df_row['resultado3'].values[0]
-                icon3 = self.get_icon_from_result(resultado)
-            self.canvas1.delete('imagem')  # Clear the canvas
-            self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
-            self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
-
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
-                self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
-
-        elif event.y <= 40 and event.x <= 30:
-            # The second icon was clicked
-            resultado = df_row['resultado2'].values[0]
-            if pd.isna(resultado):
-                next_resultado = self.get_next_result('')
-            else:
-                next_resultado = self.get_next_result(resultado)
-            df_filtrado.loc[df_filtrado['id'] == id, 'resultado2'] = next_resultado
-            icon1 = self.get_icon_from_result(df_row['resultado1'].values[0])
-            icon2 = self.get_icon_from_result(next_resultado)
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():
-                resultado = df_row['resultado3'].values[0]
-                icon3 = self.get_icon_from_result(resultado)
-            self.canvas1.delete("imagem")  # Clear the canvas
-            self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
-            self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
-
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
-                self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
-
-        elif event.y <= 60 and event.x <= 30:
-            # The third icon was clicked
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():
-                resultado = df_row['resultado3'].values[0]
+        if event.y <= 20:
+            if event.x <= 30:
+                # The first icon was clicked
+                resultado = df_row['resultado1'].values[0]
                 if pd.isna(resultado):
                     next_resultado = self.get_next_result('')
                 else:
                     next_resultado = self.get_next_result(resultado)
-                df_filtrado.loc[df_filtrado['id'] == id, 'resultado3'] = next_resultado
-                icon3 = self.get_icon_from_result(next_resultado)
+                df_filtrado.loc[df_filtrado['id'] == id, 'resultado1'] = next_resultado
+                icon1 = self.get_icon_from_result(next_resultado)
+                resultado = df_row['resultado2'].values[0]
+                icon2 = self.get_icon_from_result(resultado)
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():
+                    resultado = df_row['resultado3'].values[0]
+                    icon3 = self.get_icon_from_result(resultado)
+                self.canvas1.delete('imagem')  # Clear the canvas
+                self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
+                self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
+
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
+                    self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
             else:
-                icon3 = None
-            icon1 = self.get_icon_from_result(df_row['resultado1'].values[0])
-            icon2 = self.get_icon_from_result(df_row['resultado2'].values[0])
-            self.canvas1.delete("imagem")
-            self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
-            self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
-            if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
-                self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
+                url = bethouse_options[df_row['bethouse1'].values[0]]['html']['link']
+                navegador = bethouse_options[df_row['bethouse1'].values[0]]['html']['navegador']
+                if navegador == 'sistema':
+                    webbrowser.open(url)
+                else:
+                    browser = webbrowser.get(navegador)
+                    browser.open(url)
+
+        elif event.y <= 40:
+            if event.x <= 30:
+                # The second icon was clicked
+                resultado = df_row['resultado2'].values[0]
+                if pd.isna(resultado):
+                    next_resultado = self.get_next_result('')
+                else:
+                    next_resultado = self.get_next_result(resultado)
+                df_filtrado.loc[df_filtrado['id'] == id, 'resultado2'] = next_resultado
+                icon1 = self.get_icon_from_result(df_row['resultado1'].values[0])
+                icon2 = self.get_icon_from_result(next_resultado)
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():
+                    resultado = df_row['resultado3'].values[0]
+                    icon3 = self.get_icon_from_result(resultado)
+                self.canvas1.delete("imagem")  # Clear the canvas
+                self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
+                self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
+
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
+                    self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
+            else:
+                url = bethouse_options[df_row['bethouse2'].values[0]]['html']['link']
+                navegador = bethouse_options[df_row['bethouse2'].values[0]]['html']['navegador']
+                if navegador == 'sistema':
+                    webbrowser.open(url)
+                else:
+                    browser = webbrowser.get(navegador)
+                    browser.open(url)
+
+        elif event.y <= 60:
+            if event.x <= 30:
+                # The third icon was clicked
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():
+                    resultado = df_row['resultado3'].values[0]
+                    if pd.isna(resultado):
+                        next_resultado = self.get_next_result('')
+                    else:
+                        next_resultado = self.get_next_result(resultado)
+                    df_filtrado.loc[df_filtrado['id'] == id, 'resultado3'] = next_resultado
+                    icon3 = self.get_icon_from_result(next_resultado)
+                else:
+                    icon3 = None
+                icon1 = self.get_icon_from_result(df_row['resultado1'].values[0])
+                icon2 = self.get_icon_from_result(df_row['resultado2'].values[0])
+                self.canvas1.delete("imagem")
+                self.canvas1.create_image(0, 0, image=icon1, anchor=NW, tags='imagem')
+                self.canvas1.create_image(0, 19, image=icon2, anchor=NW, tags='imagem')
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():  # Check the value of bethouse3
+                    self.canvas1.create_image(0, 38, image=icon3, anchor=NW, tags='imagem')  # Create the third icon
+            else:
+                if df_row['bethouse3'].values[0] in bethouse_options.keys():
+                    url = bethouse_options[df_row['bethouse3'].values[0]]['html']['link']
+                    navegador = bethouse_options[df_row['bethouse3'].values[0]]['html']['navegador']
+                    if navegador == 'sistema':
+                        webbrowser.open(url)
+                    else:
+                        browser = webbrowser.get(navegador)
+                        browser.open(url)
 
     def on_save_click(self, event):
         global df_resultados
@@ -382,7 +430,7 @@ class BetHistTreeview(ttk.Treeview):
             global bethouse_options
             c = self.conn.cursor()
             if pd.isna(df_row['resultado1'].values[0]) or pd.isna(df_row['resultado2'].values[0]) or (
-                    len(item['values'][3].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
+                    len(item['values'][5].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
                 messagebox.showinfo("Aviso", "Preencha todos os resultados do jogo!")
             else:
                 def calculate_fator_resultado(resultado, odd):
@@ -431,6 +479,8 @@ class BetHistTreeview(ttk.Treeview):
                     # Modificar o nome da tabela substituindo caracteres não permitidos por sublinhado (_)
                     table_name = f"{bethouse_key}_saldos"
                     table_name = re.sub(r'\W+', '_', table_name)
+                    if table_name[0].isdigit():
+                        table_name = f'_{table_name}'
                     # Atualizar a linha correspondente na tabela {bethouse}_saldos do dados.db
                     query = f'''
                     UPDATE "{table_name}"
@@ -475,6 +525,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
     c = conn.cursor()
     treeview = ttk.Treeview(parent, style='Normal.Treeview', height=8)
     treeview.grid(row=0, column=0)
+    data_atual = datetime.today()
 
     columns = ['BetHouses', 'A', 'V', 'D', 'Saldo', 'Em Aberto', 'Total', 'Diário', 'Mensal']
     treeview['columns'] = columns
@@ -491,46 +542,55 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
     treeview['show'] = 'headings'
 
     for bethouse in bethouse_list:
-        table_name = f"{bethouse}_saldos"
-        table_name = re.sub(r'\W+', '_', table_name)
+        if bethouse in bethouse_options.keys():
+            if bethouse not in bethouse_options.keys():
+                cache.pop(bethouse, None)
+                break
+            table_name = f"{bethouse}_saldos"
+            table_name = re.sub(r'\W+', '_', table_name)
+            if table_name[0].isdigit():
+                table_name = f'_{table_name}'
 
-        # Consulta para obter os valores
-        query = f'''
-        SELECT resultado, balanco, data_fim
-        FROM "{table_name}"
-        WHERE data_fim > DATE('now', 'start of month')
-        '''
-        c.execute(query)
-        rows = c.fetchall()
+            # Consulta para obter os valores
+            query = f'''
+            SELECT resultado
+            FROM "{table_name}"
+            WHERE data_fim > DATE('{data_atual}', 'start of month')
+            '''
+            c.execute(query)
+            rows = c.fetchall()
 
-        abertas = sum(result[0] is None for result in rows)
-        vitorias = sum(result[0] in ['win', 'half-win'] for result in rows) // 2
-        derrotas = sum(result[0] in ['loss', 'half-loss'] for result in rows) // 2
-        saldo_atual = c.execute(f"SELECT SUM(balanco) FROM {table_name}").fetchone()[0]
-        saldo_atual = float(saldo_atual) if saldo_atual is not None else 0
-        montante_aberto = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NULL").fetchone()
-        montante_aberto = -float(montante_aberto[0] if montante_aberto[0] is not None else 0)
-        montante_total = float(saldo_atual + montante_aberto)
-        dif_diaria = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (data_fim = date('now'))").fetchone()[0]
-        dif_diaria = float(dif_diaria) if dif_diaria is not None else 0
-        dif_mensal = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (data_fim >= DATE('now', 'start of month'))").fetchone()[0]
-        dif_mensal = float(dif_mensal) if dif_mensal is not None else 0
+            abertas = sum(result[0] is None for result in rows)
+            vitorias = sum(result[0] in ['win', 'half-win'] for result in rows) // 2
+            derrotas = sum(result[0] in ['loss', 'half-loss'] for result in rows) // 2
+            saldo_atual = c.execute(f"SELECT SUM(balanco) FROM {table_name}").fetchone()[0]
+            saldo_atual = float(saldo_atual) if saldo_atual is not None else 0
+            montante_aberto = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NULL").fetchone()
+            montante_aberto = -float(montante_aberto[0] if montante_aberto[0] is not None else 0)
+            montante_total = float(saldo_atual + montante_aberto)
+            dif_diaria = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (DATE(data_fim) = DATE('{data_atual}'))").fetchone()[0]
+            dif_diaria = float(dif_diaria) if dif_diaria is not None else 0
+            dif_mensal = c.execute(f"SELECT SUM(balanco) FROM {table_name} WHERE resultado IS NOT NULL AND resultado IS NOT 'depósito' AND resultado IS NOT 'saque' AND (DATE(data_fim) >= DATE('{data_atual}', 'start of month'))").fetchone()[0]
+            dif_mensal = float(dif_mensal) if dif_mensal is not None else 0
 
-        cache[bethouse] = {
-            'abertas': abertas,
-            'vitorias': vitorias,
-            'derrotas': derrotas,
-            'saldo_atual': saldo_atual,
-            'montante_aberto': montante_aberto,
-            'montante_total': montante_total,
-            'dif_diaria': dif_diaria,
-            'dif_mensal': dif_mensal
-        }
+            cache[bethouse] = {
+                'abertas': abertas,
+                'vitorias': vitorias,
+                'derrotas': derrotas,
+                'saldo_atual': saldo_atual,
+                'montante_aberto': montante_aberto,
+                'montante_total': montante_total,
+                'dif_diaria': dif_diaria,
+                'dif_mensal': dif_mensal
+            }
+        else:
+            cache.pop(bethouse, None)
 
     # Calcular valores totais
-    chaves = ['abertas', 'vitorias', 'derrotas', 'saldo_atual', 'montante_aberto', 'montante_total', 'dif_diaria', 'dif_mensal']
+    chaves = ['vitorias', 'derrotas', 'saldo_atual', 'montante_aberto', 'montante_total', 'dif_diaria', 'dif_mensal']
     cache.pop('Total', None)  # Remover a chave 'Total' do dicionário cache
     cache['Total'] = {chave: sum(data[chave] for data in cache.values()) for chave in chaves}
+    cache['Total']['abertas'] = c.execute(f'SELECT COUNT(*) FROM apostas WHERE resultado1 IS NULL OR resultado2 IS NULL OR (bethouse3 IS NOT NULL AND resultado3 IS NULL)').fetchone()[0]
 
     for bethouse, data in cache.items():
         abertas = data['abertas']
@@ -575,16 +635,28 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         parent.wait_window(dialog)
         value = dialog.result
         status = 'deposito'
+        table_name = f"{bethouse_saldo}_saldos"
+        table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
+        depositos_hoje = c.execute(f"SELECT COUNT(*) FROM {table_name} WHERE DATE(data_entrada) = DATE('{data_atual}') AND resultado = 'depósito'").fetchone()[0] + 1
+        id = f"{datetime.now().strftime('%y%m%d')}01{str(depositos_hoje).zfill(2)}"
         if value is not None:
-            add_to_database(bethouse_saldo, status, value)
+            add_to_database(id, bethouse_saldo, status, value)
 
     def withdraw():
         dialog = MyDialog(parent, "Saque", f"Valor a sacar de {bethouse_saldo}:")
         parent.wait_window(dialog)
         value = dialog.result
         status = 'saque'
+        table_name = f"{bethouse_saldo}_saldos"
+        table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
+        saques_hoje = c.execute(f"SELECT COUNT(*) FROM {table_name} WHERE DATE(data_entrada) = DATE('{data_atual}') AND resultado = 'saque'").fetchone()[0] + 1
+        id = f"{datetime.now().strftime('%y%m%d')}02{str(saques_hoje).zfill(2)}"
         if value is not None:
-            add_to_database(bethouse_saldo, status, -value)
+            add_to_database(id, bethouse_saldo, status, -value)
 
     def ajuste_saldo(saldo):
         dialog = MyDialog(parent, "Novo Saldo", f"Novo Saldo atual em {bethouse_saldo}:")
@@ -592,17 +664,27 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         value = dialog.result
         montante = round(-saldo + value, 2)
         status = 'ajuste'
-        if montante is not None:
-            add_to_database(bethouse_saldo, status, montante)
+        table_name = f"{bethouse_saldo}_saldos"
+        table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
+        ajustes_hoje = c.execute(f"SELECT COUNT(*) FROM {table_name} WHERE DATE(data_entrada) = DATE('{data_atual}') AND resultado = 'saque'").fetchone()[0] + 1
+        id = f"{datetime.now().strftime('%y%m%d')}03{str(ajustes_hoje).zfill(2)}"
 
-    def add_to_database(bethouse, status, value):
+        if montante is not None:
+            add_to_database(id, bethouse_saldo, status, montante)
+
+    def add_to_database(id, bethouse, status, value):
         table_name = f"{bethouse}_saldos"
         table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
         data = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        query = f"INSERT INTO {table_name} (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real) VALUES (NULL, '{data}', '{data}', '{bethouse}', NULL, NULL, NULL, '{status}', {value}, {value})"
-        conn.execute(query, data)
+        query = "INSERT INTO {} (id, data_entrada, data_fim, odd, aposta, resultado, balanco, dif_real) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?)".format(table_name)
+        values = (id, data, data, status, value, value)
+        conn.execute(query, values)
         conn.commit()
-        bethouse_list = set(bethouse)
+        bethouse_list = {bethouse}
         tabela_bethouses(parent, conn, bethouse_list = bethouse_list)
 
     # Criando o menu de contexto
@@ -663,26 +745,9 @@ def save_apostas(dados, conn, linha_antiga=None, tipo='a'):
             bethouse_key = dados[f'bethouse{j}']
             table_name = f"{bethouse_key}_saldos"
             table_name = re.sub(r'\W+', '_', table_name)
+            if table_name[0].isdigit():
+                table_name = f'_{table_name}'
 
-            check_table_query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
-            c.execute(check_table_query)
-            result = c.fetchone()
-
-            if result is None:
-                # A tabela não existe, criar a tabela
-                create_table_query = f'''
-                        CREATE TABLE "{table_name}" (
-                            id INTEGER,
-                            data_entrada TEXT,
-                            data_fim TEXT,
-                            odd REAL,
-                            aposta REAL,
-                            resultado TEXT,
-                            balanco REAL,
-                            dif_real REAL
-                        )
-                        '''
-                c.execute(create_table_query)
             odd = dados[f'odd{j}']
             dados_saldos = {
                 'id': dados['id'],
@@ -764,6 +829,8 @@ def save_apostas(dados, conn, linha_antiga=None, tipo='a'):
         for bethouse in linha_antiga:
             table_name = f"{bethouse}_saldos"
             table_name = re.sub(r'\W+', '_', table_name)
+            if table_name[0].isdigit():
+                table_name = f'_{table_name}'
             delete_query = f"DELETE FROM {table_name} WHERE id = {dados['id']}"
             c.execute(delete_query)
 
@@ -778,6 +845,8 @@ def save_apostas(dados, conn, linha_antiga=None, tipo='a'):
                 # Modificar o nome da tabela substituindo caracteres não permitidos por sublinhado (_)
                 table_name = f"{bethouse_key}_saldos"
                 table_name = re.sub(r'\W+', '_', table_name)
+                if table_name[0].isdigit():
+                    table_name = f'_{table_name}'
 
                 # Inserir os valores na tabela
                 insert_query = f'''

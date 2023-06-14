@@ -141,13 +141,13 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 if aposta1_quarter:
                     aposta3 = aposta2
                     aposta1 = 0
-                    while retorno1() < retorno2() + retorno3() and retorno1_halfwin() < retorno3():
+                    while retorno1() < retorno2() + retorno3():
                         aposta3 += 0.01
                         aposta1 = round((retorno3() / (0.5 + odd_1 / 2)) / arred_var[0]) * arred_var[0]
                 else:
                     aposta1 = aposta2
                     aposta3 = 0
-                    while retorno3() < retorno2() + retorno1() and retorno3_halfwin() < retorno1():
+                    while retorno3() < retorno2() + retorno1():
                         aposta1 += 0.01
                         aposta3 = round((retorno1() / (0.5 + odd_3 / 2)) / arred_var[2]) * arred_var[2]
             elif aposta3 > 0:
@@ -170,11 +170,12 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             return aposta1, aposta2, aposta3, None, lucro1, lucro2, lucro3, lucro_percent, None
 
         # Modelo: AH1(-0.25) X2 2
-        # Modelo: TO(5.75) TU(5.5) TU (6.5)
+        # Modelo: TO(5.75) TU(5.5) TU(6.5)
         # Modelo: AH1(5.75) AH2(-5.5) AH2(-6.5)
+        # Modelo: AH1(-5.25) AH2(5.5) AH3(4.5)
         elif ((mercado2 == "1X" or mercado2 == "X2") and (mercado1.startswith('AH') and valor1 == -0.25 and (mercado3 == '1' or mercado3 == '2' or (mercado3.startswith('AH') and valor3 == -0.5))) or (mercado3.startswith('AH') and valor3 == -0.25 and (mercado1 == '1' or mercado1 == '2' or (mercado1.startswith('AH') and valor1 == -0.5)))) or \
                 (all(mercado.startswith("T") for mercado in mercados) and (str(valor1).endswith('.75') and str(valor2).endswith('.5') and str(valor3).endswith('.5')) or (str(valor3).endswith('.75') and str(valor1).endswith('.5') and str(valor2).endswith('.5'))) or \
-                (all(mercado.startswith("AH") for mercado in mercados) and (str(valor1).endswith('.75') and str(valor2).endswith('.5') and str(valor3).endswith('.5')) or (str(valor3).endswith('.75') and str(valor1).endswith('.5') and str(valor2).endswith('.5'))):
+                (all(mercado.startswith("AH") for mercado in mercados) and ((str(valor1).endswith('.75') or (str(valor1).endswith('.25') and str(valor1).startswith('-'))) and str(valor2).endswith('.5') and str(valor3).endswith('.5')) or ((str(valor3).endswith('.75') or (str(valor3).endswith('.25') and str(valor3).startswith('-'))) and str(valor1).endswith('.5') and str(valor2).endswith('.5'))):
             aposta1_quarter = (mercado1.startswith('AH') and valor1 == -0.25 and (mercado3 == '1' or mercado3 == '2' or (mercado3.startswith('AH') and valor3 == -0.5))) or (str(valor1).endswith('.75') and str(valor2).endswith('.5') and str(valor3).endswith('.5'))
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass

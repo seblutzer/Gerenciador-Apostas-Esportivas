@@ -3,17 +3,19 @@ import json
 import os
 import sqlite3
 import re
-from datetime import date
+import datetime
+from datetime import date, datetime
+import random
 
 
-dados = '/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db'
+sql_data = '/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db'
 with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
     data = json.load(f)
-    bethouse_options = data.get("bethouse_options", {})
+    bethouse_options_total = data.get("bethouse_options", {})
 def apostas_to_tabelas(sql = True):
     sql = True
-    dados = pd.read_csv("Apostas.csv")
-    with open('bethouse_options.json', 'r') as f:
+    dados = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/apostas_antigas.csv')
+    with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
         data = json.load(f)
         bethouse_options = data.get("bethouse_options", {})
 
@@ -36,9 +38,9 @@ def apostas_to_tabelas(sql = True):
             return -aposta
 
     if sql:
-        conn = sqlite3.connect('dados.db')  # Conectar ao banco de dados SQLite
+        conn = sqlite3.connect(sql_data)  # Conectar ao banco de dados SQLite
         cursor = conn.cursor()  # Criar um cursor para executar comandos SQL
-
+        print(len(dados))
         for i in range(len(dados)):
             for j in range(1, 4 if dados['bethouse3'].iloc[i] in bethouse_options.keys() else 3):
                 bethouse_key = dados[f'bethouse{j}'].iloc[i]
@@ -51,8 +53,10 @@ def apostas_to_tabelas(sql = True):
                     odd_real = "{:.3f}".format(odd_real).rstrip('0').rstrip('.')
 
                     # Modificar o nome da tabela substituindo caracteres não permitidos por sublinhado (_)
-                    table_name = f"{bethouse_key}_apostas"
+                    table_name = f"{bethouse_key}_saldos"
                     table_name = re.sub(r'\W+', '_', table_name)
+                    if table_name[0].isdigit():
+                        table_name = f'_{table_name}'
 
                     # Verificar se a tabela já existe no banco de dados
                     check_table_query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
@@ -64,11 +68,9 @@ def apostas_to_tabelas(sql = True):
                         create_table_query = f'''
                         CREATE TABLE "{table_name}" (
                             id INTEGER,
-                            data_entrada DATETIME,
-                            data_fim DATETIME,
-                            bethouse TEXT,
+                            data_entrada TEXT,
+                            data_fim TEXT,
                             odd TEXT,
-                            odd_real TEXT,
                             aposta REAL,
                             resultado TEXT,
                             balanco REAL,
@@ -79,16 +81,14 @@ def apostas_to_tabelas(sql = True):
 
                     # Inserir os valores na tabela
                     insert_query = f'''
-                    INSERT INTO "{table_name}" (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO "{table_name}" (id, data_entrada, data_fim, odd, aposta, resultado, balanco, dif_real)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     '''
                     values = (
                         int(dados['id'].iloc[i]),
                         dados['data_entrada'].iloc[i],
                         dados['data_jogo'].iloc[i],
-                        bethouse_key,
                         odd,
-                        odd_real,
                         round(dados[f'aposta{j}'].iloc[i], 2),
                         dados[f'resultado{j}'].iloc[i],
                         round(calculate_balance(dados.iloc[i], j), 2),
@@ -141,6 +141,8 @@ def apostas_to_tabelas(sql = True):
             file_name = f"{bethouse_key}_apostas.csv"
             file_path = os.path.join(dest_dir, file_name)
             dataframe.to_csv(file_path, index=False)
+
+#apostas_to_tabelas()
 
 def to_sql(dados, nome_tabela, arquivo_retorno, data_type='dataframe', index=False, if_exists='replace'):
     if data_type == 'csv':
@@ -280,14 +282,14 @@ def strip_column(sql_data, table, column, edition):
     cursor = conn.cursor()
 
     # Executar a consulta SQL para atualizar os valores das colunas
-    cursor.execute("UPDATE table SET column = edition(column)")
+    cursor.execute(f"UPDATE {table} SET {column} = {edition} WHERE id = 2107220102")
 
     # Confirmar as alterações no banco de dados
     conn.commit()
 
     # Fechar a conexão com o banco de dados
     conn.close()
-#strip_column(dados, 'apostas', 'data_entrada', 'TRIM'):
+#strip_column(sql_data, 'Bet365_saldos', 'data_entrada', '2021-07-22 04:43:02')
 
 
 def del_line(sql_data, table, limit=1, id='last'):
@@ -314,7 +316,7 @@ def view_last_lines(sql_data, table, limit):
     cursor = conn.cursor()
 
     # Executar a instrução SQL para selecionar as três últimas linhas
-    select_query = f"SELECT * FROM {table} ORDER BY id DESC LIMIT {limit}"
+    select_query = f"SELECT * FROM {table} ORDER BY data_entrada DESC LIMIT {limit}"
     cursor.execute(select_query)
 
     # Recuperar os resultados da consulta
@@ -382,23 +384,32 @@ def add_aposta_individual(sql_data, table, dados):
 
 def filter(sql_data, sql_table, table_column=None, operation=None, filter=None):
     conn = sqlite3.connect(sql_data)
+    c = conn.cursor()
+    table_name = f"{sql_table}_saldos"
+    table_name = re.sub(r'\W+', '_', table_name)
+    if table_name[0].isdigit():
+        table_name = f'_{table_name}'
     if table_column==None or operation==None or filter==None:
-        query = f"SELECT * FROM {sql_table} WHERE data_jogo = DATE('now')"
+        #delete_query = f"DELETE FROM {table_name} WHERE resultado = 'deposito' OR resultado = 'depósito' OR resultado = 'saque' OR resultado = 'ajuste'"
+        #c.execute(delete_query)
+        query = f"SELECT * FROM apostas"# WHERE resultado IS NULL"# WHERE DATE(data_entrada) >= '2021-01-01' AND DATE(data_entrada) < '2022-01-01' ORDER BY data_entrada ASC"
     else:
         query = f"SELECT * FROM {sql_table} WHERE {table_column} {operation} {filter}"
     df = pd.read_sql_query(query, conn)
 
-    print(df['data_jogo'])
-
+    print(df)
+    # Salvando as alterações no banco de dados
+    conn.commit()
     conn.close()
-
+    #return df
+#df = filter(sql_data, 'BetFair')
 def add_linhas_from_csv():
     # Conectando ao banco de dados SQLite
-    conn = sqlite3.connect(dados)
+    conn = sqlite3.connect(sql_data)
     cursor = conn.cursor()
 
     # Lendo o arquivo "movimentacao.csv" usando o pandas
-    df = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/movimentacao.csv')
+    df = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/depositos.csv')
 
     # Obtendo a lista de tabelas existentes no banco de dados
     existing_tables = cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
@@ -406,17 +417,20 @@ def add_linhas_from_csv():
 
     # Iterando sobre as linhas do DataFrame
     for index, row in df.iterrows():
+        id = row['id']
         bethouse = row['BetHouse']
-        status = row['Satuts']
+        status = row['Status']
         valor = row['Valor']
         data = row['Data']
 
         # Verificando se a tabela correspondente à BetHouse existe
-        table_name = f"{bethouse}_apostas"
+        table_name = f"{bethouse}_saldos"
         table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
         if table_name in existing_tables:
             # Inserindo os valores nas colunas correspondentes da tabela
-            query = f"INSERT INTO {table_name} (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real) VALUES (NULL, '{data}', '{data}', '{bethouse}', NULL, NULL, NULL, '{status}', {valor}, {valor})"
+            query = f"INSERT INTO {table_name} (id, data_entrada, data_fim, odd, aposta, resultado, balanco, dif_real) VALUES ({id}, '{data}', '{data}', NULL, NULL, '{status}', {valor}, {valor})"
             cursor.execute(query)
         else:
             print(f"Tabela {table_name} não existe.")
@@ -432,7 +446,7 @@ def sum_lucro_estimado(sql_data, sql_table):
     cursor = conexao.cursor()
 
     # Consulta SQL
-    consulta = f"SELECT SUM(lucro_estimado) FROM {sql_table} WHERE DATE(data_jogo) = '{date.today()}'"
+    consulta = f"SELECT SUM(lucro_estimado) FROM {sql_table} WHERE DATE(data_entrada) = '{date.today()}'"
 
     # Executar a consulta
     cursor.execute(consulta)
@@ -539,38 +553,116 @@ def rename_table(sql_data, sql_table_old, sql_table_new):
     # Confirmar as alterações e fechar a conexão com o banco de dados
     conn.commit()
     conn.close()
-#sum_lucro_estimado(dados, 'apostas')
-#filter(dados, 'BetFair_apostas')
+#sum_lucro_estimado(sql_data, 'apostas')
+#filter(sql_data, 'BetFair_apostas')
 
 #valores = {'id': 626, 'data_entrada': '2023-06-01 04:23:11', 'data_fim': '2023-06-04 16:00:00', 'bethouse': 'Pinnacle', 'odd': 1.684, 'odd_real': 1.684, 'aposta': 12.79, 'resultado': None, 'balanco': -12.79, 'dif_real': 0}
-#add_aposta_individual(dados, 'Pinnacle_apostas', valores)
-
-#del_line(dados, 'apostas', id=695)
-#del_line(dados, 'SportyBet_saldos', id=695)
-#del_line(dados, 'Vbet_saldos', id=695)
-#del_line(dados, 'apostas', id=696)
-#del_line(dados, 'SportyBet_saldos', id=696)
-#del_line(dados, 'Vbet_saldos', id=696)
-
-# Conectar ao banco de dados SQLite
-conn = sqlite3.connect(dados)
-
-# Nome da tabela e colunas que serão atualizadas
-nome_tabela = 'apostas'
-colunas = ['valor1', 'valor2', 'valor3', 'bethouse3', 'odd3', 'aposta3', 'mercado3', 'resultado1', 'resultado2', 'resultado3']  # Substitua pelos nomes das suas colunas
-
-# Consulta SQL para atualizar as ocorrências
-for coluna in colunas:
-    query = f"UPDATE {nome_tabela} SET {coluna} = NULL WHERE {coluna} = 'None'"
-    conn.execute(query)
-
-# Confirmar as alterações e fechar a conexão com o banco de dados
-conn.commit()
-conn.close()
+#add_aposta_individual(sql_data, 'Pinnacle_apostas', valores)
 
 
-view_tables(dados)
-view_column_type(dados, 'VBet_saldos')
-view_last_lines(dados, 'apostas', 3)
-view_last_lines(dados, 'SportyBet_saldos', 3)
-view_last_lines(dados, 'Vbet_saldos', 3)
+def arrumar_colunas(sql_data):
+    # Conectar ao banco de dados SQLite
+    conn = sqlite3.connect(sql_data)
+
+    # Nome da tabela e colunas que serão atualizadas
+    nome_tabela = 'apostas'
+    colunas = ['valor1', 'valor2', 'valor3', 'bethouse3', 'odd3', 'aposta3', 'mercado3', 'resultado1', 'resultado2', 'resultado3']  # Substitua pelos nomes das suas colunas
+
+    # Consulta SQL para atualizar as ocorrências
+    for coluna in colunas:
+        query = f"UPDATE {nome_tabela} SET {coluna} = NULL WHERE {coluna} = 'None'"
+        conn.execute(query)
+
+    # Confirmar as alterações e fechar a conexão com o banco de dados
+    conn.commit()
+    conn.close()
+
+def edit_line(sql_data, sql_table, id, set1, set2='', set3='', set4='', set5='', cond1='', cond2='', cond3='', cond4=''):
+    conn = sqlite3.connect(sql_data)
+    c = conn.cursor()
+    if id is None:
+        id = 'id IS NULL'
+    else:
+        id = f'id = {id}'
+    sets = [set2, set3, set4, set5]
+    valid_sets = [s for s in sets if s != '']
+    concatenated_sets = ', '.join(valid_sets)
+    conds = [cond1, cond2, cond3, cond4]
+    valid_conds = [s for s in conds if s != '']
+    concatenated_conds = ' AND '.join(valid_conds)
+    edit_query = f"UPDATE {sql_table} SET {set1}, balanco = 0, dif_real = 0 WHERE {id}"
+    #params = [0]  # Lista de parâmetros para substituir o espaço reservado '?'
+    c.execute(edit_query)
+    # Salvando as alterações no banco de dados
+    conn.commit()
+    conn.close()
+
+def count_hora(sql_data, dias, metodo='sum'):
+    # Conectando ao banco de dados
+    conn = sqlite3.connect(sql_data)
+    cursor = conn.cursor()
+    data = datetime.today().strftime('%Y-%m-%d')
+
+    # Consulta SQL para contar as apostas por hora nos últimos 7 dias
+    query = f"""
+        SELECT strftime('%H', data_entrada) AS hora, COUNT(*) AS total_apostas
+        FROM apostas
+        WHERE data_entrada >= date('{data}', '-{dias} days')
+        GROUP BY hora
+        ORDER BY hora
+    """
+
+    # Executando a consulta
+    cursor.execute(query)
+
+    # Obtendo os resultados
+    resultados = cursor.fetchall()
+
+    if metodo == 'sum':
+        # Exibindo os resultados
+        for hora, total_apostas in resultados:
+            print(f'Apostas na hora {hora}: {total_apostas}')
+
+    else:
+        # Consulta SQL para contar os dias diferentes em data_entrada nos últimos 7 dias
+        query_days = f"""
+            SELECT COUNT(DISTINCT date(data_entrada)) AS total_dias
+            FROM apostas
+            WHERE data_entrada >= date('{data}', '-{dias} days')
+        """
+        total_dias = cursor.execute(query_days).fetchone()[0]
+        # Exibindo os resultados
+        print(f'nos últimos {dias} dias, foi apostado em {total_dias} dias')
+        for hora, total_apostas in resultados:
+            print(f'Média de apostas na hora {hora}: {round(total_apostas / total_dias, 2)}')
+
+    # Fechando a conexão com o banco de dados
+    conn.close()
+
+count_hora(sql_data, 30, metodo='mean')
+#edit_line(sql_data, 'BWin_saldos', 20230522015, "resultado = 'return'")
+#add_linhas_from_csv()
+#view_column(sql_data, '_1xBet_saldos')
+#del_column(sql_data, 'apostas', 'id_novo')
+#del_table(sql_data, 'Teste_saldos')
+#del_line(sql_data, 'apostas', id=20230607025)
+#del_line(sql_data, 'Pinnacle_saldos', id=20230607025)
+#del_line(sql_data, 'Vbet_saldos', id=20230607025)
+#del_line(sql_data, 'apostas', id=20230614024)
+#del_line(sql_data, 'BWin_saldos', id=20230614024)
+#del_line(sql_data, 'SportyBet_saldos', id=696)
+#del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
+#view_tables(sql_data)
+view_last_lines(sql_data, 'apostas', 3)
+view_last_lines(sql_data, 'BWin_saldos', 3)
+#view_last_lines(sql_data, 'Vbet_saldos', 3)
+#view_last_lines(sql_data, 'Ex_BetFair_saldos', 3)
+#sum_lucro_estimado(sql_data, 'apostas')
+
+#df['saldo'] = round(df['balanco'].cumsum(), 2)
+
+#print(df)
+#print(df[['aposta', 'odd', 'resultado', 'balanco', 'dif_real', 'saldo']])
+
+#df = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/apostas_antigas.csv')
+#print(df)

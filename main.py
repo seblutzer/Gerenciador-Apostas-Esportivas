@@ -1,33 +1,23 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import messagebox
+from tkinter import *
+from tkinter import ttk, messagebox, colorchooser
 import datetime
-from datetime import datetime, timedelta, date
 import json
 import os
-from ttkthemes import ThemedTk
-import tkinter.colorchooser as colorchooser
+import _tkinter
+from datetime import datetime, timedelta
 import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import seaborn as sns
+import sqlite3
 from PIL import Image, ImageTk
-import numpy as np
-import fileinput
-import io
-from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, convert_ms_to_datetime, converter_esporte
+from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, converter_esporte
 from Pacotes_Lutzer.validate import create_float_entry, create_combobox
 from Pacotes_Lutzer.calc_apostas import calc_apostas
-from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, import_df_filtrado, save_apostas
-from Pacotes_Lutzer.filtros import agregar_datas
-import _tkinter
-import math
-import sqlite3
+from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, import_df_filtrado, save_apostas, tabela_bethouses
 import re
-#from Testes import gerar_saldos
 
 # Cria a janela
 janela = tk.Tk()
+janela.title('Gerenciamento de SureBets Esportivas Lutzer (Beta)')
 
 # Cria o frame
 frameOpcoes = tk.Frame(janela, padx=10, pady=10)
@@ -50,6 +40,7 @@ frameSaldos.grid(row=10, column=0)
 
 frameStatus = tk.Frame(janela)
 frameStatus.grid(row=0, column=1, rowspan=12)
+
 
 def alternar_tabelas():
     global tabela_visivel
@@ -127,6 +118,37 @@ if not os.path.isfile("dados.db"):
 else:
     conn = sqlite3.connect("dados.db")
     c = conn.cursor()
+
+
+
+def update_lucro_diario():
+    hoje = datetime.today().strftime('%Y-%m-%d')
+    lucro_diario = c.execute(f"SELECT SUM(lucro_estimado) FROM apostas WHERE DATE(data_entrada) = '{hoje}'").fetchone()[
+        0]
+    if lucro_diario:
+        lucro_diario = format(float(lucro_diario), '.2f')
+    else:
+        lucro_diario = f'{0.00:.2f}'
+    frame_lucro.itemconfigure('lucro_text', text=f'R$ {lucro_diario}')
+
+    if float(lucro_diario) < 0:
+        frame_lucro.itemconfigure('bg', fill='red')
+    elif float(lucro_diario) > 0 and float(lucro_diario) <= 75:
+        green_value = int((float(lucro_diario) / 75) * 200)
+        red_value = int((255 - green_value * 1.275) * (1 + (green_value * 1.275) / 2550))
+        frame_lucro.itemconfigure('bg', fill=f'#{red_value:02x}{green_value:02x}00')
+    else:
+        blue_value = int(((float(lucro_diario) - 75) / 75) * 255)
+        green_value = int((200 - blue_value / 1.275) * (1 + blue_value / 2550))
+        frame_lucro.itemconfigure('bg', fill=f'#00{green_value:02x}{blue_value:02x}')
+
+
+frame_lucro = tk.Canvas(janela, width=132, height=57, highlightthickness=0)
+frame_lucro.create_rectangle(0, 15, 130, 55, tags='bg')
+frame_lucro.create_text(65, 5, text="Lucro Estimado Hoje", fill="black", font=("Arial", 12, "bold"))
+frame_lucro.create_text(65, 35, text="", fill="white", font=("Arial", 24, "bold"), tag='lucro_text')
+frame_lucro.place(x=450, y=5)
+update_lucro_diario()
 
 # Filtros
 def toggle_order_crescente():
@@ -217,7 +239,6 @@ situation_button = tk.Button(frameTabela, text="Situação")
 situation_button.grid(row=0, column=4)
 situation_button.bind("<Button-1>", show_frame)
 
-
 #Pesquisa
 def search(event=None):
     # Chama a função preencher_treeview passando o valor da pesquisa
@@ -230,18 +251,19 @@ search_entry = tk.Entry(frameTabela, textvariable=search_var, width=10)
 search_entry.grid(row=0, column=5)
 icon_photo = ImageTk.PhotoImage(Image.open("pesquisa.png").resize((16, 16), Image.LANCZOS))
 search_icon_label = tk.Label(frameTabela, image=icon_photo)
-search_icon_label.place(x=535, y=4)
+search_icon_label.place(x=510, y=4)
 # Vincula a função search ao evento de pressionar o botão de pesquisa
 search_icon_label.bind("<Button-1>", search)
 # Vincula a função search ao evento de pressionar a tecla Enter no campo de pesquisa
 search_entry.bind("<Return>", search)
 
 def load_bethouse_options():
-    global bethouse_options, mercado_options, arred_var
+    global bethouse_options, bethouse_options_total, mercado_options, arred_var
     try:
         with open('bethouse_options.json', 'r') as f:
             data = json.load(f)
-            bethouse_options = data.get("bethouse_options", {})
+            bethouse_options_total = data.get("bethouse_options", {})
+            bethouse_options = {bethouse: options for bethouse, options in bethouse_options_total.items() if options.get("ativa", "False") == "True"}
             mercado_options = data.get("mercado_options", [])
             arred_var = tk.StringVar(value=data.get("arredondamento"))
             filtros = data.get("filtros", {})
@@ -252,6 +274,7 @@ def load_bethouse_options():
             selected_situations = filtros.get("situations", [])
             return order_text, add_text, time_text, timeframe_text, selected_situations
     except FileNotFoundError:
+        bethouse_options_total = {}
         bethouse_options = {}
         mercado_options = ["1", "12", "1X", "2", "AH1", "AH2", "ClearSheet1", "ClearSheet2", "DNB1", "DNB2", "EH1", "EH2", "EHX", "Exactly", "Lay", "Not", "Q1", "Q2", "Removal", "ScoreBoth", "TO", "TU", "TO1", "TO2", "TU2", "TU1", "WinNil1", "WinNil2", "WinLeastOneOfPer1", "WinLeastOneOfPer2", "X", "X2"]
         arred_var = tk.StringVar(value='Padrão')
@@ -267,35 +290,37 @@ order_button1["text"] = order_text
 order_button2["text"] = add_text
 time_button["text"] = time_text
 timeframe_combobox.set(timeframe_text)
-if len(selected_situations) != len(situation_vars):
-    print("Erro: O tamanho das listas selected_situations e situation_vars é diferente")
-else:
-    for i, var in enumerate(situation_vars):
+for i, var in enumerate(situation_vars):
         var.set(selected_situations[i]) # Configurações de usuário
 
-
-
 def open_bethouses():
+    def on_close_config():
+        # Função para lidar com o fechamento da janela
+        if bethouse_list:
+            tabela_bethouses(frameSaldos, conn, bethouse_list=bethouse_list)
+        bethouses_window.destroy()
+
     # Cria uma janela pop-up
     bethouses_window = tk.Toplevel(frameJogo)
     bethouses_window.title("BetHouses e Mercados")
     bethouses_frame = tk.Frame(bethouses_window)
     bethouses_frame.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+    bethouses_window.protocol("WM_DELETE_WINDOW", on_close_config)
+    bethouse_list = set()
 
     # Cria a entrada de texto para adicionar novas BetHouses
     bethouse_label = tk.Label(bethouses_frame, text='BetHouse:')
-    bethouse_label.grid(row=0, column=0, columnspan=2, padx=5, pady=5)
+    bethouse_label.grid(row=0, column=0, padx=5, pady=5)
     new_bethouse_entry = tk.Entry(bethouses_frame, width=15)
-    new_bethouse_entry.grid(row=0, column=2, columnspan=2, padx=5, pady=5)
+    new_bethouse_entry.grid(row=0, column=1, columnspan=3, padx=5, pady=5)
 
     # Cria um widget Label para o título 'Taxa:'
     def validate_rate_input(new_value):
-        if not new_value.startswith('0.0'):
-            return False
-        if not new_value[2:]:
+        new_value = new_value.replace(',', '.')
+        if not new_value:
             return True
         try:
-            float(new_value[2:])
+            float(new_value)
         except ValueError:
             return False
         if new_value.count('.') > 1:
@@ -306,12 +331,18 @@ def open_bethouses():
                 return False
         return True
 
-    rate_label = tk.Label(bethouses_frame, text='Taxa:')
+    def on_focus_out(event):
+        # Função para lidar com o evento FocusOut
+        if not new_rate_entry.get():
+            new_rate_entry.insert(0, 0)
+
+    rate_label = tk.Label(bethouses_frame, text='Taxa(%):')
     rate_label.grid(row=1, column=0, padx=5, pady=5)
     vcmd_tax = (bethouses_frame.register(validate_rate_input), '%P')
-    new_rate_entry = tk.Entry(bethouses_frame, validate='key', validatecommand=vcmd_tax, width=6)
-    new_rate_entry.insert(0, '0.0')
+    new_rate_entry = tk.Entry(bethouses_frame, validate='key', validatecommand=vcmd_tax, width=3)
+    new_rate_entry.insert(0, 0)
     new_rate_entry.grid(row=1, column=1, padx=5, pady=5)
+    new_rate_entry.bind("<FocusOut>", on_focus_out)
 
     arred_base_var = tk.DoubleVar(value=0.01)
     arred_base_label = tk.Label(bethouses_frame, text="Arred.:")
@@ -320,6 +351,16 @@ def open_bethouses():
     arred_base_combobox = ttk.Combobox(bethouses_frame, textvariable=arred_base_var, values=arred_base_options, width=3, state="readonly")
     arred_base_combobox.grid(row=1, column=3, padx=5, pady=5, sticky=tk.W)
 
+    # Cria a entrada de texto para adicionar links
+    link_label = tk.Label(bethouses_frame, text='Link:')
+    link_label.grid(row=2, column=0, padx=5, pady=5)
+    link_entry = tk.Entry(bethouses_frame, width=15)
+    link_entry.grid(row=2, column=1, columnspan=2, padx=5, pady=5)
+    # Cria a combobox com as opções
+    navegador = ['sistema', 'chrome', 'firefox', 'edge', 'safari']
+    navegador_combobox = ttk.Combobox(bethouses_frame, values=navegador, width=5)
+    navegador_combobox.set('sistema')
+    navegador_combobox.grid(row=2, column=3, padx=5, pady=5)
 
     # Cria uma função para adicionar uma nova BetHouse à lista
     def add_bethouse():
@@ -327,20 +368,55 @@ def open_bethouses():
         if not new_bethouse:
             tk.messagebox.showwarning("Aviso", "Dê o nome da BetHouse")
             return
+        exist = new_bethouse in bethouse_options_total.keys()
         new_bethouse = new_bethouse_entry.get().strip()
-        new_rate = float(new_rate_entry.get().strip()) if new_rate_entry.get().strip() != "" else 0.0
+        new_rate = float(new_rate_entry.get().replace(',', '.').strip()) if new_rate_entry.get().strip() != "" else 0.0
         text_color = text_color_entry.get().strip()
         background_color = background_color_entry.get().strip()
-        bethouse_options[new_bethouse] = {
-            'taxa': new_rate,
+        bethouse_options_total[new_bethouse] = {
+            'taxa': new_rate / 100,
             'text_color': text_color,
             'background_color': background_color,
-            'arred': arred_base_var.get()
+            'arred': arred_base_var.get(),
+            'ativa': 'True',
+            'html': {'link': link_entry.get().strip(),
+                     'navegador': navegador_combobox.get()}
         }
+        bethouse_options[new_bethouse] = {
+            'taxa': new_rate / 100,
+            'text_color': text_color,
+            'background_color': background_color,
+            'arred': arred_base_var.get(),
+            'ativa': 'True',
+            'html': {"link": link_entry.get().strip(),
+                     'navegador': navegador_combobox.get()}
+        }
+        if not exist:
+            table_name = f"{new_bethouse}_saldos"
+            table_name = re.sub(r'\W+', '_', table_name)
+            if table_name[0].isdigit():
+                table_name = f'_{table_name}'
+            create_table_query = f'''
+                    CREATE TABLE "{table_name}" (
+                        id INTEGER,
+                        data_entrada TEXT,
+                        data_fim TEXT,
+                        odd REAL,
+                        aposta REAL,
+                        resultado TEXT,
+                        balanco REAL,
+                        dif_real REAL
+                    )
+                    '''
+            c.execute(create_table_query)
         new_bethouse_entry.delete(0, tk.END)
         new_rate_entry.delete(0, tk.END)
+        arred_combobox.set(0.01)
         text_color_entry.delete(0, tk.END)
         background_color_entry.delete(0, tk.END)
+        link_entry.delete(0, tk.END)
+        navegador_combobox.set('sistema')
+        bethouse_list.add(new_bethouse)
         save_bethouse_options()
         update_bethouses_list()
 
@@ -374,35 +450,83 @@ def open_bethouses():
     add_bethouse_button = tk.Button(bethouses_frame, text="Adicionar", command=add_bethouse)
     add_bethouse_button.grid(row=4, column=0, columnspan=4, padx=5, pady=5)
 
+    def activate_bethouse(bethouse):
+        # Função para ativar ou desativar uma bethouse
+        if bethouse_options_total[bethouse]['ativa'] == "True":
+            bethouse_options_total[bethouse]['ativa'] = "False"
+            bethouse_options.pop(bethouse, None)
+        else:
+            bethouse_options_total[bethouse]['ativa'] = "True"
+            bethouse_options[bethouse] = bethouse_options_total[bethouse]
+        bethouse_list.add(bethouse)
+        save_bethouse_options()
+        update_bethouses_list()
+
+    def on_right_click(event):
+        # Função para lidar com o evento de clique com o botão direito do mouse
+        item = bethouses_tree.identify('item', event.x, event.y)
+        if item:
+            bethouse = bethouses_tree.item(item, 'values')[0]
+            if bethouse_options_total[bethouse]['ativa'] == "True":
+                activate_menu.entryconfigure(0, label="Desativar", command=lambda b=bethouse: activate_bethouse(b))
+            else:
+                activate_menu.entryconfigure(0, label="Ativar", command=lambda b=bethouse: activate_bethouse(b))
+            activate_menu.tk_popup(event.x_root, event.y_root)
+
     # Cria a lista de BetHouses
     configStyle = ttk.Style()
     configStyle.configure("Normal.Treeview", rowheight=20)
-    bethouses_list = sorted(bethouse_options.keys())
-    bethouses_tree = ttk.Treeview(bethouses_frame, columns=('Bethouse', 'Taxa'), show='headings', style="Normal.Treeview")
+    bethouses_list = sorted(bethouse_options_total.keys())
+    bethouses_tree = ttk.Treeview(bethouses_frame, columns=('Bethouse', 'Taxa', 'Arred', 'Ativa'), show='headings', style="Normal.Treeview")
     bethouses_tree.grid(row=5, column=0, columnspan=4, padx=5, pady=5)
     bethouses_tree.heading('Bethouse', text='BetHouse')
     bethouses_tree.heading('Taxa', text='Taxa')
+    bethouses_tree.heading('Arred', text='Arred.')
+    bethouses_tree.heading('Ativa', text='Ativa')
     bethouses_tree.column('Bethouse', width=70)
-    bethouses_tree.column('Taxa', width=70)
+    bethouses_tree.column('Taxa', width=40)
+    bethouses_tree.column('Arred', width=40)
+    bethouses_tree.column('Ativa', width=40)
+
     for bethouse in bethouses_list:
-        taxa = float(bethouse_options[bethouse]["taxa"])
-        bethouses_tree.insert('', 'end', values=(bethouse, f"{taxa:.3f}"), tags=(bethouse,))
-        bethouses_tree.tag_configure(bethouse, background=bethouse_options[bethouse]['background_color'], foreground=bethouse_options[bethouse]['text_color'])
+        taxa = f'{float(bethouse_options_total[bethouse]["taxa"]) * 100:g} %'
+        arred = bethouse_options_total[bethouse]["arred"]
+        ativa = bethouse_options_total[bethouse]["ativa"]
+        if ativa == 'True':
+            ativa = 'Sim'
+        else:
+            ativa = 'Não'
+        bethouses_tree.insert('', 'end', values=(bethouse, taxa, arred,  ativa), tags=(bethouse,))
+        bethouses_tree.tag_configure(bethouse, background=bethouse_options_total[bethouse]['background_color'], foreground=bethouse_options_total[bethouse]['text_color'])
+
+    # Cria o menu de contexto para ativar ou desativar
+    activate_menu = Menu(bethouses_tree, tearoff=False)
+    activate_menu.add_command(label="")
+
+    # Associa o menu de contexto à treeview
+    bethouses_tree.bind("<Button-2>", on_right_click)
 
     def on_double_click(event):
         selected_item = bethouses_tree.selection()[0]
         selected_bethouse = bethouses_tree.item(selected_item)['values'][0]
-        taxa = bethouse_options[selected_bethouse]["taxa"]
-        text_color = bethouse_options[selected_bethouse]["text_color"]
-        background_color = bethouse_options[selected_bethouse]["background_color"]
+        taxa = bethouse_options_total[selected_bethouse]["taxa"]
+        arred = bethouse_options_total[selected_bethouse]["arred"]
+        text_color = bethouse_options_total[selected_bethouse]["text_color"]
+        background_color = bethouse_options_total[selected_bethouse]["background_color"]
+        link = bethouse_options_total[selected_bethouse]["html"]["link"]
+        navegador = bethouse_options_total[selected_bethouse]["html"]["navegador"]
         new_bethouse_entry.delete(0, tk.END)
         new_bethouse_entry.insert(0, selected_bethouse)
         new_rate_entry.delete(0, tk.END)
-        new_rate_entry.insert(0, f"{taxa:.3f}"[3:])
+        new_rate_entry.insert(0, f'{taxa * 100:g}')
+        arred_base_combobox.set(arred)
         text_color_entry.delete(0, tk.END)
         text_color_entry.insert(0, text_color)
         background_color_entry.delete(0, tk.END)
         background_color_entry.insert(0, background_color)
+        link_entry.delete(0, tk.END)
+        link_entry.insert(0, link)
+        navegador_combobox.set(navegador)
 
     bethouses_tree.bind('<Double-1>', on_double_click)
 
@@ -410,7 +534,34 @@ def open_bethouses():
     def remove_bethouse():
         selected_item = bethouses_tree.selection()[0]
         selected_bethouse = bethouses_tree.item(selected_item)['values'][0]
-        del bethouse_options[selected_bethouse]
+        table_name = f"{selected_bethouse}_saldos"
+        table_name = re.sub(r'\W+', '_', table_name)
+        if table_name[0].isdigit():
+            table_name = f'_{table_name}'
+        # Verifica se a tabela existe
+        check_table_query = f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table_name}'"
+        c.execute(check_table_query)
+        result = c.fetchone()
+
+        if result is not None:
+            # Verifica se a tabela está vazia
+            check_empty_query = f"SELECT COUNT(*) FROM {table_name}"
+            c.execute(check_empty_query)
+            count = c.fetchone()[0]
+            if count > 0:
+                answer = messagebox.askquestion("Apagar histórico",
+                                                f"Isso apagará todo o histórico de aposta de {table_name}, deseja mesmo perder o histórico?\n(Manter a tabela e seu histórico não modifica em nada o desempenho do programa)")
+                if answer == 'yes':
+                    c.execute(f"DROP TABLE {table_name}")
+                else:
+                    return
+        # Apaga a tabela se estiver vazia
+        c.execute(f"DROP TABLE {table_name}")
+        del bethouse_options_total[selected_bethouse]
+        if selected_bethouse in bethouse_options.keys():
+            del bethouse_options[selected_bethouse]
+        bethouse_list.add(selected_bethouse)
+
         update_bethouses_list()
         save_bethouse_options()  # Salva os dados em um arquivo JSON
 
@@ -427,12 +578,18 @@ def open_bethouses():
         # Limpa a Treeview
         bethouses_tree.delete(*bethouses_tree.get_children())
         # Cria uma nova lista com as BetHouses e suas taxas
-        bethouses_list = sorted(bethouse_options.keys())
+        bethouses_list = sorted(bethouse_options_total.keys())
         # Adiciona as BetHouses à Treeview
         for bethouse in bethouses_list:
-            taxa = float(bethouse_options[bethouse]["taxa"])
-            bethouses_tree.insert('', 'end', values=(bethouse, f"{taxa:.3f}"), tags=(bethouse,))
-            bethouses_tree.tag_configure(bethouse, background=bethouse_options[bethouse]['background_color'], foreground=bethouse_options[bethouse]['text_color'])
+            taxa = f'{float(bethouse_options_total[bethouse]["taxa"]) * 100:g} %'
+            arred = bethouse_options_total[bethouse]["arred"]
+            ativa = bethouse_options_total[bethouse]["ativa"]
+            if ativa == 'True':
+                ativa = 'Sim'
+            else:
+                ativa = 'Não'
+            bethouses_tree.insert('', 'end', values=(bethouse, taxa, arred, ativa), tags=(bethouse,))
+            bethouses_tree.tag_configure(bethouse, background=bethouse_options_total[bethouse]['background_color'], foreground=bethouse_options_total[bethouse]['text_color'])
 
     # Chama a função para atualizar a lista de BetHouses
     update_bethouses_list()
@@ -459,11 +616,21 @@ def open_bethouses():
 
     # Cria a lista de opções de mercado
     mercado_options_list = sorted(list(mercado_options), key=lambda x: x[0])
-    # Adiciona as BetHouses à Listbox
-    mercado_options_listbox = tk.Listbox(bethouses_frame)
-    mercado_options_listbox.grid(row=5, column=4, columnspan=2, padx=5, pady=5)
-    for mercado in mercado_options_list:
-        mercado_options_listbox.insert(tk.END, f"{mercado}")
+
+    # Cria o Treeview
+    mercado_options_tree = ttk.Treeview(bethouses_frame, columns=['Mercado'], show='headings',
+                                        height=10, style="Normal.Treeview")
+    mercado_options_tree.grid(row=5, column=4, columnspan=2, padx=5, pady=5)
+    mercado_options_tree.heading('Mercado', text='Mercado')
+
+    # Adiciona as opções de mercado ao Treeview
+    for i, mercado in enumerate(mercado_options_list):
+        mercado_options_tree.insert('', 'end', values=[mercado])
+        if i % 2 == 1:
+            mercado_options_tree.item(mercado_options_tree.get_children()[-1], tags=['oddrow'])
+
+    # Define o estilo para linhas ímpares
+    mercado_options_tree.tag_configure('oddrow', background='gray90')
 
     # Função para remover a opção de mercado selecionada
     def remove_mercado_option():
@@ -489,8 +656,6 @@ def open_bethouses():
         # Adiciona as BetHouses à Listbox
         for mercado in mercado_options_list:
             mercado_options_listbox.insert(tk.END, f"{mercado}")
-    # Chama a função para atualizar a lista de BetHouses
-    update_bethouses_list()
 
 # Cria um menu pop-up com as opções desejadas
 settings_menu = tk.Menu(frameJogo, tearoff=False)
@@ -509,7 +674,7 @@ settings_button.bind("<Button-1>", show_settings_menu)
 # Coloca o botão de configurações no row 0 colunm 0 da janela principal
 
 def save_bethouse_options():
-    sorted_bethouse_options = dict(sorted(bethouse_options.items(), key=lambda x: x[0]))
+    sorted_bethouse_options = dict(sorted(bethouse_options_total.items(), key=lambda x: x[0]))
     sorted_mercado_options = sorted(mercado_options, key=lambda x: x[0])
     arredondamento = arred_var.get()
     data = {
@@ -598,12 +763,52 @@ esporte_entry = tk.Entry(frameJogo, foreground='gray')
 set_placeholder_text(esporte_entry, "Esporte")
 esporte_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 
+
+def on_enter_game(event):
+    # Obtém o nome completo do jogo inserido na entry
+    if " - " in jogo_entry.get():
+        time_casa, time_fora = jogo_entry.get().strip().split(" - ")
+    elif " vs " in jogo_entry.get():
+        time_casa, time_fora = jogo_entry.get().strip().split(" vs ")
+    elif " x " in jogo_entry.get():
+        time_casa, time_fora = jogo_entry.get().strip().split(" x ")
+
+    # Converte a data e hora atual para string no formato YYYY-MM-DD hh:mm:ss
+    data_hora_atual = datetime.now()
+
+    # Executa a consulta na tabela 'apostas' pelo nome da equipe da casa e data do jogo
+    c.execute(f"SELECT data_jogo FROM apostas WHERE time_casa = '{time_casa}' AND time_fora = '{time_fora}' AND data_jogo > '{data_hora_atual}'",)
+    jogo_encontrado = c.fetchone()
+
+    # Verifica se há um jogo futuro encontrado na consulta
+    if jogo_encontrado:
+        # Obtém a data do jogo
+        data_jogo = jogo_encontrado[0]
+
+        # Converte a data do jogo para objeto datetime
+        data_jogo_obj = datetime.strptime(data_jogo, "%Y-%m-%d %H:%M:%S")
+
+        # Verifica se o jogo é no futuro em relação à data e hora atual
+        if data_jogo_obj > data_hora_atual:
+            # Insere os valores nas entries correspondentes
+            dia_entry.delete(0, 'end')
+            dia_entry.insert(0, data_jogo_obj.day)
+            mes_combobox.set(convert_mes(data_jogo_obj.month))
+            hora_entry.delete(0, 'end')
+            hora_entry.insert(0, data_jogo_obj.hour)
+            minuto_entry.delete(0, 'end')
+            minuto_entry.insert(0, data_jogo_obj.minute)
+
 # Adiciona campo Jogo
-jogo_label = tk.Label(frameJogo, text="Jogo")
+jogo_label = tk.Label(frameJogo, text="Jogo / Esporte")
 jogo_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
 jogo_entry = tk.Entry(frameJogo)
-set_placeholder_text(jogo_entry, "Jogo (Equipe 1 - Equipe 2)")
-jogo_entry.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W) # Jogo
+set_placeholder_text(jogo_entry, "Jogo (Equipe 1 e Equipe 2)")
+jogo_entry.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
+jogo_entry.bind('<FocusOut>', on_enter_game)
+
+
+# Jogo
 
 # Adiciona campo Data
 def validate_day(text):
@@ -797,14 +1002,20 @@ def on_mercado_combobox_selected(event):
                 mercado_var2.set('TO2')
                 mercado_var3.set('TO2')
     elif mercado_var.get() == '1':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('2')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('2')
+            elif mercado_var2.startswith('AH'):
+                valor_var2.set('0.5')
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('2')
     elif mercado_var.get() == '2':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('1')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('1')
+            elif mercado_var2.startswith('AH'):
+                valor_var.set('0.5')
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('1')
@@ -821,31 +1032,51 @@ def on_mercado_combobox_selected(event):
         if num_bets == 2 and mercado_var2.get() == '':
             mercado_var2.set('1')
     elif mercado_var.get() == 'DNB1':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('DNB2')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('DNB2')
+            elif mercado_var2.startswith('AH'):
+                valor_var2.set(0)
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('2')
     elif mercado_var.get() == 'DNB2':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('DNB1')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('DNB1')
+            elif mercado_var2.startswith('AH'):
+                valor_var2.set(0)
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('1')
     elif mercado_var.get() == 'AH1':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('AH2')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('AH2')
+            elif mercado_var2.get() == '1' or mercado_var2.get() == '2':
+                valor_var2.set('')
+            elif mercado_var2.startswith('DNB'):
+                valor_var2.set('')
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('2')
             valor_var.set(0)
     elif mercado_var.get() == 'AH2':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('AH1')
+        if num_bets == 2:
+            if mercado_var2.get() == '':
+                mercado_var2.set('AH1')
+            elif mercado_var2.get() == '1' or mercado_var2.get() == '2':
+                valor_var.set('')
+            elif mercado_var2.startswith('DNB'):
+                valor_var2.set('')
         elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
             mercado_var3.set('1')
             valor_var.set(0)
+    elif mercado_var.get() == 'Q1':
+        mercado_var2.set('Q2')
+    elif mercado_var.get() == 'Q2':
+        mercado_var2.set('Q1')
 
 def on_valor_combobox_selected(event):
     def float_error(valor):
@@ -863,13 +1094,16 @@ def on_valor_combobox_selected(event):
             arred_valor = round(valor_var.get(), 0)
             valor_var2.set(arred_valor - 0.5)
             valor_var3.set(arred_valor + 0.5)
-    elif mercado_var.get().startswith('AH') and mercado_var2.get().startswith('AH'):
-        if num_bets == 2:
-            valor_var2.set(-valor_var.get())
-        elif num_bets == 3:
-            if mercado_var3.get().startswith('AH') and valor_var.get().is_integer():
-                valor_var2.set(-(valor_var.get() - 0.5))
-                valor_var3.set(-(valor_var.get() + 0.5))
+    elif mercado_var.get().startswith('AH'):
+        if mercado_var2.get().startswith('AH'):
+            if num_bets == 2:
+                valor_var2.set(-valor_var.get())
+            elif num_bets == 3:
+                if mercado_var3.get().startswith('AH') and valor_var.get().is_integer():
+                    valor_var2.set(-(valor_var.get() - 0.5))
+                    valor_var3.set(-(valor_var.get() + 0.5))
+        elif mercado_var2.get().startswith('DNB') and num_bets == 2:
+            valor_var2.set('')
     elif mercado_var.get().startswith('DNB') and mercado_var2.get().startswith('AH') and num_bets == 2:
         valor_var2.set(0)
     elif mercado_var2.get().startswith('DNB') and mercado_var.get().startswith('AH') and num_bets == 2:
@@ -1111,6 +1345,7 @@ def resetar_variaveis():
     if num_bets == 3:
         alternar_bets()
     esporte_entry.delete(0, tk.END)
+    update_columns()
     valor_entry.configure(fg='systemWindowBody', bg='systemWindowBody')
     odd_entry.configure(fg='systemWindowBody', bg='systemWindowBody')
     aposta_entry.configure(fg='systemWindowBody', bg='systemWindowBody')
@@ -1141,12 +1376,11 @@ def gravar():
             and (bethouse_combobox.get() in bethouse_options.keys())\
             and (bethouse_combobox2.get() in bethouse_options.keys())\
             and ((num_bets != 3) or (num_bets == 3 and bethouse_combobox3.get() in bethouse_options.keys())):
-        count_query = "SELECT COUNT(*) FROM apostas"
-        c.execute(count_query)
-        result = c.fetchone()
-        num_linhas = result[0]
+        hoje = datetime.today().strftime('%Y-%m-%d')
+        bet_hoje = c.execute(f"SELECT COUNT(*) FROM apostas WHERE DATE(data_entrada) = DATE('{hoje}')").fetchone()[0]
+
         dados = {
-            'id': num_linhas + 1,
+            'id': f"{datetime.now().strftime('%Y%m%d')}{str(bet_hoje).zfill(3)}",
             'data_entrada': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
             'data_jogo': datetime.strptime(f"{ano_combobox.get()}-{convert_mes(mes_combobox.get()):02}-{int(dia_entry.get()):02} {int(hora_entry.get()):02}:{int(minuto_entry.get()):02}:00", '%Y-%m-%d %H:%M:%S'),
             'time_casa': time_casa,
@@ -1170,7 +1404,7 @@ def gravar():
             'aposta3': palpite3_label.cget("text").replace("R$", "").strip() if palpite3_label.cget("text").replace("R$", "").strip() != '' else None,
             'resultado3': None,
             'lucro_estimado': lucro1_label.cget("text").replace("R$", "").strip(),
-            'lucro_per_estimado': lucro_percent_label1.cget("text").strip("%"),
+            'lucro_per_estimado': float(lucro_percent_label1.cget("text").strip("%")) / 100,
             'lucro_real': None,
             'lucro_per_real': None,
             'esporte': converter_esporte(esporte_entry.get().split(". ")[0])
@@ -1181,7 +1415,7 @@ def gravar():
         bethouse_list = {valor for valor in [dados['bethouse1'], dados['bethouse2'], dados['bethouse3']] if valor}
 
         save_apostas(dados, conn)
-
+        update_lucro_diario()
         preencher_treeview(conn, tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=bethouse_list)
         resetar_variaveis()
 
@@ -1287,6 +1521,7 @@ def select_bets(event):
         save_apostas(linha, conn, tipo='e', linha_antiga=bethouses_antigas)
 
         # Limpar as variáveis e atualizar a tabela
+        update_lucro_diario()
         preencher_treeview(conn, tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=bethouse_list)
         resetar_variaveis()
 
