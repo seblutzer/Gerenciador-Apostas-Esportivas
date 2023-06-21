@@ -6,7 +6,7 @@ Apresentamos o Gerenciador de Apostas Esportivas: um software completo para o ge
 Com uma interface intuitiva, o software permite a adição fácil e cálculo automático de mais de 15 tipos de SureBets além do controle preciso das BetHouses.
 
 <img width="400" alt="Captura de Tela 2023-06-20 às 03 33 08" src="https://github.com/seblutzer/Gerenciador-Apostas-Esportivas/assets/114627479/ab25ad46-2b27-49ef-9409-556c6b6fe9de">
-<img width="534" alt="Captura de Tela 2023-06-20 às 03 33 29" src="https://github.com/seblutzer/Gerenciador-Apostas-Esportivas/assets/114627479/fd59cc03-b5e1-4ae9-913c-b71182045571">
+<img width="400" alt="Captura de Tela 2023-06-20 às 03 33 29" src="https://github.com/seblutzer/Gerenciador-Apostas-Esportivas/assets/114627479/fd59cc03-b5e1-4ae9-913c-b71182045571">
 
 
 Uma funcionalidade essencial é o treeview, que exibe de forma clara todas as SureBets já realizadas e armazenar os resultados. Além disso, foram implementados filtros personalizáveis para visualização das SureBets feitas, proporcionando uma análise mais precisa e relevante.
