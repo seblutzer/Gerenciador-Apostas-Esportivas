@@ -26,7 +26,8 @@ def plot_grafico():
     plotly_component.winfo_toplevel().title("Gráfico Interativo")
 
     # Carregar o HTML do gráfico no componente Plotly
-    browser = pio.renderers._utils.Browser()
+    pio.renderers.default = 'browser'
+    browser = pio.renderers._base.DefaultRenderer().default_render_manager._renderer
     browser.open("about:blank")
     browser.window.document.write(fig_html)
     plotly_component.bind("<Destroy>", lambda event: browser.close())

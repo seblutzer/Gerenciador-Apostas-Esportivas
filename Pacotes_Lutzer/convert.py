@@ -84,13 +84,13 @@ def converter_esporte(sport):
         return 'Futebol'
     elif sport in {'basketball', 'basket', 'баскетбол'}:
         return 'Basquetebol'
-    elif sport == 'volleyball':
+    elif sport in {'volleyball', 'волейбол'}:
         return 'Voleibol'
     elif sport == 'бейсбол':
         return 'Baseball'
     elif sport in {'handball', 'гандбол'}:
         return 'Handball'
-    elif sport in {'dota2', 'esports', 'esport', 'e-sports', 'cybersports'}:
+    elif sport in {'dota2', 'dota 2', 'lol', 'league of legends', 'csgo', 'cs go', 'esports', 'esport', 'e-sports', 'cybersports'}:
         return 'E-Sports'
     elif sport in {'ice hockey', 'хоккей'}:
         return 'Hockey'

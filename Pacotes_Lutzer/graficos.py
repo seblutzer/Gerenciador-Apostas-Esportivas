@@ -1,188 +1,334 @@
-# Função para atualizar o gráfico interativamente
-def lucros_por_tempo():
-    # Obtenha os valores selecionados dos widgets de entrada
-    range_val = int(range1_entry.get())
-    periodo = periodo1_var.get()
+import pandas as pd
+import sqlite3
+from Pacotes_Lutzer.sqlite_commands import lucros_por_tempo, count_hora, saldo_bethouses, agrup_esportes, contar_bethouses, odds_resultados
+import json
+import plotly.graph_objs as go
+from plotly.subplots import make_subplots
+import plotly.express as px
 
+global bethouse_options_total
+with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
+    data = json.load(f)
+    bethouse_options_total = data.get("bethouse_options", {})
+
+def lucro_tempo(range_val, periodo, conn, media=3):
+    df = lucros_por_tempo(range_val, periodo, conn)
+
+    df['media_movel_estimado'] = df['lucro_estimado'].rolling(media, min_periods=1).mean()
+    df['media_movel_real'] = df['lucro_real'].rolling(media, min_periods=1).mean()
+
+    fig = go.Figure()
+
+    fig.add_trace(
+        go.Bar(x=df[periodo], y=df['lucro_estimado'], name='Lucro Estimado', offset=-0.2, width=0.4))
+    fig.add_trace(go.Bar(x=df[periodo], y=df['lucro_real'], name='Lucro Real', offset=0.2, width=0.4))
+    fig.add_trace(go.Bar(x=df[periodo], y=df['aberto'], name='Em aberto', base=df['lucro_real'], offset=0.2, width=0.4))
+
+    fig.add_trace(go.Scatter(x=df[periodo], y=df['media_movel_estimado'],
+                             name='Lucro Estimado (Média)', mode='lines', line=dict(width = 4)))
+    fig.add_trace(go.Scatter(x=df[periodo], y=df['media_movel_real'],
+                             name='Lucro Real (Média)', mode='lines', line=dict(width = 4)))
+    gen = 'o'
     if periodo == 'dia':
-        query = f"SELECT strftime('%d/%m', data_entrada) AS dia, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val + 1} day') GROUP BY dia ORDER BY DATE(data_entrada) ASC"
+        periodico = 'diário'
     elif periodo == 'semana':
-        query = f"SELECT STRFTIME('%d', MIN(data_entrada)) || '-' || STRFTIME('%d', MAX(data_entrada)) || '/' || STRFTIME('%m', data_entrada) AS semana, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val * 7 + 1} day') GROUP BY STRFTIME('%Y-%W', data_entrada) ORDER BY DATE(data_entrada) ASC"
+        periodico = 'semanal'
+        gen = 'a'
     elif periodo == 'mes':
-        query = f"SELECT STRFTIME('%m/%Y', data_entrada) AS mes, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val + 1} month') GROUP BY mes ORDER BY DATE(data_entrada) ASC"
+        periodico = 'mensal'
     elif periodo == 'trimestre':
-        query = f"SELECT STRFTIME('%m', MIN(data_entrada)) || '-' || STRFTIME('%m', MAX(data_entrada)) || '/' || STRFTIME('%Y', data_entrada) AS trimestre, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val * 3 + 1} month') GROUP BY STRFTIME('%Y-%m', data_entrada, 'start of quarter') ORDER BY DATE(data_entrada) ASC"
+        periodico = 'trimestral'
     elif periodo == 'semestre':
-        query = f"SELECT CASE WHEN STRFTIME('%m', data_entrada) >= '07' THEN STRFTIME('%m', data_entrada) || '-12/' || STRFTIME('%Y', data_entrada) ELSE '01-06/' || STRFTIME('%Y', data_entrada) END AS semestre, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val * 6 + 1} month') GROUP BY semestre ORDER BY DATE(data_entrada) ASC"
+        periodico = 'semestral'
+    elif periodo == 'ano':
+        periodico = 'anual'
+    # Formatar o eixo Y
+    fig.update_layout(title=f'Lucro {periodico} d{gen}s ultim{gen}s {range_val} {periodo}s', yaxis_tickprefix='R$', yaxis_tickformat=',.2f')
+
+    fig.show()
+
+def apostas_hora(conn, range):
+    df = count_hora(conn, range)
+    media = df[df['total_apostas'] > 0]['total_apostas'].mean()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=df['hora'], y=[media] * len(df['hora']),
+                             name='Média de Apostas por Hora', mode='lines', line=dict(width=1)))
+    fig.add_trace(go.Bar(
+        x=df['hora'],
+        y=df['total_apostas'],
+        name='Total de Apostas',
+        hovertemplate=(
+            "Hora: %{x}<br>" +
+            "Total de Apostas: %{y}<br>" +
+            "Média de Apostas: %{customdata:.2f}<extra></extra>"
+        ),
+        customdata=df['media_apostas'],
+        marker=dict(
+            color=df['total_apostas'],
+            colorscale=[[0, 'blue'], [1, 'red']],
+            line=dict(width=0)
+        )
+    ))
+    fig.add_trace(go.Scatter(
+        x=df['hora'],
+        y=df['lucro_total'],
+        name='Lucro total',
+        line=dict(width=3),
+        hovertemplate="Hora: %{x}<br>" +
+                  "Lucro total: R$%{y:.2f}<br>"
+    ))
+    if range == 0:
+        fig.update_layout(title=f"Número de apostas por hora hoje")
+    elif range == 1:
+        fig.update_layout(title=f"Número de apostas por hora desde ontem")
     else:
-        query = f"SELECT STRFTIME('%Y', data_entrada) || '-01' AS ano, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val + 1} year') GROUP BY ano ORDER BY DATE(data_entrada) ASC"
+        fig.update_layout(title=f"Número de apostas por hora nos últimos {range} dias")
+    fig.show()
 
-    df_lucro_por_tempo = pd.read_sql_query(query, conn)
+def calc_saldo_bethouse(conn, range, periodo, bethouse_options_total):
+    df, total_apostas = saldo_bethouses(conn, range, periodo)
 
-    # Criar uma figura e um eixo para o gráfico
-    fig, ax = plt.subplots(figsize=(2.5, 1.2))
-    # Defina o tamanho da fonte desejado
-    plt.rcParams.update({'font.size': 4})
-    ax.tick_params(axis='x', labelsize=4)  # Ajuste o tamanho dos valores do eixo x
-    ax.tick_params(axis='y', labelsize=4)  # Ajuste o tamanho dos valores do eixo y
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df[periodo].unique(),
+        y=df.groupby(periodo)['saldo_bethouse'].mean(),
+        name='Saldo Médio',
+        marker=dict(color='rgba(0,0,0,0.8)'),
+        opacity=0.5
+    ))
+    for bethouse in df['bethouse'].unique():
+        df_bethouse = df[df['bethouse'] == bethouse]
+        fig.add_trace(go.Scatter(x=df_bethouse[periodo], y=df_bethouse['saldo_bethouse'], name=bethouse,
+                                 marker=dict(color=bethouse_options_total[bethouse]['background_color']),
+                                 line=dict(color=bethouse_options_total[bethouse]['text_color'],
+                                           width = 6)))
+    if periodo == 'dia':
+        periodico = 'diário'
+    elif periodo == 'semana':
+        periodico = 'semanal'
+    elif periodo == 'mes':
+        periodico = 'mensal'
+    elif periodo == 'trimestre':
+        periodico = 'trimestral'
+    elif periodo == 'semestre':
+        periodico = 'semestral'
+    elif periodo == 'ano':
+        periodico = 'anual'
+    fig.update_layout(title=f'Variação {periodico} do Saldo das BetHouses', yaxis_tickprefix='R$ ', yaxis_tickformat=',.2f')
+    fig.show()
 
-    # Plotar as linhas de lucro_estimado e lucro_real
-    ax.plot(df_lucro_por_tempo[periodo], df_lucro_por_tempo['lucro_estimado'], label='Lucro Estimado')
-    ax.plot(df_lucro_por_tempo[periodo], df_lucro_por_tempo['lucro_real'], label='Lucro Real')
+def apostas_bethouses(conn, range, periodo, bethouse_options_total, top=0, bottom=0):
+    df, total_apostas = saldo_bethouses(conn, range, periodo)
 
-    # Adicionar título e legendas aos eixos
-    ax.set_title('Lucro por Tempo')
-    ax.set_xlabel('Período')
-    ax.set_ylabel('Lucro (R$)')
-    #ax.set_xticklabels(ax.get_xticklabels(), fontsize=5)
-    ax.yaxis.get_label().set_fontsize(5)  # Define o tamanho da fonte para 10
-    ax.legend()
+    # Define the top_bethouses and bottom_bethouses variables
+    top_bethouses = df.groupby('bethouse')['apostas'].sum().nlargest(top).index if top > 0 else []
+    bottom_bethouses = df.groupby('bethouse')['apostas'].sum().nsmallest(bottom).index if bottom > 0 else []
 
-    # Criar uma instância de FigureCanvasTkAgg passando a figura
-    canvas = FigureCanvasTkAgg(fig, master=frameStatus)
+    # Filter the data based on the top and bottom parameters
+    if top > 0:
+        df_top = df[df['bethouse'].isin(top_bethouses)]
+    if bottom > 0:
+        df_bottom = df[df['bethouse'].isin(bottom_bethouses)]
 
-    # Limpar o frameStatus antes de adicionar o gráfico
-    frameStatus.grid_forget()
-
-    # Adicionar o gráfico ao frameStatus
-    canvas.get_tk_widget().grid(row=1, column=0, columnspan=4)
-
-    # Atualizar a interface tkinter
-    frameStatus.update()
-
-
-# Crie uma caixa de entrada para o range_val
-range1_label = tk.Label(frameStatus, text="Range:")
-range1_label.grid(row=0, column=0)
-range1_entry = tk.Entry(frameStatus, width=4)
-range1_entry.grid(row=0, column=1)
-range1_entry.insert(0, 5)
-range1_entry.bind("<FocusOut>", lambda event: lucros_por_tempo())
-
-def atualizar_lucros_por_tempo(event):
-    lucros_por_tempo()
-
-# Crie uma caixa de seleção para o período
-periodo1_var = tk.StringVar(frameStatus)
-periodo1_var.set("dia")  # Valor padrão
-periodo1_dropdown = tk.OptionMenu(frameStatus, periodo1_var, "dia", "semana", "mes", "trimestre", "semestre", "ano", command=atualizar_lucros_por_tempo)
-periodo1_dropdown.grid(row=0, column=3)
-periodo1_dropdown.configure(width=4)
-lucros_por_tempo()
-
-
-
-
-
-
-
-
-
-######## Balanços BetHouses ##########
-
-def saldo_bethouses():
-    # Obtenha os valores selecionados dos widgets de entrada
-    range_val = int(range2_entry.get())
-    periodo = periodo2_var.get()
-
-    # Dataframe para armazenar os resultados
-    df_saldos = pd.DataFrame()
-
-    # Loop através das chaves do dicionário bethouse_options
-    for bethouse in bethouse_options.keys():
-        tabela_aposta = f"{bethouse}_saldos"
-        tabela_aposta = re.sub(r'\W+', '_', tabela_aposta)
-
-        # Consulta para obter a soma de dif_real e Valor agrupados por dia
-        if periodo == 'dia':
-            query = f"""
-            SELECT DATE({tabela_aposta}.data_fim) AS data, '{bethouse}' AS bethouse, SUM({tabela_aposta}.dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY DATE({tabela_aposta}.data_fim)
-            """
-        elif periodo == 'semana':
-            query = f"""
-            SELECT STRFTIME('%Y-%W', data_fim) AS periodo, '{bethouse}' AS bethouse, SUM(dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY STRFTIME('%Y-%W', data_fim)
-            """
-        elif periodo == 'mes':
-            query = f"""
-            SELECT STRFTIME('%Y-%m', data_fim) AS periodo, '{bethouse}' AS bethouse, SUM(dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY STRFTIME('%Y-%m', data_fim)
-            """
-        elif periodo == 'trimestre':
-            query = f"""
-            SELECT STRFTIME('%Y-%m', data_fim, 'start of quarter') AS periodo, '{bethouse}' AS bethouse, SUM(dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY STRFTIME('%Y-%m', data_fim, 'start of quarter')
-            """
-        elif periodo == 'semestre':
-            consulta = f"""
-            SELECT CASE WHEN STRFTIME('%m', data_fim) >= '07' THEN STRFTIME('%Y', data_fim) || '-12' ELSE STRFTIME('%Y', data_fim) || '-01' END AS periodo, '{bethouse}' AS bethouse, SUM(dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY CASE WHEN STRFTIME('%m', data_fim) >= '07' THEN STRFTIME('%Y', data_fim) || '-12' ELSE STRFTIME('%Y', data_fim) || '-01' END
-            """
+    if top > 0:
+        if bottom > 0:
+            df_others = df[~df['bethouse'].isin(top_bethouses) & ~df['bethouse'].isin(bottom_bethouses)]
+            df = pd.concat([df_top, df_bottom], ignore_index=True)
         else:
-            query = f"""
-            SELECT STRFTIME('%Y', data_fim) AS periodo, '{bethouse}' AS bethouse, SUM(dif_real) AS saldo_periodo
-            FROM {tabela_aposta}
-            GROUP BY STRFTIME('%Y', data_fim)
-            """
+            df_others = df[~df['bethouse'].isin(top_bethouses)]
+            df = df_top
+        df_others = df_others.groupby(periodo)['apostas'].sum().reset_index()
+        df_others['bethouse'] = 'Outras'
+        df_others = df_others.set_index(periodo)
+        df_others = df_others.reindex(df[periodo].iloc[:range])
+        df_others = df_others.reset_index()
+        df = pd.concat([df, df_others], ignore_index=True)
+        bethouse_options_total['Outras'] = {
+            'background_color': 'pink',
+            'text_color': 'gray'}
+        pass
+    elif bottom > 0:
+        df = df_bottom
 
-        df = pd.read_sql_query(query, conn)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=total_apostas[periodo].unique(),
+        y=total_apostas['num_apostas'],
+        name='Total de Apostas',
+        marker=dict(color='rgba(0,0,0,0.8)'),
+        opacity=0.5
+    ))
+    for bethouse in df['bethouse'].unique():
+        df_bethouse = df[df['bethouse'] == bethouse]
 
-        # Gerar a coluna saldo_bethouse que é a soma cumulativa de saldo_periodo
-        df['saldo_bethouse'] = df['saldo_periodo'].cumsum()
+        fig.add_trace(go.Scatter(
+            x=df_bethouse[periodo],
+            y=df_bethouse['apostas'],
+            name=bethouse,
+            hovertemplate=(
+                f"{bethouse}" + " em %{x}<br>" +
+                "%{y} apostas<br>" +
+                "%{customdata:.2f}% das apostas<extra></extra>"
+            ),
+            customdata=df_bethouse['apostas'] / total_apostas['num_apostas'] * 100,
+            marker=dict(color=bethouse_options_total[bethouse]['background_color']),
+            line=dict(
+                color=bethouse_options_total[bethouse]['text_color'],
+                width=5
+            )
+        ))
+    if periodo == 'dia':
+        periodico = 'diária'
+    elif periodo == 'semana':
+        periodico = 'semanal'
+    elif periodo == 'mês':
+        periodico = 'mensal'
+    elif periodo == 'trimestre':
+        periodico = 'trimestral'
+    elif periodo == 'semestre':
+        periodico = 'semestral'
+    elif periodo == 'ano':
+        periodico = 'anual'
+    fig.update_layout(title=f"Quantidade {periodico} de Apostas em cada BetHouses")
 
-        # Concatenar os resultados no dataframe df_saldos_periodos
-        df_saldos = pd.concat([df_saldos, df])
+    fig.show()
 
-    # Converter coluna 'data' para datetime
-    df_saldos['data'] = pd.to_datetime(df_saldos['data'], format='%Y-%m-%d')
 
-    # Filtrar os resultados dos últimos 15 dias
-    df_saldos_periodos = df_saldos[df_saldos['data'] > datetime.combine(datetime.now().date() - timedelta(days=range_val), datetime.min.time())]
+def relacao_esportes(conn, range, valor=False):
+    df = agrup_esportes(conn, range)
+    fig = make_subplots(rows=2, cols=2,
+                        specs=[[{'type': 'domain', 'colspan': 2}, None], [{'type': 'domain'}, {'type': 'domain'}]])
 
-    # Defina o estilo do seaborn
-    sns.set(style="darkgrid")
+    fig.add_trace(go.Pie(labels=df['esporte'], values=df['total'], name="Total"), 1, 1)
+    fig.add_trace(go.Pie(labels=df['esporte'], values=df['lucro_total'], name="Lucro Total"), 2, 1)
+    fig.add_trace(go.Pie(labels=df['esporte'], values=df['lucro_total'] / df['total'], name="Lucro Médio"), 2, 2)
 
-    # Crie o gráfico de linhas com hue
-    fig, ax = plt.subplots(figsize=(2.5, 1.2))
+    if valor:
+        fig.data[1].texttemplate = 'R$ %{value:,.2f}'
+    fig.data[2].texttemplate = 'R$ %{value:,.2f}'
 
-    sns.lineplot(data=df_saldos_periodos, x='data', y='saldo_bethouse', hue='bethouse', ax=ax)
-    ax.set_xlabel('Data')
-    ax.set_ylabel('Saldo do Bethouse')
-    plt.rcParams.update({'font.size': 4})
-    ax.tick_params(axis='x', labelsize=4)  # Ajuste o tamanho dos valores do eixo x
-    ax.tick_params(axis='y', labelsize=4)
+    fig.update_layout(title=f"Apostas por Esportes dos ultimos {range} dias")
 
-    # Crie uma instância de FigureCanvasTkAgg passando a figura
-    canvas = FigureCanvasTkAgg(fig, master=frameStatus)
+    fig.show()
 
-    ax.yaxis.get_label().set_fontsize(5)
-    # Adicione o gráfico ao frameStatus na célula específica usando o método grid
-    canvas.get_tk_widget().grid(row=6, column=0, columnspan=6)
+def eficiencia_bethouses(conn, tempo=None):
+    df = contar_bethouses(conn, tempo=tempo)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df['bethouse'],
+        y=df['%win'],
+        name='Vitória',
+        marker_color='blue',
+        hovertemplate=(
+                "%{x}<br>" +
+                "Vitórias: %{customdata}<extra></extra><br>" +
+                "Vitória(%): %{y}<br>"),
+        customdata=df['vitoria']
+    ))
+    fig.add_trace(go.Bar(
+        x=df['bethouse'],
+        y=df['%retorno'],
+        name='Retorno',
+        marker_color='gray',
+        hovertemplate = (
+            "%{x}<br>" +
+            "Retornos: %{customdata}<extra></extra><br>" +
+            "Retorno(%): %{y}<br>"),
+        customdata = df['retorno']
+    ))
+    fig.add_trace(go.Bar(
+        x=df['bethouse'],
+        y=df['%loss'],
+        name='Derrota',
+        marker_color='red',
+        hovertemplate = (
+            "%{x}<br>" +
+            "Derrotas: %{customdata}<extra></extra><br>" +
+            "Derrota(%): %{y}<br>"),
+        customdata = df['derrota']
+    ))
+    fig.update_layout(
+        title='Resultados por Betting House',
+        xaxis=dict(title='Betting House'),
+        yaxis=dict(title='Percentual', tickformat='.0%'),
+        barmode='stack'
+    )
+    fig.show()
 
-    # Atualize a interface tkinter
-    frameStatus.update()
+def relacao_bethouses(conn, range):
+    df = contar_bethouses(conn, range)
+    fig = make_subplots(rows=2, cols=2,
+                        specs=[[{'type': 'domain', 'colspan': 2}, None], [{'type': 'domain'}, {'type': 'domain'}]])
 
-# Crie uma caixa de entrada para o range_val
-range2_label = tk.Label(frameStatus, text="Range:")
-range2_label.grid(row=5, column=0)
-range2_entry = tk.Entry(frameStatus, width=4)
-range2_entry.grid(row=5, column=1)
-range2_entry.insert(0, 5)
-range2_entry.bind("<FocusOut>", lambda event: saldo_bethouses())
+    fig.add_trace(go.Pie(
+        labels=df['bethouse'],
+        values=df['ocorrencias'],
+        name="Total de Apostas",
+        marker=dict(
+            colors=[bethouse_options_total[bethouse]['background_color'] for bethouse in df['bethouse']],
+            line=dict(
+                color=[bethouse_options_total[bethouse]['text_color'] for bethouse in df['bethouse']],
+                width=3
+            )
+        )
+    ), 1, 1)
+    fig.add_trace(go.Pie(
+        labels=df['bethouse'],
+        values=df['investimento'],
+        name="Investimento",
+        marker=dict(
+            colors=[bethouse_options_total[bethouse]['background_color'] for bethouse in df['bethouse']],
+            line=dict(
+                color=[bethouse_options_total[bethouse]['text_color'] for bethouse in df['bethouse']],
+                width=3
+            )
+        )
+    ), 2, 1)
+    fig.add_trace(go.Pie(
+        labels=df['bethouse'],
+        values=df['media_investimento'],
+        name="Média de Investimento",
+        marker=dict(
+            colors=[bethouse_options_total[bethouse]['background_color'] for bethouse in df['bethouse']],
+            line=dict(
+                color=[bethouse_options_total[bethouse]['text_color'] for bethouse in df['bethouse']],
+                width=3
+            )
+        )
+    ), 2, 2)
 
-def atualizar_saldo_bethouses(event):
-    saldo_bethouses()
+    fig.data[1].texttemplate = 'R$ %{value:,.2f}'
+    fig.data[2].texttemplate = 'R$ %{value:,.2f}'
 
-# Crie uma caixa de seleção para o período
-periodo2_var = tk.StringVar(frameStatus)
-periodo2_var.set("dia")  # Valor padrão
-periodo2_dropdown = tk.OptionMenu(frameStatus, periodo1_var, "dia", "semana", "mes", "trimestre", "semestre", "ano", command=atualizar_saldo_bethouses)
-periodo2_dropdown.grid(row=5, column=3)
-periodo2_dropdown.configure(width=4)
-saldo_bethouses()
+    fig.update_layout(title=f"Relação de volume de Apostas por BetHouses do últimos {range} dias")
+
+    fig.show()
+
+def odds_x_resultado(conn, tempo=None, round=0, min=0, min_percent=0):
+    df = odds_resultados(conn, tempo=tempo, round=round, min=min, min_percent=min_percent)
+
+    # Criação dos traces para cada coluna
+    trace_win = go.Scatter(x=df.index, y=df['%win'], name='%win', mode='markers')
+    trace_loss = go.Scatter(x=df.index, y=df['%loss'], name='%loss', mode='markers')
+    trace_return = go.Scatter(x=df.index, y=df['%return'], name='%return', mode='markers')
+
+    # Criação do layout do gráfico
+    layout = go.Layout(title='Relação de Odds com Resultados desde sempre' if not tempo else f'Relação de Odds com Resultados nos últimos {tempo} dias', xaxis=dict(title='Odds'), yaxis=dict(title='Porcentagem'))
+
+    # Criação da figura e adição dos traces ao layout
+    fig = go.Figure(data=[trace_win, trace_loss, trace_return], layout=layout)
+
+    # Exibição do gráfico
+    fig.show()
+
+
+#conn = sqlite3.connect('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db')
+#c = conn.cursor()
+#lucro_tempo(20, 'dia', conn, media=10)
+#apostas_hora(conn, 90)
+#calc_saldo_bethouse(conn, 10, 'dia', bethouse_options_total)
+#apostas_bethouses(conn, 5, 'semestre', bethouse_options_total)
+#relacao_esportes(conn, 180, valor=True)
+#eficiencia_bethouses(conn, 30)
+#relacao_bethouses(conn, 90)
+#odds_x_resultado(conn, tempo=90, round=1, min=0, min_percent=1)

@@ -4,14 +4,17 @@ import os
 import sqlite3
 import re
 import datetime
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
+from Pacotes_Lutzer.convert import convert_mes
 import random
 
-
+global bethouse_options_total
 sql_data = '/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db'
 with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
     data = json.load(f)
     bethouse_options_total = data.get("bethouse_options", {})
+conn = sqlite3.connect(sql_data)
+c = conn.cursor()
 def apostas_to_tabelas(sql = True):
     sql = True
     dados = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/apostas_antigas.csv')
@@ -274,7 +277,7 @@ def del_column(sql_data, table, column_name):
 
 #del_column(dados, 'apostas', 'data_entrada_datetime')
 
-def strip_column(sql_data, table, column, edition):
+def edit_column(sql_data, table, column, edition, editable):
     # Conectar ao banco de dados
     conn = sqlite3.connect(sql_data)
 
@@ -282,14 +285,14 @@ def strip_column(sql_data, table, column, edition):
     cursor = conn.cursor()
 
     # Executar a consulta SQL para atualizar os valores das colunas
-    cursor.execute(f"UPDATE {table} SET {column} = {edition} WHERE id = 2107220102")
+    cursor.execute(f"UPDATE {table} SET {column} = '{edition}' WHERE {column} = '{editable}'")
 
     # Confirmar as alterações no banco de dados
     conn.commit()
 
     # Fechar a conexão com o banco de dados
     conn.close()
-#strip_column(sql_data, 'Bet365_saldos', 'data_entrada', '2021-07-22 04:43:02')
+#edit_column(sql_data, 'Bet365_saldos', 'data_entrada', '2021-07-22 04:43:02')
 
 
 def del_line(sql_data, table, limit=1, id='last'):
@@ -597,15 +600,122 @@ def edit_line(sql_data, sql_table, id, set1, set2='', set3='', set4='', set5='',
     conn.commit()
     conn.close()
 
-def count_hora(sql_data, dias, metodo='sum'):
+def reconstruir_tabela(conn, sql_table):
+    c = conn.cursor()
+    rename_query = f"ALTER TABLE {sql_table} RENAME TO {sql_table}_antigas"
+    c.execute(rename_query)
+
+    create_query = f"""
+            CREATE TABLE {sql_table} (
+            id INTEGER,
+            data_entrada TEXT,
+            data_jogo TEXT,
+            time_casa TEXT,
+            time_fora TEXT,
+            bethouse1 TEXT,
+            mercado1 TEXT,
+            valor1 REAL,
+            odd1 REAL,
+            aposta1 REAL,
+            resultado1 TEXT,
+            bethouse2 TEXT,
+            mercado2 TEXT,
+            valor2 REAL,
+            odd2 REAL,
+            aposta2 REAL,
+            resultado2 TEXT,
+            bethouse3 TEXT,
+            mercado3 TEXT,
+            valor3 REAL,
+            odd3 REAL,
+            aposta3 REAL,
+            resultado3 TEXT,
+            lucro_estimado REAL,
+            lucro_per_estimado REAL,
+            lucro_real REAL,
+            lucro_per_real REAL,
+            esporte TEXT
+        )
+        """
+    c.execute(create_query)
+
+    copy_query = f"""
+        INSERT INTO apostas (
+            id,
+            data_entrada,
+            data_jogo,
+            time_casa,
+            time_fora,
+            bethouse1,
+            mercado1,
+            valor1,
+            odd1,
+            aposta1,
+            resultado1,
+            bethouse2,
+            mercado2,
+            valor2,
+            odd2,
+            aposta2,
+            resultado2,
+            bethouse3,
+            mercado3,
+            valor3,
+            odd3,
+            aposta3,
+            resultado3,
+            lucro_estimado,
+            lucro_per_estimado,
+            lucro_real,
+            lucro_per_real,
+            esporte
+        )
+        SELECT
+            id,
+            data_entrada,
+            data_jogo,
+            time_casa,
+            time_fora,
+            bethouse1,
+            mercado1,
+            CAST(valor1 AS REAL),
+            CAST(odd1 AS REAL),
+            CAST(aposta1 AS REAL),
+            resultado1,
+            bethouse2,
+            mercado2,
+            CAST(valor2 AS REAL),
+            CAST(odd2 AS REAL),
+            CAST(aposta2 AS REAL),
+            resultado2,
+            bethouse3,
+            mercado3,
+            CAST(valor3 AS REAL),
+            CAST(odd3 AS REAL),
+            CAST(aposta3 AS REAL),
+            resultado3,
+            CAST(lucro_estimado AS REAL),
+            CAST(lucro_per_estimado AS REAL),
+            CAST(lucro_real AS REAL),
+            CAST(lucro_per_real AS REAL),
+            esporte
+        FROM apostas_antigas
+        """
+    c.execute(copy_query)
+    conn.commit()
+
+################################################
+################### GRÁFICOS ###################
+################################################
+
+def count_hora(conn, dias):
     # Conectando ao banco de dados
-    conn = sqlite3.connect(sql_data)
-    cursor = conn.cursor()
+    c = conn.cursor()
     data = datetime.today().strftime('%Y-%m-%d')
 
     # Consulta SQL para contar as apostas por hora nos últimos 7 dias
     query = f"""
-        SELECT strftime('%H', data_entrada) AS hora, COUNT(*) AS total_apostas
+        SELECT strftime('%H', data_entrada) AS hora, COUNT(*) AS total_apostas, SUM(lucro_real) as lucro
         FROM apostas
         WHERE data_entrada >= date('{data}', '-{dias} days')
         GROUP BY hora
@@ -613,49 +723,640 @@ def count_hora(sql_data, dias, metodo='sum'):
     """
 
     # Executando a consulta
-    cursor.execute(query)
+    c.execute(query)
 
     # Obtendo os resultados
-    resultados = cursor.fetchall()
+    resultados = c.fetchall()
 
-    if metodo == 'sum':
-        # Exibindo os resultados
-        for hora, total_apostas in resultados:
-            print(f'Apostas na hora {hora}: {total_apostas}')
+    # Consulta SQL para contar os dias diferentes em data_entrada nos últimos 7 dias
+    query_days = f"""
+        SELECT COUNT(DISTINCT date(data_entrada)) AS total_dias
+        FROM apostas
+        WHERE data_entrada >= date('{data}', '-{dias} days')
+    """
+    total_dias = c.execute(query_days).fetchone()[0]
 
-    else:
-        # Consulta SQL para contar os dias diferentes em data_entrada nos últimos 7 dias
-        query_days = f"""
-            SELECT COUNT(DISTINCT date(data_entrada)) AS total_dias
-            FROM apostas
-            WHERE data_entrada >= date('{data}', '-{dias} days')
+    # Criando o DataFrame com os resultados
+    df = pd.DataFrame(resultados, columns=['hora', 'total_apostas', 'lucro'])
+    df['hora'] = df['hora'].apply(lambda x: f'{str(x).zfill(2)}h')
+    df['media_apostas'] = df['total_apostas'] / total_dias
+    df['media_lucro'] = (df['lucro'] / df['total_apostas']).round(2)
+    df['lucro_total'] = df['lucro'].round(2)
+
+    return df
+
+def lucros_por_tempo(range_val, periodo, conn):
+    if periodo == 'dia':
+        query = f"""
+        SELECT STRFTIME('%d', data_entrada) || '/' ||
+        (CASE STRFTIME('%m', data_entrada)
+            WHEN '01' THEN 'Jan'
+            WHEN '02' THEN 'Fev'
+            WHEN '03' THEN 'Mar'
+            WHEN '04' THEN 'Abr'
+            WHEN '05' THEN 'Mai'
+            WHEN '06' THEN 'Jun'
+            WHEN '07' THEN 'Jul'
+            WHEN '08' THEN 'Ago'
+            WHEN '09' THEN 'Set'
+            WHEN '10' THEN 'Out'
+            WHEN '11' THEN 'Nov'
+            WHEN '12' THEN 'Dez'
+        END) AS {periodo},
+        SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val + 1} day') GROUP BY dia ORDER BY DATE(data_entrada) ASC"""
+    elif periodo == 'semana':
+        range_val = (range_val - 1) * 7 + datetime.today().isoweekday()
+        query = f"""
+            SELECT STRFTIME('%d', MIN(data_entrada)) || '-' || STRFTIME('%d', MAX(data_entrada)) || '/' || 
+            (CASE STRFTIME('%m', data_entrada)
+            WHEN '01' THEN 'Jan'
+            WHEN '02' THEN 'Fev'
+            WHEN '03' THEN 'Mar'
+            WHEN '04' THEN 'Abr'
+            WHEN '05' THEN 'Mai'
+            WHEN '06' THEN 'Jun'
+            WHEN '07' THEN 'Jul'
+            WHEN '08' THEN 'Ago'
+            WHEN '09' THEN 'Set'
+            WHEN '10' THEN 'Out'
+            WHEN '11' THEN 'Nov'
+            WHEN '12' THEN 'Dez'
+        END) AS {periodo}, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val} day') GROUP BY STRFTIME('%Y-%W', data_entrada, 'weekday 6') ORDER BY DATE(data_entrada) ASC
         """
-        total_dias = cursor.execute(query_days).fetchone()[0]
-        # Exibindo os resultados
-        print(f'nos últimos {dias} dias, foi apostado em {total_dias} dias')
-        for hora, total_apostas in resultados:
-            print(f'Média de apostas na hora {hora}: {round(total_apostas / total_dias, 2)}')
+    elif periodo == 'mês':
+        query = f"""
+        SELECT (CASE STRFTIME('%m', data_entrada)
+            WHEN '01' THEN 'Jan'
+            WHEN '02' THEN 'Fev'
+            WHEN '03' THEN 'Mar'
+            WHEN '04' THEN 'Abr'
+            WHEN '05' THEN 'Mai'
+            WHEN '06' THEN 'Jun'
+            WHEN '07' THEN 'Jul'
+            WHEN '08' THEN 'Ago'
+            WHEN '09' THEN 'Set'
+            WHEN '10' THEN 'Out'
+            WHEN '11' THEN 'Nov'
+            WHEN '12' THEN 'Dez'
+        END) || '/' || STRFTIME('%Y', data_entrada) AS {periodo}, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val - 1} month', 'start of month') GROUP BY {periodo} ORDER BY DATE(data_entrada) ASC
+        """
+    elif periodo == 'trimestre':
+        query = f"""
+        SELECT (CASE 
+            WHEN STRFTIME('%m', data_entrada) BETWEEN '01' AND '03' THEN '1ºTrim/' || STRFTIME('%Y', data_entrada) 
+            WHEN STRFTIME('%m', data_entrada) BETWEEN '04' AND '06' THEN '2ºTrim/' || STRFTIME('%Y', data_entrada) 
+            WHEN STRFTIME('%m', data_entrada) BETWEEN '07' AND '09' THEN '3ºTrim/' || STRFTIME('%Y', data_entrada) 
+            ELSE '4ºTrim/' || STRFTIME('%Y', data_entrada) 
+        END) AS trimestre, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val * 3 + 1} month') GROUP BY trimestre ORDER BY DATE(data_entrada) ASC
+        """
+    elif periodo == 'semestre':
+        query = f"""
+        SELECT (CASE 
+            WHEN STRFTIME('%m', data_entrada) >= '07' THEN '2ºSem/' || STRFTIME('%Y', data_entrada) 
+            ELSE '1ºSem/' || STRFTIME('%Y', data_entrada) 
+        END) AS semestre, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val * 6 + 1} month') GROUP BY semestre ORDER BY DATE(data_entrada) ASC
+        """
+    else:
+        query = f"SELECT STRFTIME('%Y', data_entrada) AS ano, SUM(lucro_estimado) AS lucro_estimado, SUM(lucro_real) AS lucro_real, SUM(CASE WHEN lucro_real IS NULL THEN lucro_estimado ELSE 0 END) AS aberto FROM apostas WHERE DATE(data_entrada) >= DATE('now', '-{range_val - 1} year', 'start of year') GROUP BY ano ORDER BY DATE(data_entrada) ASC"
 
-    # Fechando a conexão com o banco de dados
-    conn.close()
+    df = pd.read_sql_query(query, conn)
+    return df
 
-count_hora(sql_data, 30, metodo='mean')
+def saldo_bethouses(conn, range_val, periodo):
+    c = conn.cursor()
+
+    # Dataframe para armazenar os resultados
+    df_saldos = pd.DataFrame()
+    current_date = date.today()
+    current_month = current_date.month
+    condition = ''
+    if periodo == 'dia':
+        intervalo = f'{range_val - 1} days'
+    elif periodo == 'semana':
+            intervalo = f'{(range_val - 1) * 7 + (current_date.weekday() + 1)} days'
+    elif periodo == 'mês':
+        intervalo = f'{range_val - 1} month'
+        condition = "'start of month',"
+    elif periodo == 'trimestre':
+        if current_month <= 3:
+            start_of_quarter = date(current_date.year, 1, 1)
+        elif current_month <= 6:
+            start_of_quarter = date(current_date.year, 4, 1)
+        elif current_month <= 9:
+            start_of_quarter = date(current_date.year, 7, 1)
+        else:
+            start_of_quarter = date(current_date.year, 10, 1)
+        current_date = start_of_quarter
+        intervalo = f'{(range_val - 1) * 3} month'
+        condition = "'start of month',"
+    elif periodo == 'semestre':
+        if current_month <= 6:
+            start_of_semester = date(current_date.year, 1, 1)
+        elif current_month <= 7:
+            start_of_semester = date(current_date.year, 7, 1)
+        current_date = start_of_semester
+        intervalo = f'{(range_val - 1) * 6} month'
+        condition = "'start of month',"
+    else:
+        intervalo = f'{range_val - 1} years'
+        condition = "'start of year',"
+
+    # Loop através das chaves do dicionário bethouse_options
+    for bethouse in bethouse_options_total.keys():
+        tabela_aposta = f"{bethouse}_saldos"
+        tabela_aposta = re.sub(r'\W+', '_', tabela_aposta)
+        if tabela_aposta[0].isdigit():
+            tabela_aposta = f'_{tabela_aposta}'
+
+        query_saldo = f"""
+        SELECT SUM(balanco)
+        FROM {tabela_aposta}
+        WHERE data_entrada <= DATE('{current_date}', {condition}'-{intervalo}')
+        """
+        saldo_anterior = c.execute(query_saldo).fetchone()[0]
+        saldo_anterior = round(saldo_anterior, 2) if saldo_anterior is not None else 0
+
+        # Consulta para obter a soma de balanco e Valor agrupados por dia
+        if periodo == 'dia':
+            query = f"""
+            WITH all_dates AS (
+                SELECT DATE('{current_date}') AS date
+                UNION ALL
+                SELECT date(date, '-1 day') AS date
+                FROM all_dates
+                WHERE date > DATE('{current_date}', '-{intervalo}')
+            )
+            SELECT STRFTIME('%d', all_dates.date) || '/' || 
+                (CASE STRFTIME('%m', all_dates.date)
+                    WHEN '01' THEN 'Jan'
+                    WHEN '02' THEN 'Fev'
+                    WHEN '03' THEN 'Mar'
+                    WHEN '04' THEN 'Abr'
+                    WHEN '05' THEN 'Mai'
+                    WHEN '06' THEN 'Jun'
+                    WHEN '07' THEN 'Jul'
+                    WHEN '08' THEN 'Ago'
+                    WHEN '09' THEN 'Set'
+                    WHEN '10' THEN 'Out'
+                    WHEN '11' THEN 'Nov'
+                    WHEN '12' THEN 'Dez'
+                END) AS {periodo},
+                '{bethouse}' AS bethouse, ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids, GROUP_CONCAT({tabela_aposta}.id) AS ids
+            FROM all_dates
+            LEFT JOIN {tabela_aposta} ON all_dates.date = DATE({tabela_aposta}.data_entrada)
+            GROUP BY all_dates.date
+            """
+        elif periodo == 'semana':
+            query = f"""
+                WITH all_weeks AS (
+                SELECT DATE('{current_date}', 'weekday 6') AS start_of_week,
+                       STRFTIME('%d', DATE('{current_date}', 'weekday 6')) AS sunday,
+                       STRFTIME('%d', DATE('{current_date}', 'weekday 5')) AS saturday
+                UNION ALL
+                SELECT DATE(start_of_week, '-7 day') AS start_of_week,
+                       STRFTIME('%d', DATE(start_of_week, '-6 days')) AS sunday,
+                       STRFTIME('%d', DATE(start_of_week)) AS saturday
+                FROM all_weeks
+                WHERE start_of_week >= DATE('{current_date}', 'weekday 6', '-{intervalo}'))
+                SELECT all_weeks.sunday || '-' || all_weeks.saturday || '/' || 
+                    (CASE STRFTIME('%m', all_weeks.start_of_week, '+7 days')
+                        WHEN '01' THEN 'Jan'
+                        WHEN '02' THEN 'Fev'
+                        WHEN '03' THEN 'Mar'
+                        WHEN '04' THEN 'Abr'
+                        WHEN '05' THEN 'Mai'
+                        WHEN '06' THEN 'Jun'
+                        WHEN '07' THEN 'Jul'
+                        WHEN '08' THEN 'Ago'
+                        WHEN '09' THEN 'Set'
+                        WHEN '10' THEN 'Out'
+                        WHEN '11' THEN 'Nov'
+                        WHEN '12' THEN 'Dez'
+                    END) AS {periodo},
+                    '{bethouse}' AS bethouse,
+                    ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                FROM all_weeks
+                LEFT JOIN {tabela_aposta} ON {tabela_aposta}.data_entrada > all_weeks.start_of_week AND {tabela_aposta}.data_entrada <= DATE(all_weeks.start_of_week, '+7 days')
+                GROUP BY STRFTIME('%Y-%W', all_weeks.start_of_week)
+                HAVING semana IS NOT NULL
+                """
+        elif periodo == 'mês':
+            query = f"""
+                    WITH all_dates AS (
+                        SELECT DATE('{current_date}') AS date
+                        UNION ALL
+                        SELECT date(date, 'start of month', '-1 month') AS date
+                        FROM all_dates
+                        WHERE date > DATE('{current_date}', 'start of month', '-{intervalo}')
+                    )
+                    SELECT (CASE STRFTIME('%m', all_dates.date)
+                                WHEN '01' THEN 'Jan'
+                                WHEN '02' THEN 'Fev'
+                                WHEN '03' THEN 'Mar'
+                                WHEN '04' THEN 'Abr'
+                                WHEN '05' THEN 'Mai'
+                                WHEN '06' THEN 'Jun'
+                                WHEN '07' THEN 'Jul'
+                                WHEN '08' THEN 'Ago'
+                                WHEN '09' THEN 'Set'
+                                WHEN '10' THEN 'Out'
+                                WHEN '11' THEN 'Nov'
+                                WHEN '12' THEN 'Dez'
+                            END) || '/' || SUBSTR(STRFTIME('%Y', all_dates.date), 3) AS {periodo},
+                           '{bethouse}' AS bethouse,
+                           ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                    FROM all_dates
+                    LEFT JOIN {tabela_aposta} ON STRFTIME('%m/%Y', all_dates.date) = STRFTIME('%m/%Y', {tabela_aposta}.data_entrada)
+                    GROUP BY STRFTIME('%Y-%m', all_dates.date)
+                """
+        elif periodo == 'trimestre':
+            query = f"""
+                WITH all_quarters AS (
+                    SELECT DATE('{current_date}', 'start of month') AS start_of_quarter,
+                           (CASE STRFTIME('%m', DATE('{current_date}', 'start of month'))
+                                WHEN '01' THEN 'Jan'
+                                WHEN '02' THEN 'Fev'
+                                WHEN '03' THEN 'Mar'
+                                WHEN '04' THEN 'Abr'
+                                WHEN '05' THEN 'Mai'
+                                WHEN '06' THEN 'Jun'
+                                WHEN '07' THEN 'Jul'
+                                WHEN '08' THEN 'Ago'
+                                WHEN '09' THEN 'Set'
+                                WHEN '10' THEN 'Out'
+                                WHEN '11' THEN 'Nov'
+                                WHEN '12' THEN 'Dez'
+                            END) AS start_month,
+                           (CASE STRFTIME('%m', DATE('{current_date}', 'start of month', '+2 months'))
+                                WHEN '01' THEN 'Jan'
+                                WHEN '02' THEN 'Fev'
+                                WHEN '03' THEN 'Mar'
+                                WHEN '04' THEN 'Abr'
+                                WHEN '05' THEN 'Mai'
+                                WHEN '06' THEN 'Jun'
+                                WHEN '07' THEN 'Jul'
+                                WHEN '08' THEN 'Ago'
+                                WHEN '09' THEN 'Set'
+                                WHEN '10' THEN 'Out'
+                                WHEN '11' THEN 'Nov'
+                                WHEN '12' THEN 'Dez'
+                            END) AS end_month
+                    UNION ALL
+                    SELECT DATE(start_of_quarter, '-3 months') AS start_of_quarter,
+                           (CASE STRFTIME('%m', DATE(start_of_quarter, '-3 months'))
+                            WHEN '01' THEN 'Jan'
+                            WHEN '02' THEN 'Fev'
+                            WHEN '03' THEN 'Mar'
+                            WHEN '04' THEN 'Abr'
+                            WHEN '05' THEN 'Mai'
+                            WHEN '06' THEN 'Jun'
+                            WHEN '07' THEN 'Jul'
+                            WHEN '08' THEN 'Ago'
+                            WHEN '09' THEN 'Set'
+                            WHEN '10' THEN 'Out'
+                            WHEN '11' THEN 'Nov'
+                            WHEN '12' THEN 'Dez'
+                        END) AS start_month,
+                        (CASE STRFTIME('%m', DATE(start_of_quarter, '-1 month'))
+                            WHEN '01' THEN 'Jan'
+                            WHEN '02' THEN 'Fev'
+                            WHEN '03' THEN 'Mar'
+                            WHEN '04' THEN 'Abr'
+                            WHEN '05' THEN 'Mai'
+                            WHEN '06' THEN 'Jun'
+                            WHEN '07' THEN 'Jul'
+                            WHEN '08' THEN 'Ago'
+                            WHEN '09' THEN 'Set'
+                            WHEN '10' THEN 'Out'
+                            WHEN '11' THEN 'Nov'
+                            WHEN '12' THEN 'Dez'
+                        END) AS end_month
+                    FROM all_quarters
+                    WHERE start_of_quarter > DATE('{current_date}', 'start of month', '-{intervalo}')
+                )
+                SELECT CASE
+                   WHEN {tabela_aposta}.data_entrada IS NULL THEN all_quarters.start_month || '-' || all_quarters.end_month || '/' || SUBSTR(STRFTIME('%Y', all_quarters.start_of_quarter), 3)
+                   ELSE all_quarters.start_month || '-' || all_quarters.end_month || '/' || SUBSTR(STRFTIME('%Y', {tabela_aposta}.data_entrada), 3) END AS {periodo}, '{bethouse}' AS bethouse,
+                   ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                FROM all_quarters
+                LEFT JOIN {tabela_aposta} ON {tabela_aposta}.data_entrada >= all_quarters.start_of_quarter AND {tabela_aposta}.data_entrada < DATE(all_quarters.start_of_quarter, '+3 months')
+                GROUP BY STRFTIME('%Y-%m', all_quarters.start_of_quarter)
+                """
+        elif periodo == 'semestre':
+            query = f"""
+                WITH all_semesters AS (
+                    SELECT DATE('{current_date}', 'start of month') AS start_of_semester,
+                           (CASE STRFTIME('%m', DATE('{current_date}', 'start of month'))
+                                WHEN '01' THEN 'Jan'
+                                WHEN '02' THEN 'Fev'
+                                WHEN '03' THEN 'Mar'
+                                WHEN '04' THEN 'Abr'
+                                WHEN '05' THEN 'Mai'
+                                WHEN '06' THEN 'Jun'
+                                WHEN '07' THEN 'Jul'
+                                WHEN '08' THEN 'Ago'
+                                WHEN '09' THEN 'Set'
+                                WHEN '10' THEN 'Out'
+                                WHEN '11' THEN 'Nov'
+                                WHEN '12' THEN 'Dez'
+                            END) AS start_month,
+                           (CASE STRFTIME('%m', DATE('{current_date}', 'start of month', '+5 months'))
+                                WHEN '01' THEN 'Jan'
+                                WHEN '02' THEN 'Fev'
+                                WHEN '03' THEN 'Mar'
+                                WHEN '04' THEN 'Abr'
+                                WHEN '05' THEN 'Mai'
+                                WHEN '06' THEN 'Jun'
+                                WHEN '07' THEN 'Jul'
+                                WHEN '08' THEN 'Ago'
+                                WHEN '09' THEN 'Set'
+                                WHEN '10' THEN 'Out'
+                                WHEN '11' THEN 'Nov'
+                                WHEN '12' THEN 'Dez'
+                            END) AS end_month
+                    UNION ALL
+                    SELECT DATE(start_of_semester, '-6 months') AS start_of_semester,
+                        (CASE STRFTIME('%m', DATE(start_of_semester, '-6 months'))
+                            WHEN '01' THEN 'Jan'
+                            WHEN '02' THEN 'Fev'
+                            WHEN '03' THEN 'Mar'
+                            WHEN '04' THEN 'Abr'
+                            WHEN '05' THEN 'Mai'
+                            WHEN '06' THEN 'Jun'
+                            WHEN '07' THEN 'Jul'
+                            WHEN '08' THEN 'Ago'
+                            WHEN '09' THEN 'Set'
+                            WHEN '10' THEN 'Out'
+                            WHEN '11' THEN 'Nov'
+                            WHEN '12' THEN 'Dez'
+                        END) AS start_month,
+                        (CASE STRFTIME('%m', DATE(start_of_semester, '-1 month'))
+                            WHEN '01' THEN 'Jan'
+                            WHEN '02' THEN 'Fev'
+                            WHEN '03' THEN 'Mar'
+                            WHEN '04' THEN 'Abr'
+                            WHEN '05' THEN 'Mai'
+                            WHEN '06' THEN 'Jun'
+                            WHEN '07' THEN 'Jul'
+                            WHEN '08' THEN 'Ago'
+                            WHEN '09' THEN 'Set'
+                            WHEN '10' THEN 'Out'
+                            WHEN '11' THEN 'Nov'
+                            WHEN '12' THEN 'Dez'
+                        END) AS end_month
+                    FROM all_semesters
+                    WHERE start_of_semester > DATE('{current_date}', 'start of month', '-{intervalo}')
+                )
+                SELECT CASE
+                   WHEN {tabela_aposta}.data_entrada IS NULL THEN all_semesters.start_month || '-' || all_semesters.end_month || '/' || SUBSTR(STRFTIME('%Y', all_semesters.start_of_semester), 3)
+                   ELSE all_semesters.start_month || '-' || all_semesters.end_month || '/' || SUBSTR(STRFTIME('%Y', {tabela_aposta}.data_entrada), 3) END AS {periodo}, '{bethouse}' AS bethouse,
+                   ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                FROM all_semesters
+                LEFT JOIN {tabela_aposta} ON {tabela_aposta}.data_entrada >= all_semesters.start_of_semester AND {tabela_aposta}.data_entrada < DATE(all_semesters.start_of_semester, '+6 months')
+                GROUP BY STRFTIME('%Y-%m', all_semesters.start_of_semester)
+                """
+        else:
+            query = f"""
+                WITH all_dates AS (
+                    SELECT DATE('{current_date}') AS date
+                    UNION ALL
+                    SELECT date(date, 'start of year', '-1 year') AS date
+                    FROM all_dates
+                    WHERE date > DATE('{current_date}', 'start of year', '-{intervalo}')
+                )
+                SELECT STRFTIME('%Y', all_dates.date) AS {periodo}, '{bethouse}' AS bethouse, ROUND(COALESCE(SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                FROM all_dates
+                LEFT JOIN {tabela_aposta} ON STRFTIME('%Y', all_dates.date) = STRFTIME('%Y', {tabela_aposta}.data_entrada)
+                GROUP BY STRFTIME('%Y', all_dates.date)
+                HAVING STRFTIME('%Y', all_dates.date) >= STRFTIME('%Y', '{current_date}', '-{intervalo}')
+                """
+
+        df = pd.read_sql_query(query, conn)
+
+        soma_apostas = df['apostas'].sum()
+
+        if soma_apostas > 0:
+            if periodo == 'semana':
+                df = df.drop(df.index[-1])
+
+            # Gerar a coluna saldo_bethouse que é a soma cumulativa de saldo_periodo
+            df['saldo_bethouse'] = round(saldo_anterior + df['saldo_periodo'].cumsum(), 2)
+            df['media_investimento'] = round(df['investimento'] / df['apostas'], 2)
+
+            # Concatenar os resultados no dataframe df_saldos_periodos
+            df_saldos = pd.concat([df_saldos, df])
+
+    # Agrupar por 'dia' e combinar os valores de 'ids' em uma única linha, ignorando valores None
+    df_apostas_periodo = df_saldos.groupby(periodo)['ids'].apply(lambda x: ','.join([str(i) for i in x if i is not None])).reset_index()
+    lista_periodos = list(df_saldos[periodo][:range_val])
+    df_apostas_periodo = df_apostas_periodo.sort_values(by=periodo, key=lambda x: x.map({k: i for i, k in enumerate(lista_periodos)})).reset_index(drop=True)
+
+    # Transformar cada linha em um set e remover valores menores que 11 caracteres
+    df_apostas_periodo['ids'] = df_apostas_periodo['ids'].apply(lambda x: set(x.split(','))).apply(lambda x: set(item for item in x if len(str(item)) == 11))
+
+    # Criar a coluna 'num_apostas' com o tamanho de cada set
+    df_apostas_periodo['num_apostas'] = df_apostas_periodo['ids'].apply(len)
+
+    df_apostas_periodo = df_apostas_periodo[df_apostas_periodo['num_apostas'] != 0]
+    df_saldos = df_saldos[df_saldos[periodo].isin(df_apostas_periodo[periodo])]
+
+    return df_saldos, df_apostas_periodo
+
+def agrup_esportes(conn, tempo):
+    # Definindo a data atual e a data de 3 meses atrá
+    data_3_meses_atras = (datetime.today() - timedelta(days=tempo)).strftime('%Y-%m-%d')
+
+    # Consulta SQL para contar os esportes na coluna 'esporte' nos últimos 3 meses
+    query = f"""
+        SELECT esporte, COUNT(*) AS total, SUM(lucro_real) AS lucro_total
+        FROM apostas
+        WHERE data_entrada >= date('{data_3_meses_atras}')
+        GROUP BY esporte
+    """
+
+    # Executando a consulta
+    resultado = pd.read_sql_query(query, conn)
+
+    # Exibindo o DataFrame com os resultados
+    return resultado
+
+def lucro_esporte(conn, tempo):
+    data_3_meses_atras = (datetime.today() - timedelta(days=tempo)).strftime('%Y-%m-%d')
+
+    # Consulta SQL para agrupar o lucro real por esporte nos últimos 3 meses
+    query = f"""
+        SELECT esporte, SUM(lucro_real) AS lucro_total
+        FROM apostas
+        WHERE data_entrada >= date('{data_3_meses_atras}')
+        GROUP BY esporte
+    """
+
+    # Executando a consulta
+    resultado = pd.read_sql_query(query, conn)
+
+    # Exibindo o DataFrame com os resultados
+    return resultado
+
+def contar_bethouses(conn, tempo=None):
+    if tempo:
+        query = f"""
+            SELECT bethouse, SUM(total) AS total_ocorrencias, SUM(investimento) AS total_investimento, SUM(win) AS vitoria, SUM(loss) AS loss, SUM(return) AS void
+            FROM (
+                SELECT bethouse1 AS bethouse, COUNT(*) AS total, SUM(aposta1) AS investimento,
+                    SUM(CASE WHEN resultado1 = 'win' OR resultado1 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                    SUM(CASE WHEN resultado1 = 'loss' OR resultado1 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                    SUM(CASE WHEN resultado1 = 'return' THEN 1 ELSE 0 END) AS return
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND bethouse1 IS NOT NULL
+                GROUP BY bethouse1
+    
+                UNION ALL
+    
+                SELECT bethouse2 AS bethouse, COUNT(*) AS total, SUM(aposta2) AS investimento,
+                    SUM(CASE WHEN resultado2 = 'win' OR resultado2 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                    SUM(CASE WHEN resultado2 = 'loss' OR resultado2 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                    SUM(CASE WHEN resultado2 = 'return' THEN 1 ELSE 0 END) AS return
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND bethouse2 IS NOT NULL
+                GROUP BY bethouse2
+    
+                UNION ALL
+    
+                SELECT bethouse3 AS bethouse, COUNT(*) AS total, SUM(aposta3) AS investimento,
+                    SUM(CASE WHEN resultado3 = 'win' OR resultado3 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                    SUM(CASE WHEN resultado3 = 'loss' OR resultado3 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                    SUM(CASE WHEN resultado3 = 'return' THEN 1 ELSE 0 END) AS return
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND bethouse3 IS NOT NULL
+                GROUP BY bethouse3
+            ) AS subquery
+            GROUP BY bethouse
+        """
+    else:
+        query = f"""
+                    SELECT bethouse, SUM(total) AS total_ocorrencias, SUM(investimento) AS total_investimento, SUM(win) AS vitoria, SUM(loss) AS loss, SUM(return) AS void
+                    FROM (
+                        SELECT bethouse1 AS bethouse, COUNT(*) AS total, SUM(aposta1) AS investimento,
+                            SUM(CASE WHEN resultado1 = 'win' OR resultado1 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                            SUM(CASE WHEN resultado1 = 'loss' OR resultado1 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                            SUM(CASE WHEN resultado1 = 'return' THEN 1 ELSE 0 END) AS return
+                        FROM apostas
+                        WHERE AND bethouse1 IS NOT NULL
+                        GROUP BY bethouse1
+
+                        UNION ALL
+
+                        SELECT bethouse2 AS bethouse, COUNT(*) AS total, SUM(aposta2) AS investimento,
+                            SUM(CASE WHEN resultado2 = 'win' OR resultado2 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                            SUM(CASE WHEN resultado2 = 'loss' OR resultado2 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                            SUM(CASE WHEN resultado2 = 'return' THEN 1 ELSE 0 END) AS return
+                        FROM apostas
+                        WHERE AND bethouse2 IS NOT NULL
+                        GROUP BY bethouse2
+
+                        UNION ALL
+
+                        SELECT bethouse3 AS bethouse, COUNT(*) AS total, SUM(aposta3) AS investimento,
+                            SUM(CASE WHEN resultado3 = 'win' OR resultado3 = 'half-win' THEN 1 ELSE 0 END) AS win,
+                            SUM(CASE WHEN resultado3 = 'loss' OR resultado3 = 'half-loss' THEN 1 ELSE 0 END) AS loss,
+                            SUM(CASE WHEN resultado3 = 'return' THEN 1 ELSE 0 END) AS return
+                        FROM apostas
+                        WHERE AND bethouse3 IS NOT NULL
+                        GROUP BY bethouse3
+                    ) AS subquery
+                    GROUP BY bethouse
+                """
+
+    c = conn.cursor()
+    c.execute(query)
+    result = c.fetchall()
+
+    df = pd.DataFrame(result, columns=['bethouse', 'ocorrencias', 'investimento', 'vitoria', 'derrota', 'retorno'])
+    df['%win'] = round(df['vitoria'] / (df['vitoria'] + df['derrota'] + df['retorno']), 6)
+    df['%loss'] = round(df['derrota'] / (df['vitoria'] + df['derrota'] + df['retorno']), 6)
+    df['%retorno'] = round(df['retorno'] / (df['vitoria'] + df['derrota'] + df['retorno']), 6)
+    df['media_investimento'] = round(df['investimento'] / df['ocorrencias'], 2)
+    return df
+
+def odds_resultados(conn, tempo=None, round=3, min=0, min_percent=0):
+    if tempo:
+        query = f"""
+            SELECT odd1 AS odds, resultado1 AS resultados
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND odd1 AND odd1 > 0  IS NOT NULL AND resultado1 IS NOT NULL
+                UNION ALL
+            SELECT odd2 AS odds, resultado2 AS resultados
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND odd2 AND odd2 > 0  IS NOT NULL AND resultado2 IS NOT NULL
+                UNION ALL
+            SELECT odd3 AS odds, resultado3 AS resultados
+                FROM apostas
+                WHERE data_entrada >= date('now', '-{tempo} days') AND odd3 AND odd3 > 0  IS NOT NULL AND resultado3 IS NOT NULL
+            """
+    else:
+        query = f"""
+            SELECT odd1 AS odds, resultado1 AS resultados
+                FROM apostas
+                WHERE odd1 IS NOT NULL AND odd1 > 0 AND resultado1 IS NOT NULL
+                UNION ALL
+            SELECT odd2 AS odds, resultado2 AS resultados
+                FROM apostas
+                WHERE odd2 IS NOT NULL AND odd2 > 0  AND resultado2 IS NOT NULL
+                UNION ALL
+            SELECT odd3 AS odds, resultado3 AS resultados
+                FROM apostas
+                WHERE odd3 IS NOT NULL AND odd3 > 0  AND resultado3 IS NOT NULL
+            """
+    df = pd.read_sql_query(query, conn)
+    df['odds'] = df['odds'].round(round)
+    df_grouped = df.groupby('odds')['resultados'].value_counts().unstack().fillna(0).assign(total=lambda x: x.sum(axis=1))
+    df_grouped['%win'] = ((((df_grouped['win'] if 'win' in df_grouped.columns else 0) + (df_grouped['half-win'] if 'half-win' in df_grouped.columns else 0)) / df_grouped['total']) * 100).round(2)
+    df_grouped['%loss'] = ((((df_grouped['loss'] if 'loss' in df_grouped.columns else 0) + (df_grouped['half-loss'] if 'half-loss' in df_grouped.columns else 0)) / df_grouped['total']) * 100).round(2)
+    df_grouped['%return'] = (((df_grouped['return'] if 'return' in df_grouped.columns else 0) / df_grouped['total']) * 100).round(2)
+    if min > 0:
+        df_grouped = df_grouped[df_grouped['total'] > min]
+    if min_percent > 0:
+        df_grouped = df_grouped[(df_grouped['%win'] > min_percent) & (df_grouped['%win'] < 100 - min_percent) & (
+                    (df_grouped['%loss'] > min_percent) & df_grouped['%loss'] < 100 - min_percent) & (
+                    df_grouped['%return'] > min_percent) & (df_grouped['%return'] < 100 - min_percent)]
+
+
+    return df_grouped
+
+#df = contar_bethouses(conn, 7)
+#lucro_esporte(conn, 90)
+#esportes_tempo(conn, 90)
+#edit_column(sql_data, 'apostas', 'esporte', 'Rugby', 'Rugby un')
+#edit_query = "UPDATE apostas SET bethouse3 = NULL, mercado3 = NULL WHERE id = 20230604002"
+#c.execute(edit_query)
+#conn.commit()
+#query = "SELECT * FROM apostas WHERE id = 20230604002"
+#print(c.execute(query).fetchall())
+#reconstruir_tabela(conn, 'apostas')
+#df = count_hora(conn, 7)
+#df = lucros_por_tempo(7, 'trimestre', conn)
+#df, total_apostas = saldo_bethouses(conn, 5, 'semana')
+#df = odds_resultados(conn, tempo = 90)
+#print(df)
 #edit_line(sql_data, 'BWin_saldos', 20230522015, "resultado = 'return'")
 #add_linhas_from_csv()
 #view_column(sql_data, '_1xBet_saldos')
 #del_column(sql_data, 'apostas', 'id_novo')
-#del_table(sql_data, 'Teste_saldos')
+#del_table(sql_data, 'apostas')
 #del_line(sql_data, 'apostas', id=20230607025)
-#del_line(sql_data, 'Pinnacle_saldos', id=20230607025)
-#del_line(sql_data, 'Vbet_saldos', id=20230607025)
-#del_line(sql_data, 'apostas', id=20230614024)
-#del_line(sql_data, 'BWin_saldos', id=20230614024)
+#del_line(sql_data, 'Ex_BetFair_saldos', id=20230615049)
+#del_line(sql_data, 'FavBet_saldos', id=20230615049)
+#del_line(sql_data, 'apostas', id=20230616014)
+#del_line(sql_data, 'BWin_saldos', id=20230616014)
 #del_line(sql_data, 'SportyBet_saldos', id=696)
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
-view_last_lines(sql_data, 'apostas', 3)
-view_last_lines(sql_data, 'BWin_saldos', 3)
-#view_last_lines(sql_data, 'Vbet_saldos', 3)
+#view_column(sql_data, 'apostas')
+
+#view_last_lines(sql_data, 'apostas', 100)
+#view_last_lines(sql_data, 'apostas_antigas', 3)
+#view_last_lines(sql_data, 'Pinnacle_saldos', 3)
+#view_last_lines(sql_data, 'FavBet_saldos', 3)
 #view_last_lines(sql_data, 'Ex_BetFair_saldos', 3)
 #sum_lucro_estimado(sql_data, 'apostas')
 
