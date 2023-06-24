@@ -5,6 +5,7 @@ import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
 import plotly.express as px
+import numpy as np
 
 global bethouse_options_total
 with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
@@ -47,22 +48,22 @@ def lucro_tempo(range_val, periodo, conn, media=3):
 
     fig.show()
 
-def apostas_hora(conn, range):
-    df = count_hora(conn, range)
-    media = df[df['total_apostas'] > 0]['total_apostas'].mean()
+def apostas_hora(conn, tempo):
+    df = count_hora(conn, tempo)
+    media = df[df['media_apostas'] > 0]['media_apostas'].mean()
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df['hora'], y=[media] * len(df['hora']),
-                             name='Média de Apostas por Hora', mode='lines', line=dict(width=1)))
+                             name='Média de Apostas Diária', mode='lines', line=dict(width=1)))
     fig.add_trace(go.Bar(
         x=df['hora'],
-        y=df['total_apostas'],
-        name='Total de Apostas',
+        y=df['media_apostas'],
+        name='Média de Apostas',
         hovertemplate=(
             "Hora: %{x}<br>" +
-            "Total de Apostas: %{y}<br>" +
-            "Média de Apostas: %{customdata:.2f}<extra></extra>"
+            "Total de Apostas: %{customdata}<extra></extra><br>" +
+            "Média de Apostas: %{y}"
         ),
-        customdata=df['media_apostas'],
+        customdata=df['total_apostas'],
         marker=dict(
             color=df['total_apostas'],
             colorscale=[[0, 'blue'], [1, 'red']],
@@ -71,18 +72,26 @@ def apostas_hora(conn, range):
     ))
     fig.add_trace(go.Scatter(
         x=df['hora'],
-        y=df['lucro_total'],
-        name='Lucro total',
-        line=dict(width=3),
+        y=df['media_lucro'],
+        name='Lucro médio',
+        line=dict(width=2),
         hovertemplate="Hora: %{x}<br>" +
-                  "Lucro total: R$%{y:.2f}<br>"
+                  "Lucro médio: R$%{y:.2f}<br>"
     ))
-    if range == 0:
-        fig.update_layout(title=f"Número de apostas por hora hoje")
-    elif range == 1:
-        fig.update_layout(title=f"Número de apostas por hora desde ontem")
+    fig.add_trace(go.Bar(
+        x=df['hora'],
+        y=-((df['desvio_padrao'] / df['total_apostas']) * df['media_apostas']),
+        name='Desvio padrão',
+        hovertemplate="Desvio padrão: " + df['desvio_padrao'].round(2).astype(str) + "<br>Desvio padrão médio: " + round((df['desvio_padrao'] / df['total_apostas']) * df['media_apostas'], 2).astype(str),
+        width=0.3
+    ))
+
+    if tempo == 0:
+        fig.update_layout(title=f"Número médio de apostas por hora hoje", barmode='stack',)
+    elif tempo == 1:
+        fig.update_layout(title=f"Número médio de apostas por hora desde ontem", barmode='stack',)
     else:
-        fig.update_layout(title=f"Número de apostas por hora nos últimos {range} dias")
+        fig.update_layout(title=f"Número médio de apostas por hora nos últimos {tempo} dias", barmode='stack',)
     fig.show()
 
 def calc_saldo_bethouse(conn, range, periodo, bethouse_options_total):
@@ -307,16 +316,75 @@ def relacao_bethouses(conn, range):
 def odds_x_resultado(conn, tempo=None, round=0, min=0, min_percent=0):
     df = odds_resultados(conn, tempo=tempo, round=round, min=min, min_percent=min_percent)
 
+    # Calcular a média móvel
+    window_size = 10  # Tamanho da janela para a média móvel
+    rolling_win = df['%win'].rolling(window=window_size, min_periods=1).mean()
+    rolling_loss = df['%loss'].rolling(window=window_size, min_periods=1).mean()
+    rolling_return = df['%return'].rolling(window=window_size, min_periods=1).mean()
+
     # Criação dos traces para cada coluna
-    trace_win = go.Scatter(x=df.index, y=df['%win'], name='%win', mode='markers')
-    trace_loss = go.Scatter(x=df.index, y=df['%loss'], name='%loss', mode='markers')
-    trace_return = go.Scatter(x=df.index, y=df['%return'], name='%return', mode='markers')
+    trace_win = go.Scatter(
+        x=df['odds'],
+        y=df['%win'],
+        hovertemplate='Odd: %{x}<br>' + df['win'].astype(str) + ' / ' + df['total'].astype(
+            str) + ' apostas<br>%{y}% apostas ganhas',
+        name='%win',
+        mode='markers',
+        line=dict(color='green')
+    )
+
+    trace_loss = go.Scatter(
+        x=df['odds'],
+        y=df['%loss'],
+        name='%loss',
+        hovertemplate='Odd: %{x}<br>' + df['loss'].astype(str) + ' / ' + df['total'].astype(
+            str) + ' apostas<br>%{y}% apostas perdidas',
+        mode='markers',
+        line=dict(color='red')
+    )
+
+    trace_return = go.Scatter(
+        x=df['padrao'],
+        y=df['%return'],
+        hovertemplate='Odd: %{x}<br>' + df['return'].astype(str) + ' / ' + df['total'].astype(
+            str) + ' apostas<br>%{y}% apostas anuladas',
+        name='%return',
+        mode='markers',
+        line=dict(color='gray')
+    )
+
+    # Average lines
+    average_win = go.Scatter(
+        x=df['padrao'],
+        y=rolling_win,
+        name='Média de vitória',
+        mode='lines',
+        line=dict(color='green', dash='dash')
+    )
+
+    average_loss = go.Scatter(
+        x=df['padrao'],
+        y=rolling_loss,
+        name='Média de derrota',
+        mode='lines',
+        line=dict(color='red', dash='dash')
+    )
+
+    average_return = go.Scatter(
+        x=df['odds'],
+        y=rolling_return,
+        name='Média de anulação',
+        mode='lines',
+        line=dict(color='gray', dash='dash')
+    )
 
     # Criação do layout do gráfico
     layout = go.Layout(title='Relação de Odds com Resultados desde sempre' if not tempo else f'Relação de Odds com Resultados nos últimos {tempo} dias', xaxis=dict(title='Odds'), yaxis=dict(title='Porcentagem'))
 
     # Criação da figura e adição dos traces ao layout
-    fig = go.Figure(data=[trace_win, trace_loss, trace_return], layout=layout)
+    fig = go.Figure(data=[trace_win, trace_loss, trace_return, average_win, average_loss, average_return], layout=layout)
+    customdata = df[['odds', 'total']].T.values.tolist()
+    fig.update_traces(customdata=customdata)
 
     # Exibição do gráfico
     fig.show()
@@ -325,10 +393,10 @@ def odds_x_resultado(conn, tempo=None, round=0, min=0, min_percent=0):
 #conn = sqlite3.connect('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db')
 #c = conn.cursor()
 #lucro_tempo(20, 'dia', conn, media=10)
-#apostas_hora(conn, 90)
+#apostas_hora(conn, 10)
 #calc_saldo_bethouse(conn, 10, 'dia', bethouse_options_total)
 #apostas_bethouses(conn, 5, 'semestre', bethouse_options_total)
 #relacao_esportes(conn, 180, valor=True)
 #eficiencia_bethouses(conn, 30)
 #relacao_bethouses(conn, 90)
-#odds_x_resultado(conn, tempo=90, round=1, min=0, min_percent=1)
+#odds_x_resultado(conn, tempo=900, round=1, min=3, min_percent=1)

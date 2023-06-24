@@ -721,6 +721,30 @@ def count_hora(conn, dias):
         GROUP BY hora
         ORDER BY hora
     """
+    query = f"""
+        WITH subquery AS (
+            SELECT strftime('%H', data_entrada) AS hora, COUNT(*) AS total_apostas
+            FROM apostas
+            WHERE data_entrada >= date('{data}', '-{dias} days')
+            GROUP BY hora
+        ),
+        stats AS (
+            SELECT AVG(total_apostas) AS media, COUNT(*) AS count
+            FROM subquery
+        )
+        SELECT s.hora, s.total_apostas, a.lucro, 
+               POWER((SUM((s.total_apostas - stats.media)*(s.total_apostas - stats.media))/stats.count), 0.5) AS desvio_padrao
+        FROM subquery s
+        CROSS JOIN stats
+        LEFT JOIN (
+            SELECT strftime('%H', data_entrada) AS hora, SUM(lucro_real) AS lucro
+            FROM apostas
+            WHERE data_entrada >= date('{data}', '-{dias} days')
+            GROUP BY hora
+        ) a ON s.hora = a.hora
+        GROUP BY s.hora, a.lucro
+        ORDER BY s.hora
+    """
 
     # Executando a consulta
     c.execute(query)
@@ -737,11 +761,11 @@ def count_hora(conn, dias):
     total_dias = c.execute(query_days).fetchone()[0]
 
     # Criando o DataFrame com os resultados
-    df = pd.DataFrame(resultados, columns=['hora', 'total_apostas', 'lucro'])
+    df = pd.DataFrame(resultados, columns=['hora', 'total_apostas', 'lucro', 'desvio_padrao'])
     df['hora'] = df['hora'].apply(lambda x: f'{str(x).zfill(2)}h')
     df['media_apostas'] = df['total_apostas'] / total_dias
-    df['media_lucro'] = (df['lucro'] / df['total_apostas']).round(2)
-    df['lucro_total'] = df['lucro'].round(2)
+    df['media_lucro'] = ((df['lucro'] if dias > 0 else 0) / (df['total_apostas'] if dias > 0 else 1))
+    df['lucro_total'] = (df['lucro'] if dias > 0 else 0)
 
     return df
 
@@ -1309,10 +1333,20 @@ def odds_resultados(conn, tempo=None, round=3, min=0, min_percent=0):
             """
     df = pd.read_sql_query(query, conn)
     df['odds'] = df['odds'].round(round)
-    df_grouped = df.groupby('odds')['resultados'].value_counts().unstack().fillna(0).assign(total=lambda x: x.sum(axis=1))
+    df_grouped = df.groupby('odds')['resultados'].value_counts().unstack().fillna(0).assign(total=lambda x: x.sum(axis=1)).reset_index()
+    if 'win' in df_grouped.columns:
+        df_grouped['win'] = df_grouped['win'].astype(int)
+    if 'loss' in df_grouped.columns:
+        df_grouped['loss'] = df_grouped['loss'].astype(int)
+    if 'return' in df_grouped.columns:
+        df_grouped['return'] = df_grouped['return'].astype(int)
+    df_grouped['total'] = df_grouped['total'].astype(int)
     df_grouped['%win'] = ((((df_grouped['win'] if 'win' in df_grouped.columns else 0) + (df_grouped['half-win'] if 'half-win' in df_grouped.columns else 0)) / df_grouped['total']) * 100).round(2)
     df_grouped['%loss'] = ((((df_grouped['loss'] if 'loss' in df_grouped.columns else 0) + (df_grouped['half-loss'] if 'half-loss' in df_grouped.columns else 0)) / df_grouped['total']) * 100).round(2)
     df_grouped['%return'] = (((df_grouped['return'] if 'return' in df_grouped.columns else 0) / df_grouped['total']) * 100).round(2)
+    media = df['odds'].mean()
+    desvio = df['odds'].std()
+    df_grouped['padrao'] = df_grouped.index.map(lambda odd: (odd - media) / desvio)
     if min > 0:
         df_grouped = df_grouped[df_grouped['total'] > min]
     if min_percent > 0:
@@ -1333,7 +1367,7 @@ def odds_resultados(conn, tempo=None, round=3, min=0, min_percent=0):
 #query = "SELECT * FROM apostas WHERE id = 20230604002"
 #print(c.execute(query).fetchall())
 #reconstruir_tabela(conn, 'apostas')
-#df = count_hora(conn, 7)
+#df = count_hora(conn, 0)
 #df = lucros_por_tempo(7, 'trimestre', conn)
 #df, total_apostas = saldo_bethouses(conn, 5, 'semana')
 #df = odds_resultados(conn, tempo = 90)

@@ -268,9 +268,9 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno3() - aposta1 - aposta2 - aposta3), 2)
             if aposta1_quarter:
-                lucro2 = round((retorno2() + (retorno1() - aposta1 / 2 - aposta3) - aposta1 - aposta2 - aposta3), 2)
+                lucro2 = round((retorno2() + retorno1_halfloss() - aposta1 - aposta2), 2)
             else:
-                lucro2 = round((retorno2() + (retorno3() - aposta3 / 2 - aposta1) - aposta1 - aposta2 - aposta3), 2)
+                lucro2 = round((retorno2() + retorno3_halfloss() - aposta2 - aposta3), 2)
             lucro_percent = round((((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3)) * 100, 2)
             return aposta1, aposta2, aposta3, None, lucro1, lucro2, lucro3, lucro_percent, None
 
@@ -317,9 +317,9 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno3() - aposta1 - aposta2 - aposta3), 2)
             if aposta1_quarter:
-                lucro2 = round((retorno2() + retorno1_halfwin() - aposta1 - aposta2 - aposta3), 2)
+                lucro2 = round((retorno2() + retorno1_halfwin() - aposta1 - aposta2), 2)
             else:
-                lucro2 = round((retorno2() + retorno3_halfwin() - aposta1 - aposta2 - aposta3), 2)
+                lucro2 = round((retorno2() + retorno3_halfwin() - aposta2 - aposta3), 2)
             lucro_percent = round((((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3)) * 100, 2)
             return aposta1, aposta2, aposta3, None, lucro1, lucro2, lucro3, lucro_percent, None
 
@@ -501,7 +501,6 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
 
         #Todos os outros resultados)
         else:
-            print('acabei errando')
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
             elif aposta1 > 0 and aposta2 > 0:

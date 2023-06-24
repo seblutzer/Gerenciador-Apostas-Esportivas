@@ -1,5 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
+import _tkinter
+
 
 ###################### NÚMEROS ######################
 def validate_num(var, dig=4, dec=2, negative=True, restrict=None):
@@ -114,3 +116,10 @@ def create_combobox(parent, options, row, column, label_text=None, width=7):
     combobox.bind("<KeyRelease>", lambda event: update_combobox(event, combobox_var, options, combobox))
     combobox.bind("<FocusOut>", lambda event: on_combobox_focus_out(event, combobox_var, options, combobox))
     return combobox, combobox_var
+
+def float_error(valor, erro):
+    try:
+        valor_float = valor.get()
+    except _tkinter.TclError:
+        valor_float = erro
+    return valor_float

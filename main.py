@@ -4,17 +4,18 @@ from tkinter import ttk, messagebox, colorchooser
 import datetime
 import json
 import os
-import _tkinter
 from datetime import datetime
 import pandas as pd
 import sqlite3
 from PIL import Image, ImageTk
 from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, converter_esporte
-from Pacotes_Lutzer.validate import create_float_entry, create_combobox
+from Pacotes_Lutzer.validate import create_float_entry, create_combobox, float_error
 from Pacotes_Lutzer.calc_apostas import calc_apostas
 from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, import_df_filtrado, save_apostas, tabela_bethouses
 from Pacotes_Lutzer.graficos import lucro_tempo, apostas_hora, calc_saldo_bethouse, apostas_bethouses, relacao_bethouses, relacao_esportes, eficiencia_bethouses, odds_x_resultado
 import re
+from tkinter import Toplevel, Label
+
 
 # Cria a janela
 janela = tk.Tk()
@@ -249,19 +250,19 @@ def selecionar_opcao(event):
         combobox_round.set(2)  # Define o valor inicial selecionado
         combobox_round.grid(row=1, column=1)
 
-        labelMin = tk.Label(popup, text="Maiores:")
+        labelMin = tk.Label(popup, text="Minimo:")
         labelMin.grid(row=2, column=0)
 
         entryMin, min_var = create_float_entry(popup, row=2, width=8, column=1, dig=3, dec=0)
 
-        labelMin_percent = tk.Label(popup, text="Menores:")
+        labelMin_percent = tk.Label(popup, text="Mínimo(%):")
         labelMin_percent.grid(row=3, column=0)
 
         entryMin_percent, min_percent_var = create_float_entry(popup, row=3, width=8, column=1, dig=2, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else None
-            round = int(combobox_round.get()) if combobox_round.get().isdigit() else 2
+            round = int(combobox_round.get()) if combobox_round.get().isdigit() else 1
             min = int(entryMin.get()) if entryMin.get().isdigit() else 0
             min_percent = int(entryMin_percent.get()) if entryMin_percent.get().isdigit() else 1
             odds_x_resultado(conn, tempo, round=round, min=min, min_percent=min_percent)
@@ -846,10 +847,15 @@ def open_bethouses():
 
     # Função para remover a opção de mercado selecionada
     def remove_mercado_option():
-        selected_option = mercado_options_listbox.get(tk.ACTIVE)
-        mercado_options.remove(selected_option)
-        save_bethouse_options()
-        update_mercado_options_list()
+        selected_item = mercado_options_tree.focus()
+        if selected_item:
+            values = mercado_options_tree.item(selected_item)['values']
+            if values:
+                selected_option = values[0]
+                mercado_options_tree.delete(selected_item)
+                mercado_options.remove(selected_option)
+                save_bethouse_options()
+                update_mercado_options_list()
 
     # Cria um botão para remover a opção de mercado selecionada
     remove_mercado_button = tk.Button(bethouses_frame, text="Remover", command=remove_mercado_option)
@@ -858,16 +864,18 @@ def open_bethouses():
     # Cria uma função para atualizar a lista de BetHouses
     def update_mercado_options_list():
         # Atualiza as opções do combobox
-        mercado_combobox['values'] = sorted(list(mercado_options), key=lambda x: x[0])
-        mercado_combobox2['values'] = sorted(list(mercado_options), key=lambda x: x[0])
-        mercado_combobox3['values'] = sorted(list(mercado_options), key=lambda x: x[0])
-        # Limpa a Listbox
-        mercado_options_listbox.delete(0, tk.END)
-        # Cria uma nova lista com os mercados
-        mercado_options_list = sorted(list(mercado_options), key=lambda x: x[0])
-        # Adiciona as BetHouses à Listbox
-        for mercado in mercado_options_list:
-            mercado_options_listbox.insert(tk.END, f"{mercado}")
+        mercados = sorted(list(mercado_options), key=lambda x: x[0])
+        mercado_combobox['values'] = mercados
+        mercado_combobox2['values'] = mercados
+        mercado_combobox3['values'] = mercados
+        # Limpa o Treeview
+        mercado_options_tree.delete(*mercado_options_tree.get_children())
+        # Adiciona as opções de mercado ao Treeview
+        for i, mercado in enumerate(mercados):
+            mercado_options_tree.insert('', 'end', values=[mercado])
+            if i % 2 == 1:
+                mercado_options_tree.item(mercado_options_tree.get_children()[-1], tags=['oddrow'])
+
 
 # Cria um menu pop-up com as opções desejadas
 settings_menu = tk.Menu(frameJogo, tearoff=False)
@@ -1291,18 +1299,12 @@ def on_mercado_combobox_selected(event):
         mercado_var2.set('Q1')
 
 def on_valor_combobox_selected(event):
-    def float_error(valor):
-        try:
-            valor_float = valor.get()
-        except _tkinter.TclError:
-            valor_float = ''
-        return valor_float
-    if float_error(valor_var) == 0 and num_bets == 2:
+    if float_error(valor_var, '') == 0 and num_bets == 2:
             valor_var2.set(0)
     elif mercado_var.get().startswith('T'):
         if num_bets == 2 and mercado_var2.get().startswith('T'):
-            valor_var2.set(float_error(valor_var))
-        elif num_bets == 3 and (float_error(valor_var).is_integer() or (float_error(valor_var)-0.25).is_integer() or (float_error(valor_var)-0.75).is_integer()) and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
+            valor_var2.set(float_error(valor_var, ''))
+        elif num_bets == 3 and (float_error(valor_var, '').is_integer() or (float_error(valor_var, '')-0.25).is_integer() or (float_error(valor_var, '')-0.75).is_integer()) and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
             arred_valor = round(valor_var.get(), 0)
             valor_var2.set(arred_valor - 0.5)
             valor_var3.set(arred_valor + 0.5)
@@ -1327,9 +1329,172 @@ mercado_label.grid(row=0, column=1)
 mercado_combobox, mercado_var = create_combobox(frameApostas, mercado_options, row=1, column=1, width=7)
 mercado_combobox.bind("<<ComboboxSelected>>", lambda event: update_columns())
 mercado_combobox.bind("<<ComboboxSelected>>", on_mercado_combobox_selected)
+
+def show_tooltip(event):
+    if float_error(valor_var, '') == '' and mercado_var.get() == '':
+        return
+    global tooltip_window
+    tooltip_window = Toplevel(frameApostas)
+    tooltip_window.wm_overrideredirect(True)
+    x = valor_entry.winfo_rootx()
+    y = valor_entry.winfo_rooty() - 45
+    tooltip_window.wm_geometry(f"+{x}+{y}")
+    mensagem = gerar_mensagem(str(mercado_var.get()), float_error(valor_var, ''), esporte_entry.get())
+    label = Label(tooltip_window, text=mensagem)
+    label.pack()
+
+def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str) -> str:
+    esporte = converter_esporte(esporte)
+    plural = ''
+    set = 'set'
+    if esporte == 'Tênis' or esporte == 'Tênis de Mesa' or esporte == 'Dardos':
+        equipe = 'jogador'
+        plutal = 'e'
+    elif esporte == 'Boxe' or esporte == 'MMA':
+        equipe = 'lutador'
+        plutal = 'e'
+    else:
+        equipe = 'time'
+    if esporte == 'Futebol':
+        set = 'tempo'
+        ponto = 'gol'
+    else:
+        ponto = 'ponto'
+    if esporte == 'E-Sports':
+        set = 'jogo'
+
+    if mercado_var.startswith('T') or mercado_var.startswith('Exac'):
+        tipo = 'total'
+    elif mercado_var.startswith(('AH', 'EH', '1', '2', '1X', 'X2', 'X', 'DNB')):
+        if mercado_var.startswith(('1', '2')):
+            valor_var = -0.5
+        elif mercado_var.startswith(('1X', 'X2')):
+            valor_var = 0.5
+        elif mercado_var.startswith('X'):
+            mercado_var = 'EHX'
+            valor_var = 0
+        elif mercado_var.startswith('DNB'):
+            valor_var = 0
+        tipo = 'handicap'
+    else:
+        tipo = 'especial'
+
+    str_valor = str(valor_var)
+    if str_valor == '':
+        valor_tipo = 'vazio'
+    elif str_valor.endswith('.5'):
+        valor_tipo = 'meio'
+    elif str_valor.endswith('.25'):
+        valor_tipo = 'but_quart'
+    elif str_valor.endswith('.75'):
+        valor_tipo = 'top_quart'
+    elif mercado_var.endswith('(3-way)') or mercado_var.startswith('EH'):
+        valor_tipo = 'europeu'
+    else:
+        valor_tipo = 'inteiro'
+    if valor_var != '':
+        valor = float(valor_var)
+        arredondado_para_cima = int(valor) + 1
+        arredondado_para_baixo = int(valor)
+        if tipo == 'total':
+            if valor_tipo == 'meio':
+                if mercado_var.startswith('TO'):
+                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                elif mercado_var.startswith('TU'):
+                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+            elif valor_tipo == 'but_quart':
+                if mercado_var.startswith('TO'):
+                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nMeia vitória com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
+                elif mercado_var.startswith('TU'):
+                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia derrota com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+            elif valor_tipo == 'top_quart':
+                if mercado_var.startswith('TO'):
+                    return f"Vence com {arredondado_para_cima + 1} ou mais {ponto}s\nMeia derrota com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                elif mercado_var.startswith('TU'):
+                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nMeia vitória com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_cima + 1} ou mais {ponto}s"
+            elif valor_tipo == 'europeu':
+                if mercado_var.startswith('TO'):
+                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                elif mercado_var.startswith('TU'):
+                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde com {arredondado_para_baixo} ou mais {ponto}s"
+            elif valor_tipo == 'inteiro':
+                if mercado_var.startswith('TO'):
+                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
+                elif mercado_var.startswith('TU'):
+                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+                else:
+                    return f"Vence com {arredondado_para_baixo} {ponto}s\nPerde com qualquer outra pontuação"
+
+        elif tipo == 'handicap':
+            if valor_tipo == 'meio':
+                if valor == 0.5:
+                    return f"Vence se o {equipe} empatar ou vencer\nPerde se o {equipe} perder"
+                elif valor == -0.5:
+                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
+                elif valor > 0.5:
+                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                else:
+                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+            elif valor_tipo == 'but_quart':
+                if valor > 0:
+                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia vitória se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                else:
+                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nMeia derrota se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo - 1} ou menos {ponto}s"
+            elif valor_tipo == 'top_quart':
+                if valor > 0:
+                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nMeia derrota se o {equipe} perder por {arredondado_para_cima} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima + 1} ou mais {ponto}s"
+                else:
+                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 2} ou mais {ponto}s\nMeia vitória se o {equipe} vencer por {-arredondado_para_baixo + 1} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+            elif valor_tipo == 'europeu':
+                if valor > 0:
+                    if mercado_var.startswith('EHX'):
+                        return f"Vence se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
+                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_baixo} ou mais {ponto}s"
+                elif valor < 0:
+                    if mercado_var.startswith('EHX'):
+                        return f"Vence se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
+                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+                else:
+                    if mercado_var.startswith('EHX'):
+                        return f"Vence se o {equipe} empatar sem {ponto}s\nPerde por qualquer outra pontuação"
+                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
+            elif valor_tipo == 'inteiro':
+                if valor > 0:
+                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                elif valor < 0:
+                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nAnula se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_cima} ou menos {ponto}s"
+                else:
+                    return f"Vence se o {equipe} vencer\nAnula se empatar\nPerde se o {equipe} perder"
+    else:
+        if mercado_var.startswith('Clear'):
+            return f"Vence se o {equipe} não sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
+        elif mercado_var.startswith('WinNil'):
+            return f"Vence se o {equipe} vencer sem sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
+        elif mercado_var.startswith('Score'):
+            return f"Vence se ambos os {equipe}{plural}s marcarem pelo menos um {ponto}\nPerde ao menos um dos {equipe}{plural}s não marcar ao menos um {ponto}"
+        elif mercado_var.startswith('WinLeas'):
+            return f"Vence se o {equipe} vencer pelo menos um {set}\nPerde se o {equipe} não vencer nenhum {set}"
+        elif mercado_var.startswith('Not') or mercado_var.startswith('Lay'):
+            return f"Vence se a outra aposta não vencer\nPerde se a outra aposta perder"
+        elif mercado_var.startswith('Remo'):
+            return f"Vence se houver expulsão\nPerde se não houver expulsão"
+    return ''
+
+
+
+def hide_tooltip(event):
+    global tooltip_window
+    if tooltip_window:
+        tooltip_window.destroy()
+
+
 # Adiciona campo Valor
 valor_entry, valor_var = create_float_entry(frameApostas, row=1, column=2, width=4, dig=3, dec=2, restrict="quarter")
 valor_entry.bind("<FocusOut>", on_valor_combobox_selected)
+tooltip_window = None
+valor_entry.bind("<Enter>", show_tooltip)
+valor_entry.bind("<Leave>", hide_tooltip)
+
 
 # Adiciona campo Mercado2
 mercado_combobox2, mercado_var2 = create_combobox(frameApostas, mercado_options, row=2, column=1, width=7)
@@ -1392,12 +1557,6 @@ def on_variable_change(*args):
     taxas = [bethouse_options.get(bethouse_var.get(), {}).get('taxa', 0.0),
              bethouse_options.get(bethouse_var2.get(), {}).get('taxa', 0.0),
              bethouse_options.get(bethouse_var3.get(), {}).get('taxa', 0.0)]
-    def float_error(valor):
-        try:
-            valor_float = valor.get()
-        except _tkinter.TclError:
-            valor_float = 0.0
-        return valor_float
 
     if (len([odd for odd in odds if odd != 0.0]) == num_bets) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1):
         arred = arred_var.get()
@@ -1409,7 +1568,7 @@ def on_variable_change(*args):
         else:
             arred = float(arred)
             arreds = [arred, arred, arred]
-        resultado = calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(), mercado_var2.get(), mercado_var3.get(), float_error(valor_var), float_error(valor_var2), float_error(valor_var3), taxas[0], taxas[1], taxas[2], arreds, bonus)
+        resultado = calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(), mercado_var2.get(), mercado_var3.get(), float_error(valor_var, 0.0), float_error(valor_var2, 0.0), float_error(valor_var3, 0.0), taxas[0], taxas[1], taxas[2], arreds, bonus)
         palpite1_label.config(text=f"R$ {format(round(resultado[0],2), '.2f')}" if resultado[0] is not None else "")
         palpite2_label.config(text=f"R$ {format(round(resultado[1],2), '.2f')}" if resultado[1] is not None else "")
         palpite3_label.config(text=f"R$ {format(round(resultado[2],2), '.2f')}" if resultado[2] is not None else "")
