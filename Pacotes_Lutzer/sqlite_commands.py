@@ -208,7 +208,7 @@ def to_sql(dados, nome_tabela, arquivo_retorno, data_type='dataframe', index=Fal
 def filter_column(sql_data, sql_table, table_column=None, operation=None, filter=None):
     con = sqlite3.connect(sql_data)
     if table_column==None or operation==None or filter==None:
-        query = f"SELECT * FROM {sql_table}"
+        query = f"SELECT valor1 FROM {sql_table} WHERE valor1 = ''"
     else:
         query = f"SELECT * FROM {sql_table} WHERE {table_column} {operation} {filter}"
     df = pd.read_sql_query(query, con)
@@ -217,7 +217,7 @@ def filter_column(sql_data, sql_table, table_column=None, operation=None, filter
 
     con.close()
 
-#filter_column(dados, 'apostas', table_column='resultado1', operation='!=', filter="'win'")
+#filter_column(sql_data, 'apostas')#, table_column='resultado1', operation='!=', filter="'win'")
 def view_tables(sql_data):
     # Conectar ao banco de dados
     conn = sqlite3.connect(sql_data)
@@ -285,14 +285,16 @@ def edit_column(sql_data, table, column, edition, editable):
     cursor = conn.cursor()
 
     # Executar a consulta SQL para atualizar os valores das colunas
-    cursor.execute(f"UPDATE {table} SET {column} = '{edition}' WHERE {column} = '{editable}'")
 
+    cursor.execute(f"UPDATE {table} SET {column} = {edition} WHERE {column} = '{editable}'")
+    #cursor.execute(f"UPDATE apostas SET mercado1 = 'Not ScoreBoth' WHERE ID = 20230626039")
     # Confirmar as alterações no banco de dados
+
     conn.commit()
 
     # Fechar a conexão com o banco de dados
     conn.close()
-#edit_column(sql_data, 'Bet365_saldos', 'data_entrada', '2021-07-22 04:43:02')
+#edit_column(sql_data, 'apostas', 'valor1', 'NULL', '')
 
 
 def del_line(sql_data, table, limit=1, id='last'):
@@ -393,19 +395,26 @@ def filter(sql_data, sql_table, table_column=None, operation=None, filter=None):
     if table_name[0].isdigit():
         table_name = f'_{table_name}'
     if table_column==None or operation==None or filter==None:
-        #delete_query = f"DELETE FROM {table_name} WHERE resultado = 'deposito' OR resultado = 'depósito' OR resultado = 'saque' OR resultado = 'ajuste'"
-        #c.execute(delete_query)
-        query = f"SELECT * FROM apostas"# WHERE resultado IS NULL"# WHERE DATE(data_entrada) >= '2021-01-01' AND DATE(data_entrada) < '2022-01-01' ORDER BY data_entrada ASC"
+        c.execute("SELECT valor3 FROM apostas WHERE CAST(valor1 AS REAL) IS NULL and valor3 IS NOT NULL")
+
+        # Recuperar os resultados da consulta
+        resultados = c.fetchall()
+
+        # Imprimir os valores
+        #for resultado in resultados:
+        #    print(resultado[0])
+
+        #query = f"SELECT * FROM apostas"# WHERE resultado IS NULL"# WHERE DATE(data_entrada) >= '2021-01-01' AND DATE(data_entrada) < '2022-01-01' ORDER BY data_entrada ASC"
     else:
         query = f"SELECT * FROM {sql_table} WHERE {table_column} {operation} {filter}"
-    df = pd.read_sql_query(query, conn)
+    #df = pd.read_sql_query(query, conn)
 
-    print(df)
+    #print(df)
     # Salvando as alterações no banco de dados
     conn.commit()
     conn.close()
     #return df
-#df = filter(sql_data, 'BetFair')
+df = filter(sql_data, 'BetFair')
 def add_linhas_from_csv():
     # Conectando ao banco de dados SQLite
     conn = sqlite3.connect(sql_data)
@@ -1372,24 +1381,24 @@ def odds_resultados(conn, tempo=None, round=3, min=0, min_percent=0):
 #df, total_apostas = saldo_bethouses(conn, 5, 'semana')
 #df = odds_resultados(conn, tempo = 90)
 #print(df)
+
 #edit_line(sql_data, 'BWin_saldos', 20230522015, "resultado = 'return'")
 #add_linhas_from_csv()
 #view_column(sql_data, '_1xBet_saldos')
 #del_column(sql_data, 'apostas', 'id_novo')
 #del_table(sql_data, 'apostas')
-#del_line(sql_data, 'apostas', id=20230607025)
+#del_line(sql_data, 'apostas', id=20230630020)
 #del_line(sql_data, 'Ex_BetFair_saldos', id=20230615049)
-#del_line(sql_data, 'FavBet_saldos', id=20230615049)
-#del_line(sql_data, 'apostas', id=20230616014)
-#del_line(sql_data, 'BWin_saldos', id=20230616014)
+#del_line(sql_data, 'FavBet_saldos', id=2306250301)
+#del_line(sql_data, 'apostas', id=20230630015)
+#del_line(sql_data, 'BWin_saldos', id=20230630020)
 #del_line(sql_data, 'SportyBet_saldos', id=696)
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
 #view_column(sql_data, 'apostas')
-
-#view_last_lines(sql_data, 'apostas', 100)
+#view_last_lines(sql_data, 'apostas', 3)
 #view_last_lines(sql_data, 'apostas_antigas', 3)
-#view_last_lines(sql_data, 'Pinnacle_saldos', 3)
+#view_last_lines(sql_data, 'BWin_saldos', 3)
 #view_last_lines(sql_data, 'FavBet_saldos', 3)
 #view_last_lines(sql_data, 'Ex_BetFair_saldos', 3)
 #sum_lucro_estimado(sql_data, 'apostas')

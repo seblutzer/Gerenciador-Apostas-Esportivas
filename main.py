@@ -9,17 +9,20 @@ import pandas as pd
 import sqlite3
 from PIL import Image, ImageTk
 from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, converter_esporte
-from Pacotes_Lutzer.validate import create_float_entry, create_combobox, float_error
+from Pacotes_Lutzer.validate import create_float_entry, create_combobox, float_error, gerar_mensagem
 from Pacotes_Lutzer.calc_apostas import calc_apostas
 from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, import_df_filtrado, save_apostas, tabela_bethouses
 from Pacotes_Lutzer.graficos import lucro_tempo, apostas_hora, calc_saldo_bethouse, apostas_bethouses, relacao_bethouses, relacao_esportes, eficiencia_bethouses, odds_x_resultado
 import re
 from tkinter import Toplevel, Label
+import gettext
 
-
+idioma = 'Português'
+idiomas = {"Português": ["Gerenciamento de SureBets Esportivas Lutzer (Beta)", "Ocultar Tabelas", "Mostrar Tabelas", "Construir Gráficos", "Lucro x Tempo", "Apostas x Hora", "Histórico de Saldos", "Apostas x Tempo", "Apostas x Bethouse", "Esportes", "Resultado x BetHouse", "Odds x Resultado"],
+           "English": ["Lutzer's Sports SureBets Management (Beta)", "Hide Tables", "Show Tables", "Build Charts", "Profit x Time", "Bets x Hour", "Balance History", "Bets x Time", "Bets x Bethouse", "Sports", "Outcome x Bethouse", "Odds x Outcome"]}
 # Cria a janela
 janela = tk.Tk()
-janela.title('Gerenciamento de SureBets Esportivas Lutzer (Beta)')
+janela.title(idiomas[idioma][0])
 
 # Cria o frame
 frameOpcoes = tk.Frame(janela, padx=10, pady=10)
@@ -50,22 +53,22 @@ def alternar_tabelas():
     if tabela_visivel:
         frameTabela.grid(row=9, column=0)
         frameSaldos.grid(row=10, column=0)
-        botao_tabelas["text"] = "Ocultar Tabelas"
+        botao_tabelas["text"] = idiomas[idioma][1]
     else:
         frameTabela.grid_remove()
         frameSaldos.grid_remove()
-        botao_tabelas["text"] = "Mostrar Tabelas"
+        botao_tabelas["text"] = idiomas[idioma][2]
 
 tabela_visivel = True
-botao_tabelas = ttk.Button(frameOpcoes, text="Ocultar Tabelas", command=alternar_tabelas)
+botao_tabelas = ttk.Button(frameOpcoes, text=idiomas[idioma][1], command=alternar_tabelas)
 botao_tabelas.grid(row=0, column=1)
 def selecionar_opcao(event):
     opcao_selecionada = combo_opcoes.get()
-    if opcao_selecionada == "Lucro x Tempo":
+    if opcao_selecionada == idiomas[idioma][3]:
         popup = tk.Toplevel()
         popup.title(opcao_selecionada)
 
-        labelTempo = tk.Label(popup, text="Tempo:")
+        labelTempo = tk.Label(popup, text=idiomas[idioma][12])
         labelTempo.grid(row=0, column=0)
 
         entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=2, dec=0)
@@ -271,18 +274,18 @@ def selecionar_opcao(event):
         btnGerarGrafico.grid(row=4, column=0, columnspan=2)
 
 combo_opcoes = ttk.Combobox(frameOpcoes, values=[
-    "Construir Gráficos",
-    "Lucro x Tempo",
-    "Apostas x Hora",
-    "Histórico de Saldos",
-    "Apostas x Tempo",
-    "Apostas x Bethouse",
-    "Esportes",
-    "Resultado x BetHouse",
-    "Odds x Resultado"
+    idiomas[idioma][3],
+    idiomas[idioma][4],
+    idiomas[idioma][5],
+    idiomas[idioma][6],
+    idiomas[idioma][7],
+    idiomas[idioma][8],
+    idiomas[idioma][9],
+    idiomas[idioma][10],
+    idiomas[idioma][11]
 ], state="readonly", width=14)
 combo_opcoes.bind("<<ComboboxSelected>>", selecionar_opcao)
-combo_opcoes.set("Contruir Gráficos")
+combo_opcoes.set(idiomas[idioma][3])
 combo_opcoes.grid(row=0, column=2)
 
 
@@ -489,7 +492,7 @@ def load_bethouse_options():
     except FileNotFoundError:
         bethouse_options_total = {}
         bethouse_options = {}
-        mercado_options = ["1", "12", "1X", "2", "AH1", "AH2", "ClearSheet1", "ClearSheet2", "DNB1", "DNB2", "EH1", "EH2", "EHX", "Exactly", "Lay", "Not", "Q1", "Q2", "Removal", "ScoreBoth", "TO", "TU", "TO1", "TO2", "TU2", "TU1", "WinNil1", "WinNil2", "WinLeastOneOfPer1", "WinLeastOneOfPer2", "X", "X2"]
+        mercado_options = ["1", "12", "1X", "2", "AH1", "AH2", "ClearSheet1", "ClearSheet2", "DNB1", "DNB2", "EH1", "EH2", "EHX", "Exactly", "Lay", "Not", "Q1", "Q2", "Removal", "ScoreBoth", "TEv", "TO", "TO (3-way)", "TU", "TU (3-way)", "TO1", "TO1 (3-way)", "TO2", "TO2 (3-way)",  "TOd", "TU2", "TU2 (3-way)", "TU1", "TU1 (3-way)", "WinAllPer1", "WinAllPer2", "WinNil1", "WinNil2", "WinLeastOneOfPer1", "WinLeastOneOfPer2", "X", "X2"]
         arred_var = tk.StringVar(value='Padrão')
         order_text = "Crescente"
         add_text = "Data"
@@ -964,24 +967,42 @@ ano_var = tk.StringVar(value=datetime.now().year)
 ano_combobox = ttk.Combobox(frameJogo, textvariable=ano_var, values=opcoes_anos, width=4)
 ano_combobox.bind('<KeyRelease>', update_year_combobox)
 ano_combobox.grid(row=1, column=4, padx=5, pady=5, sticky=tk.W) # Ano
-def set_placeholder_text(entry, placeholder):
-    entry.insert(0, placeholder)
-    entry.bind('<FocusIn>', lambda event: on_entry_click(entry, placeholder))
-    entry.bind('<FocusOut>', lambda event: on_focus_out(entry, placeholder))
 
-def on_entry_click(entry, placeholder):
-    if entry.get() == placeholder:
-        entry.delete(0, tk.END)  # Limpar o texto existente
-        entry.config(foreground='black')  # Alterar a cor do texto para preto
+def show_tooltip_simples(event, onde, oque):
+    global tooltip_window
+    tooltip_window = Toplevel(frameJogo)
+    tooltip_window.wm_overrideredirect(True)
+    x = onde.winfo_rootx()
+    y = onde.winfo_rooty() - 20
+    tooltip_window.wm_geometry(f"+{x}+{y}")
+    if oque == 'jogo':
+        label = Label(tooltip_window, text="Adicione os dois times/jogadores separado por '-', 'x' ou 'vs'")
+    else:
+        label = Label(tooltip_window, text="Adicione o esporte")
+    label.pack()
 
-def on_focus_out(entry, placeholder):
-    if entry.get() == "":
-        entry.insert(0, placeholder)  # Restaurar o texto do placeholder
-        entry.config(foreground='gray')
+def hide_tooltip_simples(event):
+    global tooltip_window
+    if tooltip_window:
+        tooltip_window.destroy()
+
+def processar_colar(event):
+    dados = janela.clipboard_get()
+    linhas = dados.splitlines()
+    jogo_entry.delete(0, tk.END)
+    jogo_entry.insert(tk.END, linhas[0])
+    esporte_entry.delete(0, tk.END)
+
+    partes = linhas[1].split('.')
+    esporte_entry.insert(tk.END, partes[0])
+
 
 esporte_entry = tk.Entry(frameJogo, foreground='gray')
-set_placeholder_text(esporte_entry, "Esporte")
 esporte_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
+esporte_entry.bind('<Enter>', lambda event: show_tooltip_simples(event, esporte_entry, 'esporte'))
+esporte_entry.bind('<Leave>', hide_tooltip_simples)
+janela.bind_all('<<Paste>>', processar_colar)
+
 
 
 def on_enter_game(event):
@@ -1023,9 +1044,10 @@ def on_enter_game(event):
 jogo_label = tk.Label(frameJogo, text="Jogo / Esporte")
 jogo_label.grid(row=0, column=0, padx=5, pady=5, sticky=tk.W)
 jogo_entry = tk.Entry(frameJogo)
-set_placeholder_text(jogo_entry, "Jogo (Equipe 1 e Equipe 2)")
 jogo_entry.grid(row=1, column=0, padx=5, pady=5, sticky=tk.W)
 jogo_entry.bind('<FocusOut>', on_enter_game)
+jogo_entry.bind('<Enter>', lambda event: show_tooltip_simples(event, jogo_entry, 'jogo'))
+jogo_entry.bind('<Leave>', hide_tooltip_simples)
 
 
 # Jogo
@@ -1146,7 +1168,7 @@ def alternar_bets():
         num_bets = 3
         bethouse_combobox3.grid(row=3, column=0, padx=5, pady=5, sticky=tk.W)
         mercado_combobox3.grid(row=3, column=1, padx=5, pady=5, sticky=tk.W)
-        valor_entry3.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
+        #valor_entry3.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
         odd_entry3.grid(row=3, column=3, padx=5, pady=5, sticky=tk.W)
         real_label3.grid(row=3, column=4)
         aposta_entry3.grid(row=3, column=5, padx=5, pady=5, sticky=tk.W)
@@ -1184,332 +1206,375 @@ bethouse_combobox3.bind("<<ComboboxSelected>>", on_select3)
 # BetHouses
 
 def on_mercado_combobox_selected(event):
-    if mercado_var.get().startswith('T'):
-        if mercado_var.get() == 'TO':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TU')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TU')
-                mercado_var3.set('TU')
-        elif mercado_var.get() == 'TO1':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TU1')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TU1')
-                mercado_var3.set('TU1')
-        elif mercado_var.get() == 'TO2':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TU2')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TU2')
-                mercado_var3.set('TU2')
-        elif mercado_var.get() == 'TU':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TO')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TO')
-                mercado_var3.set('TO')
-        elif mercado_var.get() == 'TU1':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TO1')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TO1')
-                mercado_var3.set('TO1')
-        elif mercado_var.get() == 'TU2':
-            if num_bets == 2 and mercado_var2.get() == '':
-                mercado_var2.set('TO2')
-            elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-                mercado_var2.set('TO2')
-                mercado_var3.set('TO2')
-    elif mercado_var.get() == '1':
+    update_columns()
+    mercado = mercado_var.get()
+    mercado2 = mercado_var2.get()
+    mercado3 = mercado_var3.get()
+    if mercado.startswith('T'):
+        if len(mercado) == 2:
+            igual = ''
+            complemento = ''
+        elif len(mercado) == 3:
+            igual = mercado[2]
+            complemento = ''
+        else:
+            igual = mercado[2]
+            complemento = mercado[3:]
+        operacao = mercado[1]
+        if operacao == 'O':
+            inverso = 'U'
+        else:
+            inverso = 'O'
         if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('2')
-            elif mercado_var2.startswith('AH'):
-                valor_var2.set('0.5')
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            if mercado.startswith('TEv'):
+                mercado_var2.set('TOd')
+                return
+            elif mercado.startswith('TOd'):
+                mercado_var2.set('TEv')
+                return
+            mercado_var2.set(f'T{inverso}{igual}{complemento}')
+        else:
+            if mercado.endswith('(3-way)'):
+                mercado_var2.set('Exactly')
+                mercado_var3.set(f'T{inverso}{igual}')
+    elif mercado.startswith('AH'):
+        igual = mercado[2]
+        if igual == '1':
+            oposto = '2'
+        else:
+            oposto = '1'
+        if num_bets == 2:
+            mercado_var2.set(f'AH{oposto}')
+        else:
             mercado_var2.set('X')
             mercado_var3.set('2')
-    elif mercado_var.get() == '2':
+    elif mercado.startswith('DNB'):
+        igual = mercado[3]
+        if igual == '1':
+            oposto = '2'
+        else:
+            oposto = '1'
         if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('1')
-            elif mercado_var2.startswith('AH'):
-                valor_var.set('0.5')
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+            mercado_var2.set(f'DNB{oposto}')
+        elif num_bets == 3:
             mercado_var2.set('X')
             mercado_var3.set('1')
-    elif mercado_var.get() == '12':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('X')
-    elif mercado_var.get() == 'X':
-        if num_bets == 2 and mercado_var2.get() == '':
-            mercado_var2.set('12')
-    elif mercado_var.get() == '1X':
-        if num_bets == 2 and mercado_var2.get() == '':
+    elif mercado == '1':
+        if num_bets == 2:
             mercado_var2.set('2')
-    elif mercado_var.get() == 'X2':
-        if num_bets == 2 and mercado_var2.get() == '':
+        else:
+            mercado_var2.set('X')
+            mercado_var3.set('2')
+    elif mercado == '2':
+        if num_bets == 2:
             mercado_var2.set('1')
-    elif mercado_var.get() == 'DNB1':
-        if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('DNB2')
-            elif mercado_var2.startswith('AH'):
-                valor_var2.set(0)
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-            mercado_var2.set('X')
-            mercado_var3.set('2')
-    elif mercado_var.get() == 'DNB2':
-        if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('DNB1')
-            elif mercado_var2.startswith('AH'):
-                valor_var2.set(0)
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
+        else:
             mercado_var2.set('X')
             mercado_var3.set('1')
-    elif mercado_var.get() == 'AH1':
+    elif mercado == '12':
         if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('AH2')
-            elif mercado_var2.get() == '1' or mercado_var2.get() == '2':
-                valor_var2.set('')
-            elif mercado_var2.startswith('DNB'):
-                valor_var2.set('')
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
             mercado_var2.set('X')
-            mercado_var3.set('2')
-            valor_var.set(0)
-    elif mercado_var.get() == 'AH2':
+    elif mercado == 'X':
         if num_bets == 2:
-            if mercado_var2.get() == '':
-                mercado_var2.set('AH1')
-            elif mercado_var2.get() == '1' or mercado_var2.get() == '2':
-                valor_var.set('')
-            elif mercado_var2.startswith('DNB'):
-                valor_var2.set('')
-        elif num_bets == 3 and mercado_var2.get() == '' and mercado_var3.get() == '':
-            mercado_var2.set('X')
-            mercado_var3.set('1')
-            valor_var.set(0)
-    elif mercado_var.get() == 'Q1':
+            mercado_var2.set('12')
+    elif mercado == '1X':
+        if num_bets == 2:
+            mercado_var2.set('2')
+    elif mercado == 'X2':
+        if num_bets == 2:
+            mercado_var2.set('1')
+    elif mercado == 'EH1':
+        if num_bets == 2:
+            mercado_var2.set('AH2')
+    elif mercado == 'EH2':
+        if num_bets == 2:
+            mercado_var2.set('AH1')
+    elif mercado == 'Q1':
         mercado_var2.set('Q2')
-    elif mercado_var.get() == 'Q2':
+    elif mercado == 'Q2':
         mercado_var2.set('Q1')
+    elif mercado.startswith(('Score', 'Win', 'Remo', 'Clear')):
+        mercado_var2.set('Not')
 
-def on_valor_combobox_selected(event):
-    if float_error(valor_var, '') == 0 and num_bets == 2:
-            valor_var2.set(0)
-    elif mercado_var.get().startswith('T'):
-        if num_bets == 2 and mercado_var2.get().startswith('T'):
-            valor_var2.set(float_error(valor_var, ''))
-        elif num_bets == 3 and (float_error(valor_var, '').is_integer() or (float_error(valor_var, '')-0.25).is_integer() or (float_error(valor_var, '')-0.75).is_integer()) and mercado_var2.get().startswith('T') and mercado_var3.get().startswith('T'):
-            arred_valor = round(valor_var.get(), 0)
-            valor_var2.set(arred_valor - 0.5)
-            valor_var3.set(arred_valor + 0.5)
-    elif mercado_var.get().startswith('AH'):
-        if mercado_var2.get().startswith('AH'):
+def on_valor_chosen(event):
+    mercado = mercado_var.get()
+    if mercado == 'lay':
+        update_columns()
+    valor = float_error(valor_var, '')
+    if valor != '':
+        if mercado.startswith('AH'):
+            arred_valor = round(valor, 0)
+            igual = mercado[2]
+            if igual == '1':
+                oposto = '2'
+            else:
+                oposto = '1'
             if num_bets == 2:
-                valor_var2.set(-valor_var.get())
-            elif num_bets == 3:
-                if mercado_var3.get().startswith('AH') and valor_var.get().is_integer():
-                    valor_var2.set(-(valor_var.get() - 0.5))
-                    valor_var3.set(-(valor_var.get() + 0.5))
-        elif mercado_var2.get().startswith('DNB') and num_bets == 2:
-            valor_var2.set('')
-    elif mercado_var.get().startswith('DNB') and mercado_var2.get().startswith('AH') and num_bets == 2:
-        valor_var2.set(0)
-    elif mercado_var2.get().startswith('DNB') and mercado_var.get().startswith('AH') and num_bets == 2:
-        valor_var.set(0)
+                valor_var2.set(-valor)
+            else:
+                if valor == 0:
+                    return
+                elif valor =='':
+                    valor_var.set(0)
+                    return
+                elif valor.is_integer():
+                    mercado_var2.set(f'AH{oposto}')
+                    mercado_var3.set(f'AH{oposto}')
+                    valor_var2.set(-(valor - 0.5))
+                    valor_var3.set(-(valor + 0.5))
+                elif (valor - 0.25).is_integer() or (valor - 0.75).is_integer():
+                    mercado_var2.set(f'AH{oposto}')
+                    mercado_var3.set(f'AH{oposto}')
+                    valor_var2.set(-arred_valor - 0.5)
+                    valor_var3.set(-arred_valor + 0.5)
+                elif valor == -0.5:
+                    mercado_var2.set('X')
+                    mercado_var3.set(f'DNB{oposto}')
+                else:
+                    mercado_var2.set(f'EH{oposto}')
+                    mercado_var3.set(f'EH{oposto}')
+                    if valor > 0:
+                        valor_var2.set(-arred_valor + 1)
+                        valor_var3.set(-arred_valor)
+                    else:
+                        valor_var2.set(-arred_valor)
+                        valor_var3.set(-arred_valor - 1)
+        elif mercado.startswith('T'):
+            if len(mercado) == 2:
+                igual = ''
+                complemento = ''
+            elif len(mercado) == 3:
+                igual = mercado[2]
+                complemento = ''
+            else:
+                igual = mercado[2]
+                complemento = mercado[3:]
+            operacao = mercado[1]
+            if operacao == 'O':
+                inverso = 'U'
+            else:
+                inverso = 'O'
+            arred_valor = round(valor, 0)
+            if num_bets == 2:
+                mercado_var2.set(f'T{inverso}{igual}{complemento}')
+                valor_var2.set(valor)
+            else:
+                if mercado.endswith('(3-way)'):
+                    mercado_var2.set('Exactly')
+                    mercado_var3.set(f'T{inverso}{igual}')
+                    valor_var2.set(valor)
+                    valor_var3.set(valor)
+                elif (valor.is_integer() or (valor - 0.25).is_integer() or (valor - 0.75).is_integer()):
+                    mercado_var2.set(f'T{inverso}{igual}')
+                    mercado_var3.set(f'T{inverso}{igual}')
+                    valor_var2.set(arred_valor - 0.5)
+                    valor_var3.set(arred_valor + 0.5)
 
-# Adiciona campo Mercado
-mercado_label = tk.Label(frameApostas, text="Mercado")
-mercado_label.grid(row=0, column=1)
-mercado_combobox, mercado_var = create_combobox(frameApostas, mercado_options, row=1, column=1, width=7)
-mercado_combobox.bind("<<ComboboxSelected>>", lambda event: update_columns())
-mercado_combobox.bind("<<ComboboxSelected>>", on_mercado_combobox_selected)
+def on_mercado_combobox2_selected(event):
+    mercado = mercado_var.get()
+    mercado2 = mercado_var2.get()
+    mercado3 = mercado_var3.get()
+    if mercado2 == 'Lay':
+        update_columns()
+    if mercado.startswith('T'):
+        valor = float_error(valor_var, '')
+        if valor != '':
+            arred_valor = round(valor, 0)
+            if len(mercado) == 2:
+                igual = ''
+            elif len(mercado) == 3:
+                igual = mercado[2]
+            else:
+                igual = mercado[2]
+            operacao = mercado[1]
+            if operacao == 'O':
+                inverso = 'U'
+            else:
+                inverso = 'O'
+            if num_bets == 3:
+                if mercado2.startswith('Exac'):
+                    if valor.is_integer():
+                        valor_var2.set(valor)
+                    elif mercado.startswith('TO') and not valor.is_integer():
+                        valor_var2.set(arred_valor)
+                        mercado_var3.set(f'T{inverso}{igual}')
+                        valor_var3.set(arred_valor - 0.5)
+                    elif mercado.startswith('TU') and not valor.is_integer():
+                        valor_var2.set(arred_valor + 1)
+                        mercado_var3.set(f'T{inverso}{igual}')
+                        valor_var3.set(arred_valor + 0.5)
+                    elif mercado.endswith('(3-way)'):
+                        valor_var2.set(valor)
+                        mercado_var3.set(f'T{inverso}{igual}')
+                        valor_var2.set(valor)
+    elif mercado.startswith('AH'):
+        valor = valor_var.get()
+        arred_valor = round(valor, 0)
+        igual = mercado[2]
+        if igual == '1':
+            oposto = '2'
+        else:
+            oposto = '1'
+        if num_bets == 2:
+            if mercado2.startswith('EH') and (valor - 0.5).is_integer():
+                valor_var2.set(-(valor - 0.5))
+        else:
+            if mercado2 == 'X2' and valor == -0.5:
+                mercado_var3.set('AH1')
+                valor_var3.set(-0.25)
+            elif mercado2 == '1X' and valor == -0.5:
+                mercado_var3.set('AH1')
+                valor_var3.set(-0.25)
+    elif mercado == '1':
+        print('mercado 1')
+        if mercado2.startswith('AH'):
+            valor_var2.set(0.5)
+        elif mercado2.startswith('EH'):
+            valor_var2.set(1)
+    elif mercado == '2' and mercado2.startswith('AH'):
+        if mercado2.startswith('AH'):
+            valor_var2.set(0.5)
+        elif mercado2.startswith('EH'):
+            valor_var2.set(1)
+    elif mercado == '1X' and mercado2.startswith('AH'):
+        if mercado2.startswith('AH'):
+            valor_var2.set(-0.5)
+        elif mercado2.startswith('EH'):
+            valor_var2.set(0)
+    elif mercado == 'X2' and mercado2.startswith('AH'):
+        if mercado2.startswith('AH'):
+            valor_var2.set(-0.5)
+        elif mercado2.startswith('EH'):
+            valor_var2.set(0)
+    elif mercado.startswith('DNB'):
+        if num_bets == 2:
+            if mercado2.startswith('AH'):
+                valor_var2.set(0)
 
-def show_tooltip(event):
-    if float_error(valor_var, '') == '' and mercado_var.get() == '':
+def on_valor2_chosen(event):
+    if num_bets == 2:
+        return
+    else:
+        return
+
+def on_mercado_combobox3_selected(event):
+    mercado = mercado_var.get()
+    mercado2 = mercado_var2.get()
+    mercado3 = mercado_var3.get()
+    if mercado3 == 'Lay':
+        update_columns()
+    if mercado.startswith('T') and mercado2.startswith('Exac'):
+        valor = valor_var.get()
+        valor2 = valor_var2.get()
+        valor3 = valor_var3.get()
+        valor = valor_var.get()
+        arred_valor = round(valor, 0)
+        if len(mercado) == 2:
+            igual = ''
+            complemento = ''
+        elif len(mercado) == 3:
+            igual = mercado[2]
+            complemento = ''
+        else:
+            igual = mercado[2]
+            complemento = mercado[3:]
+        operacao = mercado[1]
+        if operacao == 'O':
+            inverso = 'U'
+        else:
+            inverso = 'O'
+        if valor.is_integer():
+            print('verdadeiro')
+            valor_var3.set(valor)
+        else:
+            print('falso')
+            if mercado3.endswith('(3-way)'):
+                valor_var3.set(valor2)
+            else:
+                if valor > valor2:
+                    valor_var3.set(valor2 + 0.5)
+                else:
+                    valor_var3.set(valor2 - 0.5)
+
+
+def show_tooltip(event, valor, valor_entry, mercado, esporte, modx=None, mody=None):
+    if valor == '' and mercado == '':
         return
     global tooltip_window
     tooltip_window = Toplevel(frameApostas)
     tooltip_window.wm_overrideredirect(True)
-    x = valor_entry.winfo_rootx()
-    y = valor_entry.winfo_rooty() - 45
+    if modx:
+        x = valor_entry.winfo_rootx() + modx
+    else:
+        x = valor_entry.winfo_rootx()
+    if mody:
+        y = valor_entry.winfo_rooty() + mody
+    else:
+        y = valor_entry.winfo_rooty()
     tooltip_window.wm_geometry(f"+{x}+{y}")
-    mensagem = gerar_mensagem(str(mercado_var.get()), float_error(valor_var, ''), esporte_entry.get())
+    mensagem = gerar_mensagem(str(mercado), valor, esporte)
     label = Label(tooltip_window, text=mensagem)
     label.pack()
-
-def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str) -> str:
-    esporte = converter_esporte(esporte)
-    plural = ''
-    set = 'set'
-    if esporte == 'Tênis' or esporte == 'Tênis de Mesa' or esporte == 'Dardos':
-        equipe = 'jogador'
-        plutal = 'e'
-    elif esporte == 'Boxe' or esporte == 'MMA':
-        equipe = 'lutador'
-        plutal = 'e'
-    else:
-        equipe = 'time'
-    if esporte == 'Futebol':
-        set = 'tempo'
-        ponto = 'gol'
-    else:
-        ponto = 'ponto'
-    if esporte == 'E-Sports':
-        set = 'jogo'
-
-    if mercado_var.startswith('T') or mercado_var.startswith('Exac'):
-        tipo = 'total'
-    elif mercado_var.startswith(('AH', 'EH', '1', '2', '1X', 'X2', 'X', 'DNB')):
-        if mercado_var.startswith(('1', '2')):
-            valor_var = -0.5
-        elif mercado_var.startswith(('1X', 'X2')):
-            valor_var = 0.5
-        elif mercado_var.startswith('X'):
-            mercado_var = 'EHX'
-            valor_var = 0
-        elif mercado_var.startswith('DNB'):
-            valor_var = 0
-        tipo = 'handicap'
-    else:
-        tipo = 'especial'
-
-    str_valor = str(valor_var)
-    if str_valor == '':
-        valor_tipo = 'vazio'
-    elif str_valor.endswith('.5'):
-        valor_tipo = 'meio'
-    elif str_valor.endswith('.25'):
-        valor_tipo = 'but_quart'
-    elif str_valor.endswith('.75'):
-        valor_tipo = 'top_quart'
-    elif mercado_var.endswith('(3-way)') or mercado_var.startswith('EH'):
-        valor_tipo = 'europeu'
-    else:
-        valor_tipo = 'inteiro'
-    if valor_var != '':
-        valor = float(valor_var)
-        arredondado_para_cima = int(valor) + 1
-        arredondado_para_baixo = int(valor)
-        if tipo == 'total':
-            if valor_tipo == 'meio':
-                if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
-                elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
-            elif valor_tipo == 'but_quart':
-                if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nMeia vitória com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
-                elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia derrota com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
-            elif valor_tipo == 'top_quart':
-                if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima + 1} ou mais {ponto}s\nMeia derrota com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
-                elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nMeia vitória com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_cima + 1} ou mais {ponto}s"
-            elif valor_tipo == 'europeu':
-                if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
-                elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde com {arredondado_para_baixo} ou mais {ponto}s"
-            elif valor_tipo == 'inteiro':
-                if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
-                elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
-                else:
-                    return f"Vence com {arredondado_para_baixo} {ponto}s\nPerde com qualquer outra pontuação"
-
-        elif tipo == 'handicap':
-            if valor_tipo == 'meio':
-                if valor == 0.5:
-                    return f"Vence se o {equipe} empatar ou vencer\nPerde se o {equipe} perder"
-                elif valor == -0.5:
-                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
-                elif valor > 0.5:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
-                else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
-            elif valor_tipo == 'but_quart':
-                if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia vitória se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
-                else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nMeia derrota se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo - 1} ou menos {ponto}s"
-            elif valor_tipo == 'top_quart':
-                if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nMeia derrota se o {equipe} perder por {arredondado_para_cima} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima + 1} ou mais {ponto}s"
-                else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 2} ou mais {ponto}s\nMeia vitória se o {equipe} vencer por {-arredondado_para_baixo + 1} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
-            elif valor_tipo == 'europeu':
-                if valor > 0:
-                    if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_baixo} ou mais {ponto}s"
-                elif valor < 0:
-                    if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
-                else:
-                    if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} empatar sem {ponto}s\nPerde por qualquer outra pontuação"
-                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
-            elif valor_tipo == 'inteiro':
-                if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
-                elif valor < 0:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nAnula se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_cima} ou menos {ponto}s"
-                else:
-                    return f"Vence se o {equipe} vencer\nAnula se empatar\nPerde se o {equipe} perder"
-    else:
-        if mercado_var.startswith('Clear'):
-            return f"Vence se o {equipe} não sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
-        elif mercado_var.startswith('WinNil'):
-            return f"Vence se o {equipe} vencer sem sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
-        elif mercado_var.startswith('Score'):
-            return f"Vence se ambos os {equipe}{plural}s marcarem pelo menos um {ponto}\nPerde ao menos um dos {equipe}{plural}s não marcar ao menos um {ponto}"
-        elif mercado_var.startswith('WinLeas'):
-            return f"Vence se o {equipe} vencer pelo menos um {set}\nPerde se o {equipe} não vencer nenhum {set}"
-        elif mercado_var.startswith('Not') or mercado_var.startswith('Lay'):
-            return f"Vence se a outra aposta não vencer\nPerde se a outra aposta perder"
-        elif mercado_var.startswith('Remo'):
-            return f"Vence se houver expulsão\nPerde se não houver expulsão"
-    return ''
-
-
 
 def hide_tooltip(event):
     global tooltip_window
     if tooltip_window:
         tooltip_window.destroy()
 
+# Adiciona campo Mercado
+mercado_label = tk.Label(frameApostas, text="Mercado")
+mercado_label.grid(row=0, column=1)
+mercado_combobox, mercado_var = create_combobox(frameApostas, mercado_options, row=1, column=1, width=7)
+mercado_combobox.bind("<<ComboboxSelected>>", on_mercado_combobox_selected)
+mercado_combobox.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var, ''), mercado_combobox, mercado_var.get(), converter_esporte(esporte_entry.get()), mody = -45))
+mercado_combobox.bind("<Leave>", hide_tooltip)
 
 # Adiciona campo Valor
 valor_entry, valor_var = create_float_entry(frameApostas, row=1, column=2, width=4, dig=3, dec=2, restrict="quarter")
-valor_entry.bind("<FocusOut>", on_valor_combobox_selected)
+valor_entry.grid_remove()
+valor_entry.bind("<FocusOut>", on_valor_chosen)
 tooltip_window = None
-valor_entry.bind("<Enter>", show_tooltip)
+valor_entry.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var, ''), valor_entry, mercado_var.get(), converter_esporte(esporte_entry.get()), mody = -45))
 valor_entry.bind("<Leave>", hide_tooltip)
 
+def retorna_focus(event, teste1, teste2, destino, teste3='', teste4='', destino2=''):
+    if teste1.startswith(('TO', 'TU', 'AH', 'EH', 'Exac')) and float_error(teste2, '') == '':
+        if teste1 == 'TOd':
+            pass
+        else:
+            janela.after(100, destino.focus_set())
+    if teste3.startswith(('TO', 'TU', 'AH', 'EH', 'Exac')) and float_error(teste4, '') == '':
+        if teste3 == 'TOd':
+            pass
+        else:
+            janela.after(100, destino2.focus_set())
 
 # Adiciona campo Mercado2
 mercado_combobox2, mercado_var2 = create_combobox(frameApostas, mercado_options, row=2, column=1, width=7)
-mercado_combobox2.bind("<<ComboboxSelected>>", lambda event: update_columns())
+mercado_combobox2.bind("<FocusIn>", lambda event: retorna_focus(event, mercado_var.get(), valor_var, valor_entry))
+mercado_combobox2.bind("<<ComboboxSelected>>", on_mercado_combobox2_selected)
+mercado_combobox2.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var2, ''), mercado_combobox2, mercado_var2.get(), converter_esporte(esporte_entry.get()), mody = 25))
+mercado_combobox2.bind("<Leave>", hide_tooltip)
 
 # Adiciona campo Valor2
 valor_entry2, valor_var2 = create_float_entry(frameApostas, row=2, column=2, width=4, dig=3, dec=2, restrict="quarter")
-valor_entry2.bind("<FocusOut>", on_valor_combobox_selected)
+valor_entry2.bind("<FocusOut>", on_valor2_chosen)
+valor_entry2.grid_remove()
+valor_entry2.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var2, ''), valor_entry2, mercado_var2.get(), converter_esporte(esporte_entry.get()), mody = 25))
+valor_entry2.bind("<Leave>", hide_tooltip)
 
 # Adiciona campo Mercado2
 mercado_combobox3, mercado_var3 = create_combobox(frameApostas, mercado_options, row=3, column=1, width=7)
+mercado_combobox3.bind("<FocusIn>", lambda event: retorna_focus(event, mercado_var2.get(), valor_var2, valor_entry2))
 mercado_combobox3.grid_remove()
+mercado_combobox3.bind("<<ComboboxSelected>>", on_mercado_combobox3_selected)
+mercado_combobox3.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var3, ''), mercado_combobox3, mercado_var3.get(), converter_esporte(esporte_entry.get()), mody = 25))
+mercado_combobox3.bind("<Leave>", hide_tooltip)
 # Adiciona campo Valor2
 valor_entry3, valor_var3 = create_float_entry(frameApostas, row=3, column=2, width=4, dig=3, dec=2, restrict="quarter")
 valor_entry3.grid_remove()
+valor_entry3.bind("<Enter>", lambda event: show_tooltip(event, float_error(valor_var3, ''), valor_entry3, mercado_var3.get(), converter_esporte(esporte_entry.get()), mody = 25))
+valor_entry3.bind("<Leave>", hide_tooltip)
 
 def fill_empty_entry_with_zero(event):
     entry = event.widget
@@ -1521,6 +1586,8 @@ def fill_empty_entry_with_zero(event):
 odd_label = tk.Label(frameApostas, text="ODD")
 odd_label.grid(row=0, column=3)
 odd_entry, odd_var = create_float_entry(frameApostas, row=1, column=3, width=4, dig=3, dec=3, value=0.0, negative=False)
+odd_entry.bind("<FocusIn>", lambda event: retorna_focus(event, mercado_var2.get(), valor_var2, valor_entry2, teste3=mercado_var3.get(), teste4=valor_var3, destino2=valor_entry3))
+#odd_entry.bind("<FocusIn>", lambda event: retorna_focus(event, mercado_var3.get(), valor_var3, valor_entry3))
 odd_entry.bind("<FocusOut>", fill_empty_entry_with_zero)
 # Adiciona campo ODD2
 odd_entry2, odd_var2 = create_float_entry(frameApostas, row=2, column=3, width=4, dig=3, dec=3, value=0.0, negative=False)
@@ -1552,6 +1619,33 @@ aposta_entry3.bind("<FocusOut>", fill_empty_entry_with_zero)
 
 #Adicionando cálculos
 def on_variable_change(*args):
+    if mercado_var.get().startswith(('TO', 'TU', 'AH', 'EH', 'Exac')):
+        if mercado_var.get() == 'TOd':
+            pass
+        else:
+            valor_entry.grid(row=1, column=2, padx=5, pady=5, sticky=tk.W)
+    else:
+        if valor_entry.winfo_manager():
+            valor_var.set('')
+            valor_entry.grid_remove()
+    if mercado_var2.get().startswith(('TO', 'TU', 'AH', 'EH', 'Exac')):
+        if mercado_var.get() == 'TOd':
+            pass
+        else:
+            valor_entry2.grid(row=2, column=2, padx=5, pady=5, sticky=tk.W)
+    else:
+        if valor_entry2.winfo_manager():
+            valor_var2.set('')
+            valor_entry2.grid_remove()
+    if mercado_var3.get().startswith(('TO', 'TU', 'AH', 'EH', 'Exac')):
+        if mercado_var.get() == 'TOd':
+            pass
+        else:
+            valor_entry3.grid(row=3, column=2, padx=5, pady=5, sticky=tk.W)
+    else:
+        if valor_entry3.winfo_manager():
+            valor_var3.set('')
+            valor_entry3.grid_remove()
     odds = [odd_var.get(), odd_var2.get(), odd_var3.get()]
     apostas = [aposta_var.get(), aposta_var2.get(), aposta_var3.get()]
     taxas = [bethouse_options.get(bethouse_var.get(), {}).get('taxa', 0.0),
@@ -1654,7 +1748,7 @@ bonus3.trace_add('write', on_variable_change)
 # on_variable change para variaveis
 
 def update_columns():
-    if mercado_var.get() == "Lay" or mercado_var2.get() =="Lay":
+    if mercado_var.get() == "Lay" or mercado_var2.get() =="Lay" or mercado_var3.get() =="Lay":
         liability_label.grid(row=0, column=7, padx=5, pady=5, sticky=tk.W)
         lucro_label.grid(row=0, column=8, padx=5, pady=5, sticky=tk.W)
         lucro1_label.grid(row=1, column=8)
@@ -1741,15 +1835,30 @@ def gravar():
     else:
         time_casa, time_fora = "", ""
 
+    def change_not(mercado, outro_mercado, outro_mercado2=None):
+        if mercado == 'Not':
+            if outro_mercado.startswith(('Clear', 'Remo', 'Score', 'Win', 'Q')):
+                return f'Not {outro_mercado}'
+            elif outro_mercado.startswith('TO') or outro_mercado == 'Lay':
+                return 'Not ScoreBoth'
+            if outro_mercado2 is not None:
+                if outro_mercado2.startswith(('Clear', 'Remo', 'Score', 'Win', 'Q')):
+                    return f'Not {outro_mercado2}'
+                elif outro_mercado2.startswith('TO'):
+                    return 'Not ScoreBoth'
+        else:
+            return mercado
+
+
     if (len([odd for odd in odds if odd != 0.0]) >= 2)\
             and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1)\
             and time_casa != "" and time_fora != ""\
             and (bethouse_combobox.get() in bethouse_options.keys())\
             and (bethouse_combobox2.get() in bethouse_options.keys())\
             and ((num_bets != 3) or (num_bets == 3 and bethouse_combobox3.get() in bethouse_options.keys())):
+        mercados = [mercado_combobox.get(), mercado_combobox2.get(), (mercado_combobox3.get() if mercado_combobox3.get() != '' else None)]
         hoje = datetime.today().strftime('%Y-%m-%d')
         bet_hoje = c.execute(f"SELECT COUNT(*) FROM apostas WHERE DATE(data_entrada) = DATE('{hoje}')").fetchone()[0]
-
         dados = {
             'id': f"{datetime.now().strftime('%Y%m%d')}{str(bet_hoje).zfill(3)}",
             'data_entrada': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -1757,24 +1866,24 @@ def gravar():
             'time_casa': time_casa,
             'time_fora': time_fora,
             'bethouse1': bethouse_combobox.get(),
-            'mercado1': mercado_combobox.get(),
-            'valor1': valor_entry.get() if valor_entry.get() != '' else None,
+            'mercado1': change_not(mercados[0], mercados[1], mercados[2]),
+            'valor1': float_error(valor_entry.get(), None),
             'odd1': odd_entry.get(),
             'aposta1': palpite1_label.cget("text").replace("R$", "").strip(),
             'resultado1': None,
             'bethouse2': bethouse_combobox2.get(),
-            'mercado2': mercado_combobox2.get(),
-            'valor2': valor_entry2.get() if valor_entry2.get() != '' else None,
+            'mercado2': change_not(mercados[1], mercados[0], mercados[2]),
+            'valor2': float_error(valor_entry2.get(), None),
             'odd2': odd_entry2.get(),
             'aposta2': palpite2_label.cget("text").replace("R$", "").strip(),
             'resultado2': None,
             'bethouse3': bethouse_combobox3.get() if bethouse_combobox3.get() != '' else None,
-            'mercado3': mercado_combobox3.get() if mercado_combobox3.get() != '' else None,
-            'valor3': valor_entry3.get() if valor_entry3.get() != '' else None,
-            'odd3': odd_entry3.get()  if odd_entry3.get() != '' else None,
+            'mercado3': change_not(mercados[2], mercados[0], mercados[1]) if mercados[2] != '' else None,
+            'valor3': float_error(valor_entry3.get(), None),
+            'odd3': odd_entry3.get() if odd_entry3.get() != '' else None,
             'aposta3': palpite3_label.cget("text").replace("R$", "").strip() if palpite3_label.cget("text").replace("R$", "").strip() != '' else None,
             'resultado3': None,
-            'lucro_estimado': lucro1_label.cget("text").replace("R$", "").strip(),
+            'lucro_estimado': (float(lucro1_label.cget("text").replace("R$", "").strip()) + float(lucro2_label.cget("text").replace("R$", "").strip()) + float(lucro3_label.cget("text").replace("R$", "").strip())) / 3,
             'lucro_per_estimado': float(lucro_percent_label1.cget("text").strip("%")) / 100,
             'lucro_real': None,
             'lucro_per_real': None,
@@ -1787,8 +1896,8 @@ def gravar():
 
         save_apostas(dados, conn)
         update_lucro_diario()
-        preencher_treeview(conn, tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=bethouse_list)
         resetar_variaveis()
+        preencher_treeview(conn, tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=bethouse_list)
 
     else:
         messagebox.showwarning("Aviso", "Preencha o jogo, as BetHouses, as odds e uma aposta.")
@@ -1827,7 +1936,7 @@ def select_bets(event):
         bethouse_combobox3.set(row['bethouse3'])
         mercado_combobox3.set(row['mercado3'])
         valor_entry3.delete(0, 'end')
-        valor_entry3.insert(0, row['valor3'] if row['valor3'] is not None else '')
+        valor_entry3.insert(0, row['valor3'] if (row['valor3'] is not None and row['valor3'] != '') else '')
         odd_entry3.delete(0, 'end')
         odd_entry3.insert(0, row['odd3'])
         aposta_var3.set(row['aposta3'])
@@ -1836,9 +1945,9 @@ def select_bets(event):
     mercado_combobox.set(row['mercado1'])
     mercado_combobox2.set(row['mercado2'])
     valor_entry.delete(0, 'end')
-    valor_entry.insert(0, row['valor1'] if row['valor1'] is not None else '')
+    valor_entry.insert(0, row['valor1'] if (row['valor1'] is not None and row['valor1'] != '') else '')
     valor_entry2.delete(0, 'end')
-    valor_entry2.insert(0, row['valor2'] if row['valor2'] is not None else '')
+    valor_entry2.insert(0, row['valor2'] if (row['valor2'] is not None and row['valor2'] != '') else '')
     odd_entry.delete(0, 'end')
     odd_entry.insert(0, row['odd1'])
     odd_entry2.delete(0, 'end')
@@ -1871,9 +1980,9 @@ def select_bets(event):
         df_filtrado.loc[mask, 'mercado1'] = mercado_combobox.get()
         df_filtrado.loc[mask, 'mercado2'] = mercado_combobox2.get()
         df_filtrado.loc[mask, 'mercado3'] = mercado_combobox3.get() if mercado_combobox3.get() != '' else None
-        df_filtrado.loc[mask, 'valor1'] = valor_entry.get() if valor_entry.get().isnumeric() else None
-        df_filtrado.loc[mask, 'valor2'] = valor_entry2.get() if valor_entry.get().isnumeric() else None
-        df_filtrado.loc[mask, 'valor3'] = valor_entry3.get() if valor_entry.get().isnumeric() else None
+        df_filtrado.loc[mask, 'valor1'] = valor_entry.get() if (valor_entry.get() is not None and valor_entry.get() != '') else None
+        df_filtrado.loc[mask, 'valor2'] = valor_entry2.get() if (valor_entry2.get() is not None and valor_entry2.get() != '') else None
+        df_filtrado.loc[mask, 'valor3'] = valor_entry3.get() if (valor_entry3.get() is not None and valor_entry3.get() != '') else None
         df_filtrado.loc[mask, 'odd1'] = odd_entry.get()
         df_filtrado.loc[mask, 'odd2'] = odd_entry2.get()
         df_filtrado.loc[mask, 'odd3'] = odd_entry3.get() if odd_entry3.get() != '' else None

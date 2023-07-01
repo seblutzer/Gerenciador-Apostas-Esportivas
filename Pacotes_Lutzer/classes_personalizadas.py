@@ -74,6 +74,7 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
             apostas += f"\nR$ {float(row['aposta3']):.2f}" if isinstance(float(row['aposta3']), (float, int)) else ""
         mercados = str(row['mercado1'])
         if pd.notna(row['valor1']):
+
             valor1 = float(row['valor1'])
             if isinstance(valor1, (int, float)):
                 mercados += "({:.2f}".format(valor1).rstrip('0').rstrip('.') + ")"
