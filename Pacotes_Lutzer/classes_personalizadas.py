@@ -13,17 +13,18 @@ import numpy as np
 import sqlite3
 from pandastable import Table
 import webbrowser
+from language import trans_filtros, trans_datas, trans_jogo, trans_config, trans_graficos, trans_tabelas
 
 global contador
 contador = 0
 def import_df_filtrado():
     return df_filtrado
-def preencher_treeview(conn, tabela, options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, bethouse_list=None):
-    global bethouse_options, df_filtrado
+def preencher_treeview(conn, tabela, options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, idioma, cambio, linhas, bethouse_list=None):
+    global bethouse_options, df_filtrado, treeview
     bethouse_options = options
 
     # Montar a consulta SQL com base nas variáveis de situação e filtro
-    query = filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela)
+    query = filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, idioma)
     # Executar a consulta SQL e obter o resultado como DataFrame
     df_filtrado = pd.read_sql_query(query, conn)
 
@@ -40,20 +41,20 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
         id = row['id']
         jogo = f"{row['time_casa']}\n{row['time_fora']}"
         data_jogo = datetime.strptime(row['data_jogo'], '%Y-%m-%d %H:%M:%S')
-        data = "  {}\n{:02d}/{}\n {:02d}:{:02d}".format(convert_dia(data_jogo.strftime('%a')), data_jogo.day,
-                                                      convert_mes(data_jogo.month), data_jogo.hour, data_jogo.minute)
+        data = "  {}\n{:02d}/{}\n {:02d}:{:02d}".format(trans_datas[data_jogo.strftime('%a')][idioma], data_jogo.day,
+                                                      trans_datas[str(data_jogo.month)][idioma], data_jogo.hour, data_jogo.minute)
 
         def show_results(resultados):
             if resultados == "win":
-                return "W"
+                return trans_jogo['W/L'][idioma][0]
             elif resultados == "loss":
-                return "L"
+                return trans_jogo['W/L'][idioma][2]
             elif resultados == "return":
                 return "X"
             elif resultados == "half-win":
-                return "HW"
+                return f"½{trans_jogo['W/L'][idioma][0]}"
             elif resultados == "half-loss":
-                return "HL"
+                return f"½{trans_jogo['W/L'][idioma][2]}"
             else:
                 return ""
 
@@ -67,11 +68,11 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
             float(row['odd2'])).rstrip('0').rstrip('.')
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
             odds += "\n{:.3f}".format(float(row['odd3'])).rstrip('0').rstrip('.')
-        apostas = f"R$ {float(row['aposta1']):.2f}" if isinstance(float(row['aposta1']), (float, int)) else f"\nR$ 0.00"
-        apostas += f"\nR$ {float(row['aposta2']):.2f}" if isinstance(float(row['aposta2']),
+        apostas = f"{cambio} {float(row['aposta1']):.2f}" if isinstance(float(row['aposta1']), (float, int)) else f"\nR$ 0.00"
+        apostas += f"\n{cambio} {float(row['aposta2']):.2f}" if isinstance(float(row['aposta2']),
                                                                      (float, int)) else f"\nR$ 0.00"
         if pd.notna(row['bethouse3']) and row['bethouse3'] in bethouse_options.keys():
-            apostas += f"\nR$ {float(row['aposta3']):.2f}" if isinstance(float(row['aposta3']), (float, int)) else ""
+            apostas += f"\n{cambio} {float(row['aposta3']):.2f}" if isinstance(float(row['aposta3']), (float, int)) else ""
         mercados = str(row['mercado1'])
         if pd.notna(row['valor1']):
 
@@ -112,9 +113,11 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
     if bethouse_list == set():
         pass
     else:
-        tabela_bethouses(frameSaldos, conn, bethouse_list=bethouse_list)
+        if bethouse_list == bethouse_options.keys():
+            treeview.destroy()
+        tabela_bethouses(frameSaldos, idioma, cambio, linhas, conn, bethouse_list=bethouse_list)
 
-def filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela):
+def filter_selection(conn, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, idioma):
     global contador, frame_vencidas
     contador += 1 if contador < 2 else 0
 
@@ -142,31 +145,31 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
     num_vencidas = result[0]
 
     # Filtro de tempo
-    if time_button["text"] == "Vencem até":
-        if timeframe_combobox.get() == "hoje":
+    if time_button["text"] == trans_filtros['Vencem até'][idioma]:
+        if timeframe_combobox.get() == trans_filtros['hoje'][idioma]:
             query += f" AND (DATE(data_jogo) = DATE('{data}'))"
-        elif timeframe_combobox.get() == "amanhã":
+        elif timeframe_combobox.get() == trans_filtros['amanhã'][idioma]:
             query += f" AND (DATE(data_jogo) <= DATE('{data}', '+1 day'))"
-        elif timeframe_combobox.get() == "1 semana":
+        elif timeframe_combobox.get() == trans_filtros['essa semana'][idioma]:
             query += f" AND (DATE(data_jogo) <= DATE('{data}', 'weekday 0', '+7 days'))"
-        elif timeframe_combobox.get() == "1 mês":
+        elif timeframe_combobox.get() == trans_filtros['esse mês'][idioma]:
             query += f" AND (DATE(data_jogo) <= DATE('{data}', 'start of month', '+31 days'))"
     else:
-        if timeframe_combobox.get() == "hoje":
+        if timeframe_combobox.get() == trans_filtros['hoje'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}'))"
-        elif timeframe_combobox.get() == "ontem":
+        elif timeframe_combobox.get() == trans_filtros['ontem'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', '-1 day'))"
-        elif timeframe_combobox.get() == "1 semana":
+        elif timeframe_combobox.get() == trans_filtros['essa semana'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', 'weekday 0', '-7 days'))"
-        elif timeframe_combobox.get() == "1 mês":
+        elif timeframe_combobox.get() == trans_filtros['esse mês'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', 'start of month'))"
-        elif timeframe_combobox.get() == "30 dias":
+        elif timeframe_combobox.get() == trans_filtros['30 dias'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', '-30 day'))"
-        elif timeframe_combobox.get() == "6 meses":
+        elif timeframe_combobox.get() == trans_filtros['6 meses'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', '-6 month'))"
-        elif timeframe_combobox.get() == "esse ano":
+        elif timeframe_combobox.get() == trans_filtros['esse ano'][idioma]:
             query += f" AND (DATE(data_entrada) >= DATE('{data}', 'start of year'))"
-        elif timeframe_combobox.get() == "365 dias":
+        elif timeframe_combobox.get() == trans_filtros['365 dias'][idioma]:
             query += f" AND (DATE(data_entrada) <= DATE('{data}', '-1 year'))"
 
     if search_var.get() == '':
@@ -178,11 +181,11 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
         query += f" AND (id LIKE '%{palavra_chave}%' OR data_entrada LIKE '%{palavra_chave}%' OR data_jogo LIKE '%{palavra_chave}%' OR time_casa LIKE '%{palavra_chave}%' OR time_fora LIKE '%{palavra_chave}%' OR bethouse1 LIKE '%{palavra_chave}%' OR mercado1 LIKE '%{palavra_chave}%' OR valor1 LIKE '%{palavra_chave}%' OR odd1 LIKE '%{palavra_chave}%' OR aposta1 LIKE '%{palavra_chave}%' OR bethouse2 LIKE '%{palavra_chave}%' OR mercado2 LIKE '%{palavra_chave}%' OR valor2 LIKE '%{palavra_chave}%' OR odd2 LIKE '%{palavra_chave}%' OR aposta2 LIKE '%{palavra_chave}%' OR bethouse3 LIKE '%{palavra_chave}%' OR mercado3 LIKE '%{palavra_chave}%' OR valor3 LIKE '%{palavra_chave}%' OR odd3 LIKE '%{palavra_chave}%' OR aposta3 LIKE '%{palavra_chave}%' OR esporte LIKE '%{palavra_chave}%')"
 
     # Ordenação
-    if order_button1["text"] == "Crescente" and order_button2["text"] == "Data":
+    if order_button1["text"] == trans_filtros['Crescente'][idioma] and order_button2["text"] == trans_filtros['Data'][idioma]:
         query += " ORDER BY data_jogo ASC"
-    elif order_button1["text"] == "Decrescente" and order_button2["text"] == "Data":
+    elif order_button1["text"] == trans_filtros['Decrescente'][idioma] and order_button2["text"] == trans_filtros['Data'][idioma]:
         query += " ORDER BY data_jogo DESC"
-    elif order_button1["text"] == "Crescente" and order_button2["text"] == "Adição":
+    elif order_button1["text"] == trans_filtros['Crescente'][idioma] and order_button2["text"] == trans_filtros['Adição'][idioma]:
         query += " ORDER BY id ASC"
     else:  # Decrescente e Adição
         query += " ORDER BY id DESC"
@@ -199,18 +202,10 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
     else:
         frame_vencidas.place_forget()
 
-
-    #if num_vencidas > 0:
-    #    frame_vencidas.itemconfigure('count', text=num_vencidas)
-    #else:
-    #    frame_vencidas.delete('frame')
-    #    frame_vencidas.place_forget()
-
-    # Exibir o resultado
     return query
 
 class BetHistTreeview(ttk.Treeview):
-    def __init__(self, master=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, search_var=None, frameTabela=None, frameSaldos=None, conn=None, **kw):
+    def __init__(self, master=None, situation_vars=None, order_button1=None, order_button2=None, time_button=None, timeframe_combobox=None, search_var=None, frameTabela=None, frameSaldos=None, idioma=None, cambio=None, linhas=None, conn=None, **kw):
         ttk.Treeview.__init__(self, master, **kw)
         self.situation_vars = situation_vars
         self.order_button1 = order_button1
@@ -221,6 +216,9 @@ class BetHistTreeview(ttk.Treeview):
         self.search_var = search_var
         self.frameTabela = frameTabela
         self.frameSaldos = frameSaldos
+        self.idioma = idioma
+        self.cambio = cambio
+        self.linhas = linhas
         self.bind("<<TreeviewSelect>>", self.on_select)
         self.canvas1 = Canvas(self, width=300, height=40, bg="#b3d7fe", highlightthickness=0) #bg="#b3d7fe"
         image = PhotoImage(file='save.png').subsample(10, 10)
@@ -290,14 +288,14 @@ class BetHistTreeview(ttk.Treeview):
         self.canvas1.create_image(0, 0, image=icons[0], anchor=NW, tags='imagem')
         self.canvas1.create_text(28, 10, text=df_row['bethouse1'].values[0], anchor = W, fill = fg_color1)
         self.canvas1.create_text(100, 10, text=df_row['odd1'].values[0], anchor = W, fill = fg_color1)
-        self.canvas1.create_text(150, 10, text=f"R$ {float(df_row['aposta1'].values[0]):.2f}", anchor = W, fill = fg_color1)
+        self.canvas1.create_text(150, 10, text=f"{self.cambio} {float(df_row['aposta1'].values[0]):.2f}", anchor = W, fill = fg_color1)
         formatted_valor1 = "" if pd.isna(df_row['valor1'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor1'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
         self.canvas1.create_text(219, 10, text="{}{}".format(df_row['mercado1'].values[0], formatted_valor1), anchor=W, fill=fg_color1)
         self.canvas1.create_rectangle(28, 40, 300, 20, fill=bg_color2)
         self.canvas1.create_image(0, 20, image=icons[1], anchor=NW, tags='imagem')
         self.canvas1.create_text(28, 30, text=df_row['bethouse2'].values[0], anchor=W, fill=fg_color2)
         self.canvas1.create_text(100, 30, text=df_row['odd2'].values[0], anchor=W, fill=fg_color2)
-        self.canvas1.create_text(150, 30, text=f"R$ {float(df_row['aposta2'].values[0]):.2f}", anchor=W, fill=fg_color2)
+        self.canvas1.create_text(150, 30, text=f"{self.cambio} {float(df_row['aposta2'].values[0]):.2f}", anchor=W, fill=fg_color2)
         formatted_valor2 = "" if pd.isna(df_row['valor2'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor2'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
         self.canvas1.create_text(219, 30, text="{}{}".format(df_row['mercado2'].values[0], formatted_valor2), anchor=W, fill=fg_color2)
 
@@ -309,7 +307,7 @@ class BetHistTreeview(ttk.Treeview):
             self.canvas1.create_image(0, 40, image=icons[2], anchor=NW, tags='imagem')  # Create the third icon
             self.canvas1.create_text(28, 50, text=df_row['bethouse3'].values[0], anchor=W, fill=fg_color3)
             self.canvas1.create_text(100, 50, text=df_row['odd3'].values[0], anchor=W, fill=fg_color3)
-            self.canvas1.create_text(150, 50, text=f"R$ {float(df_row['aposta3'].values[0]):.2f}", anchor=W, fill=fg_color3)
+            self.canvas1.create_text(150, 50, text=f"{self.cambio} {float(df_row['aposta3'].values[0]):.2f}", anchor=W, fill=fg_color3)
             formatted_valor3 = "" if pd.isna(df_row['valor3'].values[0]) or df_row['valor1'].values[0] == '' else "(" + f"{float(df_row['valor3'].values[0]):.2f}".rstrip('0').rstrip('.') + ")"
             self.canvas1.create_text(219, 50, text="{}{}".format(df_row['mercado3'].values[0], f"{formatted_valor3}" if pd.notna(df_row['valor3'].values[0]) else ""),anchor=W, fill=fg_color3)
         else:
@@ -501,7 +499,7 @@ class BetHistTreeview(ttk.Treeview):
 
             # Commit das alterações
             self.conn.commit()
-            preencher_treeview(self.conn, self, bethouse_options, self.situation_vars, self.order_button1, self.order_button2, self.time_button, self.timeframe_combobox, self.search_var, self.frameTabela, self.frameSaldos, bethouse_list=bethouse_list)
+            preencher_treeview(self.conn, self, bethouse_options, self.situation_vars, self.order_button1, self.order_button2, self.time_button, self.timeframe_combobox, self.search_var, self.frameTabela, self.frameSaldos, self.idioma, self.cambio, self.linhas, bethouse_list=bethouse_list)
             self.canvas1.place_forget()
 
             def show_message(title, message):
@@ -513,7 +511,6 @@ class BetHistTreeview(ttk.Treeview):
             show_message("Aviso", "Resultados salvos com sucesso!")
 
         save_results()
-        df_resultados = df_filtrado[["resultado1", "resultado2", "resultado3"]]
         self.save.place_forget()
 
     def get_next_result(self, resultado):
@@ -523,25 +520,25 @@ class BetHistTreeview(ttk.Treeview):
         next_index = (index + 1) % len(resultados)
         return resultados[next_index]
 
-def tabela_bethouses(parent, conn, bethouse_list=None):
-    global bethouse_options, cache
+def tabela_bethouses(parent, idioma, cambio, linhas, conn, bethouse_list=None):
+    global bethouse_options, cache, treeview
     if bethouse_list is None:
         bethouse_list = bethouse_options.keys()
         cache = {}
     c = conn.cursor()
-    treeview = ttk.Treeview(parent, style='Normal.Treeview', height=8)
+    treeview = ttk.Treeview(parent, style='Normal.Treeview', height=linhas)
     treeview.grid(row=0, column=0)
     data_atual = datetime.today()
 
-    columns = ['BetHouses', 'A', 'V', 'D', 'Saldo', 'Em Aberto', 'Total', 'Diário', 'Mensal']
+    columns = [trans_config['BetHouses'][idioma], trans_filtros['Abertas'][idioma][0], trans_jogo['W/L'][idioma][0], trans_jogo['W/L'][idioma][2], trans_tabelas['Saldo'][idioma], trans_graficos['Em aberto'][idioma], trans_graficos['Total'][idioma], trans_filtros['hoje'][idioma].capitalize(), trans_graficos['mês'][idioma]]
     treeview['columns'] = columns
     for column in columns:
         treeview.heading(column, text=column)
-        if column == 'A' or column == 'V' or column == 'D':
+        if column == trans_filtros['Abertas'][idioma][0] or column == trans_jogo['W/L'][idioma][0] or column == trans_jogo['W/L'][idioma][2]:
             treeview.column(column, width=30)
-        elif column == 'BetHouses':
+        elif column == trans_config['BetHouses'][idioma]:
             treeview.column(column, width=65)
-        elif column == 'Diário':
+        elif column == trans_filtros['hoje'][idioma]:
             treeview.column(column, width=70)
         else:
             treeview.column(column, width=85)
@@ -594,9 +591,9 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
 
     # Calcular valores totais
     chaves = ['vitorias', 'derrotas', 'saldo_atual', 'montante_aberto', 'montante_total', 'dif_diaria', 'dif_mensal']
-    cache.pop('Total', None)  # Remover a chave 'Total' do dicionário cache
-    cache['Total'] = {chave: sum(data[chave] for data in cache.values()) for chave in chaves}
-    cache['Total']['abertas'] = c.execute(f'SELECT COUNT(*) FROM apostas WHERE resultado1 IS NULL OR resultado2 IS NULL OR (bethouse3 IS NOT NULL AND resultado3 IS NULL)').fetchone()[0]
+    cache.pop(trans_graficos['Total'][idioma], None)  # Remover a chave 'Total' do dicionário cache
+    cache[trans_graficos['Total'][idioma]] = {chave: sum(data[chave] for data in cache.values()) for chave in chaves}
+    cache[trans_graficos['Total'][idioma]]['abertas'] = c.execute(f'SELECT COUNT(*) FROM apostas WHERE resultado1 IS NULL OR resultado2 IS NULL OR (bethouse3 IS NOT NULL AND resultado3 IS NULL)').fetchone()[0]
 
     for bethouse, data in cache.items():
         abertas = data['abertas']
@@ -608,9 +605,9 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         dif_diaria = data['dif_diaria']
         dif_mensal = data['dif_mensal']
 
-        values = [bethouse, abertas, vitorias, derrotas, f"R$ {saldo_atual:.2f}", f"R$ {montante_aberto:.2f}", f"R$ {montante_total:.2f}", f"R$ {dif_diaria:.2f}", f"R$ {dif_mensal:.2f}"]
+        values = [bethouse, abertas, vitorias, derrotas, f"{cambio} {saldo_atual:.2f}", f"{cambio} {montante_aberto:.2f}", f"{cambio} {montante_total:.2f}", f"{cambio} {dif_diaria:.2f}", f"{cambio} {dif_mensal:.2f}"]
         treeview.insert('', 'end', values=values, tags=(bethouse,))
-        if bethouse == 'Total':
+        if bethouse == trans_graficos['Total'][idioma]:
             treeview.tag_configure(bethouse, background='white', foreground='black')
         else:
             treeview.tag_configure(bethouse, background=bethouse_options[bethouse]['background_color'], foreground=bethouse_options[bethouse]['text_color'])
@@ -637,7 +634,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
             self.destroy()
 
     def deposit():
-        dialog = MyDialog(parent, "Depósito", f"Valor a depositar em {bethouse_saldo}:")
+        dialog = MyDialog(parent, trans_tabelas['Depósito'][idioma], f"{trans_tabelas['Valor a depositar'][idioma]} {bethouse_saldo}:")
         parent.wait_window(dialog)
         value = dialog.result
         status = 'depósito'
@@ -651,7 +648,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
             add_to_database(id, bethouse_saldo, status, value)
 
     def withdraw():
-        dialog = MyDialog(parent, "Saque", f"Valor a sacar de {bethouse_saldo}:")
+        dialog = MyDialog(parent, trans_tabelas['Saque'][idioma], f"{trans_tabelas['Valor a sacar'][idioma]} {bethouse_saldo}:")
         parent.wait_window(dialog)
         value = dialog.result
         status = 'saque'
@@ -665,7 +662,7 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
             add_to_database(id, bethouse_saldo, status, -value)
 
     def ajuste_saldo(saldo):
-        dialog = MyDialog(parent, "Novo Saldo", f"Novo Saldo atual em {bethouse_saldo}:")
+        dialog = MyDialog(parent, trans_tabelas['Novo Saldo'][idioma], f"{trans_tabelas['Novo Saldo atual'][idioma]} {bethouse_saldo}:")
         parent.wait_window(dialog)
         value = dialog.result
         montante = round(-saldo + value, 2)
@@ -691,20 +688,20 @@ def tabela_bethouses(parent, conn, bethouse_list=None):
         conn.execute(query, values)
         conn.commit()
         bethouse_list = {bethouse}
-        tabela_bethouses(parent, conn, bethouse_list = bethouse_list)
+        tabela_bethouses(parent, idioma, cambio, linhas, conn, bethouse_list = bethouse_list)
 
     # Criando o menu de contexto
     menu = Menu(parent, tearoff=0)
-    menu.add_command(label='Depósito', command=deposit)
-    menu.add_command(label='Retirada', command=withdraw)
-    menu.add_command(label='Novo Saldo', command=lambda: ajuste_saldo(saldo_atualizado))
+    menu.add_command(label=trans_tabelas['Depósito'][idioma], command=deposit)
+    menu.add_command(label=trans_tabelas['Saque'][idioma], command=withdraw)
+    menu.add_command(label=trans_tabelas['Novo Saldo'][idioma], command=lambda: ajuste_saldo(saldo_atualizado))
 
     # Função para exibir o menu de contexto
     def show_menu(event):
         global bethouse_saldo, saldo_atualizado
         row_id = treeview.identify_row(event.y)
         bethouse_saldo = treeview.item(row_id)['values'][0]
-        saldo_atualizado = float(treeview.item(row_id)['values'][4].replace('R$ ', '').strip())
+        saldo_atualizado = float(treeview.item(row_id)['values'][4].replace(f"{cambio} ", '').strip())
         menu.post(event.x_root, event.y_root)
 
 
@@ -874,54 +871,5 @@ def save_apostas(dados, conn, linha_antiga=None, tipo='a'):
 
     # Commit das alterações e fechamento da conexão
     conn.commit()
-
-def graph():
-    def update_graph():
-        range_val = int(range_val_entry.get())
-        periodo_tempo = periodo_tempo_var.get()
-
-        filtered_dfs = {}
-        for bethouse, df in df_saldos_bethouses.items():
-            if periodo_tempo == 'Dia':
-                filtered_df = df.tail(range_val)
-            elif periodo_tempo == 'Semana':
-                filtered_df = df.resample('W').last().tail(range_val)
-            elif periodo_tempo == 'Mês':
-                filtered_df = df.resample('M').last().tail(range_val)
-            elif periodo_tempo == 'Ano':
-                filtered_df = df.resample('Y').last().tail(range_val)
-            filtered_dfs[bethouse] = filtered_df
-
-        # Criar o gráfico de linhas
-        plt.figure(figsize=(8, 2.7))
-
-        for bethouse, df in filtered_dfs.items():
-            plt.plot(df.index, df['balanco'], label=bethouse)
-        plt.xlabel('data_fim')
-        plt.ylabel('Saldo Diário')
-        plt.legend()
-
-        # Atualizar o gráfico no frameStatus
-        canvas = FigureCanvasTkAgg(plt.gcf(), master=frameStatus)
-        canvas.draw()
-        canvas.get_tk_widget().grid(row=5, column=0, padx=10, pady=10, rowspan=8, columnspan=6)
-
-
-    range_val_label = Label(frameStatus, text="range_val:")
-    # Criar o entry e o label para range_val
-    range_val_label.grid(row=3, column=0)
-    range_val_entry = Entry(frameStatus, width=4)
-    range_val_entry.grid(row=3, column=1)
-
-    # Criar o menu suspenso para periodo_tempo
-    periodo_tempo_var = StringVar(frameStatus)
-    periodo_tempo_var.set('Dia')  # Valor padrão
-    periodo_tempo_options = ['Dia', 'Semana', 'Mês', 'Ano']
-    periodo_tempo_menu = OptionMenu(frameStatus, periodo_tempo_var, *periodo_tempo_options)
-    periodo_tempo_menu.grid(row=3, column=2)
-
-    # Criar o botão para atualizar o gráfico
-    update_button = Button(frameStatus, text="Atualizar Gráfico", command=update_graph)
-    update_button.grid(row=3, column=3)
 
 

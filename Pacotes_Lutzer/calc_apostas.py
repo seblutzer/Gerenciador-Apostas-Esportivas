@@ -115,7 +115,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             apostas = [aposta1, aposta2, aposta3]
             lucros = [lucro1, lucro2, lucro3]
             lucros, apostas = reordenar(lucros, apostas, ordem)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0-X-2' or padrao == '1-X-0':
             if padrao == '1-X-0':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -154,7 +154,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0-X2-2' or padrao == '1-1X-0':
             if padrao == '1-1X-0':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -162,13 +162,13 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
             elif aposta1 > 0 and aposta2 > 0:
-                aposta3 = round((aposta1 / odd3) / arred_var[2]) * arred_var[2]
+                aposta3 = round((aposta1 / odd_3) / arred_var[2]) * arred_var[2]
             elif aposta1 > 0 and aposta3 > 0:
                 aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
             elif aposta2 > 0 and aposta3 > 0:
                 aposta1 = round((aposta3 * odd_3) / arred_var[0]) * arred_var[0]
             elif aposta1 > 0.0:
-                aposta3 = round((aposta1 / odd3) / arred_var[2]) * arred_var[2]
+                aposta3 = round((aposta1 / odd_3) / arred_var[2]) * arred_var[2]
                 aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
             elif aposta2 > 0.0:
                 aposta3 = 0.0
@@ -177,6 +177,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                         aposta3 = round(aposta3, 2)
                         break
                     aposta3 += 0.01
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
                 aposta1 = round((aposta3 * odd_3) / arred_var[0]) * arred_var[0]
             elif aposta3 > 0.0:
                 aposta1 = round((aposta3 * odd_3) / arred_var[0]) * arred_var[0]
@@ -191,7 +192,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0.25-X2-2' or padrao == '1-1X-0.25':
             if padrao == '1-1X-0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -214,7 +215,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                     aposta3 += 0.01
                     aposta1 = round((retorno3() / (0.5 + odd_1 / 2)) / arred_var[0]) * arred_var[0]
             elif aposta3 > 0:
-                aposta1 = round((retorno3() / (0.5 + odd1 / 2)) / arred_var[0]) * arred_var[0]
+                aposta1 = round((retorno3() / (0.5 + odd_1 / 2)) / arred_var[0]) * arred_var[0]
                 aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno2() + retorno3() - aposta1 - aposta2 - aposta3), 2)
@@ -226,7 +227,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-X2-2' or padrao == '1-1X--0.25':
             if padrao == '1-1X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -261,7 +262,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-X-0' or padrao == '0-X--0.25':
             if padrao == '0-X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -293,7 +294,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0.25-X-2' or padrao == '1-X-0.25':
             if padrao == '1-X-0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -328,7 +329,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-X-2' or padrao == '1-X--0.25':
             if padrao == '1-X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -363,7 +364,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-X--0.25':
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
@@ -389,7 +390,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             apostas = [aposta1, aposta2, aposta3]
             lucros = [lucro1, lucro2, lucro3]
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-1X--0.25' or padrao == '-0.25-X2--0.25':
             if padrao == '-0.25-1X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -424,7 +425,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0-X2--0.25' or padrao == '-0.25-1X-0':
             if padrao == '-0.25-1X-0':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -465,7 +466,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '-0.25-X2-0' or padrao == '0-1X--0.25':
             if padrao == '0-1X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -506,7 +507,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0.25-12-X2' or padrao == '1X-12-0.25':
             if padrao == '1X-12-0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -538,7 +539,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0.25-12-0.25':
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
@@ -581,7 +582,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             apostas = [aposta1, aposta2, aposta3]
             lucros = [lucro1, lucro2, lucro3]
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '0-12-X2' or padrao == '1X-12-0':
             if padrao == '1X-12-0':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -613,7 +614,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 inverso = [3, 2, 1]
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == 'U1.25-O0.75-O1.5':
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
@@ -661,7 +662,7 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             apostas = [aposta1, aposta2, aposta3]
             lucros = [lucro1, lucro2, lucro3]
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
         elif padrao == '112' or padrao == '112X' or padrao == '112W' or padrao == '112L':
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
@@ -689,13 +690,14 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 lucro2 = round(lucro1 / 2, 2)
             lucro3 = round((retorno3() - aposta1 - aposta2 - aposta3), 2)
             lucro_percent = round((((lucro1 + lucro3) / 2) / (aposta1 + aposta2 + aposta3)) * 100, 2)
+            liability1 = calc_liability(mercado1, odd1, aposta1)
+            liability2 = calc_liability(mercado2, odd2, aposta2)
+            liability3 = calc_liability(mercado3, odd3, aposta3)
             apostas = [aposta1, aposta2, aposta3]
             lucros = [lucro1, lucro2, lucro3]
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
-            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None
+            return apostas[0], apostas[1], apostas[2], liability1, lucros[0], lucros[1], lucros[2], lucro_percent, liability2, liability3
     else:
-        liability = None
-        liability2 = None
         if aposta1 > 0.0 and aposta2 > 0.0:
             pass
         elif aposta1 > 0.0:
@@ -710,7 +712,6 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
         liability3 = None
         lucro_percent = round((((lucro1 + lucro2) / 2) / (aposta1 + aposta2)) * 100, 2)
         return aposta1, aposta2, aposta3, liability1, lucro1, lucro2, lucro3, lucro_percent, liability2, liability3
-
 
 def calc_apostas2(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var, bonus):
     if aposta1 == '':

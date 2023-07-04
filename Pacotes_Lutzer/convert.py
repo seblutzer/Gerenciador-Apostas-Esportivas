@@ -106,5 +106,6 @@ def converter_esporte(sport):
         return 'Boxe'
     elif sport == 'футзал':
         return 'Futsal'
-    else:
-        return sport.capitalize()
+    elif sport == '':
+        return None
+    return sport.capitalize()

@@ -13,7 +13,7 @@ def resultado_handicap(handicap: float, diferenca_pontos: int, over=True, draw=F
         if diferenca_pontos == -handicap:
             return 'win'
         return 'loss'
-    if isinstance(handicap, int):
+    if handicap % 1 == 0:
         if diferenca_pontos == -handicap:
             return 'return'
         elif diferenca_pontos > -handicap:
@@ -123,7 +123,7 @@ def resultado_total_asiatico(total: float, dif_pontos: int, over=True, draw=Fals
         if dif_pontos == total:
             return 'win'
         return 'loss'
-    if isinstance(total, int):
+    if total % 1 == 0:
         if dif_pontos == total:
             return 'return'
         elif dif_pontos > total:
@@ -176,7 +176,6 @@ def all_totals(mercado1, valor1, mercado2, valor2, mercado3, valor3):
             resultados.append(resultado)
         if not resultados in resultados_possiveis:
             resultados_possiveis.append(resultados)
-
     return resultados_possiveis
 
 def especiais(mercado1, mercado2, mercado3):
@@ -210,6 +209,7 @@ def calc_resultados(mercados, valores):
         resultados_possiveis = all_totals(mercados[0], valores[0], mercados[1], valores[1], mercados[2], valores[2])
     else:
         resultados_possiveis = especiais(mercados[0], mercados[1],mercados[2])
+
     if resultados_possiveis:
         sure_bets = verificar_surebets(resultados_possiveis)
         resultados = resultados_possiveis

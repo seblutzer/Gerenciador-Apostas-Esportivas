@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk
 import _tkinter
 from Pacotes_Lutzer.convert import converter_esporte
+from language import trans_dicas
 
 
 ###################### NÚMEROS ######################
@@ -135,32 +136,43 @@ def create_combobox(parent, options, row, column, label_text=None, width=7):
 
 def float_error(valor, erro):
     try:
-        valor_float = float(valor.get())
+        valor_float = valor.get()
     except _tkinter.TclError:
-        valor_float = erro
+        return erro
     except AttributeError:
-        valor_float = erro
+        return erro
+    if valor_float == '':
+        return erro
     return valor_float
 
-def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str) -> str:
+def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str, idioma) -> str:
     esporte = converter_esporte(esporte)
     plural = ''
     set = 'set'
     if esporte == 'Tênis' or esporte == 'Tênis de Mesa' or esporte == 'Dardos':
-        equipe = 'jogador'
-        plutal = 'e'
+        equipe = trans_dicas['o jogador'][idioma]
+        equipes = trans_dicas['os jogadores'][idioma]
     elif esporte == 'Boxe' or esporte == 'MMA':
-        equipe = 'lutador'
-        plutal = 'e'
+        equipe = trans_dicas['o lutado'][idioma]
+        equipes = trans_dicas['os lutadores'][idioma]
     else:
-        equipe = 'time'
+        equipe = trans_dicas['o time'][idioma]
+        equipes = trans_dicas['os times'][idioma]
     if esporte == 'Futebol':
-        set = 'tempo'
-        ponto = 'gol'
+        set = trans_dicas['tempo'][idioma]
+        sets = trans_dicas['tempos'][idioma]
+        ponto = trans_dicas['gol'][idioma]
+        pontos = trans_dicas['gols'][idioma]
     else:
-        ponto = 'ponto'
+        set = trans_dicas['set'][idioma]
+        set = trans_dicas['sets'][idioma]
+        ponto = trans_dicas['ponto'][idioma]
+        pontos = trans_dicas['pontos'][idioma]
     if esporte == 'E-Sports':
-        set = 'jogo'
+        set = trans_dicas['jogo'][idioma]
+        sets = trans_dicas['jogos'][idioma]
+        ponto = trans_dicas['ponto'][idioma]
+        pontos = trans_dicas['pontos'][idioma]
 
     if mercado_var.startswith('T') or mercado_var.startswith('Exac'):
         tipo = 'total'
@@ -198,100 +210,100 @@ def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str) -> str:
         arredondado_para_baixo = int(valor)
         if tipo == 'total':
             if mercado_var.startswith('TEv'):
-                return f"Vence se o total de pontos for ímpar\nPerde se o total de pontos for par"
+                return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['Total de pontos ímpar'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['Total de pontos par'][idioma]}"
             elif mercado_var.startswith('TOd'):
-                return f"Vence se o total de pontos for par\nPerde se o total de pontos for ímpar"
+                return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['Total de pontos par'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['Total de pontos ímpar'][idioma]}"
             elif valor_tipo == 'meio':
                 if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
                 elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
             elif valor_tipo == 'but_quart':
                 if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nMeia vitória com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Meia Vitória com'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}"
                 elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia derrota com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Meia Derrota com'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
             elif valor_tipo == 'top_quart':
                 if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima + 1} ou mais {ponto}s\nMeia derrota com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_cima + 1} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Meia Derrota com'][idioma]} {arredondado_para_cima} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
                 elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo} ou menos {ponto}s\nMeia vitória com {arredondado_para_cima} {ponto}s\nPerde com {arredondado_para_cima + 1} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Meia Vitória com'][idioma]} {arredondado_para_cima} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_cima + 1} {trans_dicas['ou mais'][idioma]} {pontos}"
             elif valor_tipo == 'europeu':
                 if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nPerde com {arredondado_para_baixo} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
                 elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde com {arredondado_para_baixo} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo} {trans_dicas['ou mais'][idioma]} {pontos}"
             elif valor_tipo == 'inteiro':
                 if mercado_var.startswith('TO'):
-                    return f"Vence com {arredondado_para_cima} ou mais {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_baixo - 1} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Anula com'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}"
                 elif mercado_var.startswith('TU'):
-                    return f"Vence com {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula com {arredondado_para_baixo} {ponto}s\nPerde com {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Anula com'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde com'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
                 else:
-                    return f"Vence com {arredondado_para_baixo} {ponto}s\nPerde com qualquer outra pontuação"
+                    return f"{trans_dicas['Vence com'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde com'][idioma]} {trans_dicas['Qualquer outra pontuação'][idioma]}"
 
         elif tipo == 'handicap':
             if valor_tipo == 'meio':
                 if valor == 0.5:
-                    return f"Vence se o {equipe} empatar ou vencer\nPerde se o {equipe} perder"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['empatar ou vencer'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder'][idioma]}"
                 elif valor == -0.5:
-                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['empatar ou perder'][idioma]}"
                 elif valor > 0.5:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
                 else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 1} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
             elif valor_tipo == 'but_quart':
                 if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nMeia vitória se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Meia Vitória se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
                 else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nMeia derrota se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo - 1} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 1} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Meia Derrota se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}"
             elif valor_tipo == 'top_quart':
                 if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo} ou menos {ponto}s\nMeia derrota se o {equipe} perder por {arredondado_para_cima} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima + 1} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Meia Derrota se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_cima} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_cima + 1} {trans_dicas['ou mais'][idioma]} {pontos}"
                 else:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 2} ou mais {ponto}s\nMeia vitória se o {equipe} vencer por {-arredondado_para_baixo + 1} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 2} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Meia Vitória se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 1} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
             elif valor_tipo == 'europeu':
                 if valor > 0:
                     if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
+                        return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {pontos}\nPerde por {trans_dicas['Qualquer outra pontuação'][idioma]}"
                     if valor == 1:
-                        return f"Vence se o {equipe} empatar ou vencer\nPerde se o {equipe} perder"
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nPerde se o {equipe} perder por {arredondado_para_baixo} ou mais {ponto}s"
+                        return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['empatar ou vencer'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder'][idioma]}"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {trans_dicas['ou mais'][idioma]} {pontos}"
                 elif valor < 0:
                     if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde por qualquer outra pontuação"
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_baixo} ou menos {ponto}s"
+                        return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {pontos}\nPerde por {trans_dicas['Qualquer outra pontuação'][idioma]}"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 1} {trans_dicas['ou mais'][idioma]} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {trans_dicas['ou menos'][idioma]} {pontos}"
                 else:
                     if mercado_var.startswith('EHX'):
-                        return f"Vence se o {equipe} empatar sem {ponto}s\nPerde por qualquer outra pontuação"
-                    return f"Vence se o {equipe} vencer\nPerde se o {equipe} empatar ou perder"
+                        return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['empatar sem'][idioma]} {pontos}\n{trans_dicas['Perde com'][idioma]} {trans_dicas['Qualquer outra pontuação'][idioma]}"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['empatar ou perder'][idioma]}"
             elif valor_tipo == 'inteiro':
                 if valor > 0:
-                    return f"Vence se o {equipe} perder por {arredondado_para_baixo - 1} ou menos {ponto}s\nAnula se o {equipe} perder por {arredondado_para_baixo} {ponto}s\nPerde se o {equipe} perder por {arredondado_para_cima} ou mais {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo - 1} {trans_dicas['ou menos'][idioma]} {pontos}\nAnula se o {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_baixo} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder por'][idioma]} {arredondado_para_cima} {trans_dicas['ou mais'][idioma]} {pontos}"
                 elif valor < 0:
-                    return f"Vence se o {equipe} vencer por {-arredondado_para_baixo + 1} ou mais {ponto}s\nAnula se o {equipe} vencer por {-arredondado_para_baixo} {ponto}s\nPerde se o {equipe} vencer por {-arredondado_para_cima} ou menos {ponto}s"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo + 1} {trans_dicas['ou mais'][idioma]} {pontos}\nAnula se o {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_baixo} {pontos}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['vencer por'][idioma]} {-arredondado_para_cima} {trans_dicas['ou menos'][idioma]} {pontos}"
                 else:
-                    return f"Vence se o {equipe} vencer\nAnula se empatar\nPerde se o {equipe} perder"
+                    return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer'][idioma]}\nAnula se {trans_dicas['empatar'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['perder'][idioma]}"
     else:
         if mercado_var.startswith('Clear'):
-            return f"Vence se o {equipe} não sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
+            return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['não sofrer nenhum'][idioma]} {ponto}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['sofrer qualquer'][idioma]} {ponto}"
         elif mercado_var.startswith('WinNil'):
-            return f"Vence se o {equipe} vencer sem sofrer nenhum {ponto}\nPerde se o {equipe} sofrer qualquer {ponto}"
+            return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer sem sofrer nenhum'][idioma]} {ponto}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['sofrer qualquer'][idioma]} {ponto}"
         elif mercado_var.startswith('Score'):
-            return f"Vence se ambos os {equipe}{plural}s marcarem pelo menos um {ponto}\nPerde ao menos um dos {equipe}{plural}s não marcar ao menos um {ponto}"
+            return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['ambos os'][idioma]} {equipes} {trans_dicas['marcarem pelo menos um'][idioma]} {ponto}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['ao menos um dos'][idioma]} {equipes} {trans_dicas['não marcar ao menos um'][idioma]} {ponto}"
         elif mercado_var.startswith('WinLeas'):
-            return f"Vence se o {equipe} vencer pelo menos um {set}\nPerde se o {equipe} não vencer nenhum {set}"
+            return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer pelo menos um'][idioma]} {set}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['não vencer nenhum'][idioma]} {set}"
         elif mercado_var.startswith('WinAll'):
-            return f"Vence se o {equipe} vencer todos os {set}s\nPerde se o {equipe} não vencer ao menos um {set}"
+            return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['vencer todos os'][idioma]} {sets}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['não vencer ao menos um'][idioma]} {set}"
         elif mercado_var.startswith('Not') or mercado_var.startswith('Lay'):
-            return f"Vence se a outra aposta não vencer\nPerde se a outra aposta perder"
+            return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['a outra aposta'][idioma]} não {trans_dicas['vencer'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['a outra aposta'][idioma]} {trans_dicas['perder'][idioma]}"
         elif mercado_var.startswith('Q'):
-            return f"Vence se o {equipe} se qualificar para a próxima etapa\nPerde se o {equipe} não se qualificar para a próxima etapa"
+            return f"{trans_dicas['Vence se'][idioma]} {equipe} {trans_dicas['se qualificar para a próxima etapa'][idioma]}\n{trans_dicas['Perde se'][idioma]} {equipe} {trans_dicas['não se qualificar para a próxima etapa'][idioma]}"
         elif mercado_var.startswith('Remo'):
-            return f"Vence se houver expulsão\nPerde se não houver expulsão"
+            return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['houver expulsão'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['não houver expulsão'][idioma]}"
         elif mercado_var.startswith('TEv'):
-            return f"Vence se o total de pontos for ímpar\nPerde se o total de pontos for par"
+            return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['Total de pontos ímpar'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['Total de pontos par'][idioma]}"
         elif mercado_var.startswith('TOd'):
-            return f"Vence se o total de pontos for par\nPerde se o total de pontos for ímpar"
+            return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['Total de pontos par'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['Total de pontos ímpar'][idioma]}"
     return ''
 
 
