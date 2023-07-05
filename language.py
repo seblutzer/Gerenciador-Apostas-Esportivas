@@ -1,13 +1,13 @@
 trans_config = {
     'programa': {
-        'Português': 'Gerenciamento de SureBets Esportivas Lutzer',
-        'English': 'Sports SureBets Management Lutzer',
-        'Deutsch': 'Sportwetten SureBets Verwaltung Lutzer',
-        'Italiano': 'Gestione SureBets Sportive Lutzer',
-        'Français': 'Gestion des SureBets Sportifs Lutzer',
-        'Español': 'Gestión de SureBets Deportivas Lutzer',
-        'Ελληνικά': 'Διαχείριση Αθλητικών SureBets Lutzer',
-        'Русский': 'Управление спортивными SureBets Lutzer'
+        'Português': 'Gerenciamento de SureBets Esportivas Lutzer (v. 1.0.0)',
+        'English': 'Sports SureBets Management Lutzer (v. 1.0.0)',
+        'Deutsch': 'Sportwetten SureBets Verwaltung Lutzer (v. 1.0.0)',
+        'Italiano': 'Gestione SureBets Sportive Lutzer (v. 1.0.0)',
+        'Français': 'Gestion des SureBets Sportifs Lutzer (v. 1.0.0)',
+        'Español': 'Gestión de SureBets Deportivas Lutzer (v. 1.0.0)',
+        'Ελληνικά': 'Διαχείριση Αθλητικών SureBets Lutzer (v. 1.0.0)',
+        'Русский': 'Управление спортивными SureBets Lutzer (v. 1.0.0)'
     },
     'Configurações': {
         'Português': 'Configurações',
