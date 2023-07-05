@@ -1,13 +1,13 @@
 trans_config = {
     'programa': {
-        'Português': 'Gerenciamento de SureBets Esportivas Lutzer (Beta)',
-        'English': 'Sports SureBets Management Lutzer (Beta)',
-        'Deutsch': 'Sportwetten SureBets Verwaltung Lutzer (Beta)',
-        'Italiano': 'Gestione SureBets Sportive Lutzer (Beta)',
-        'Français': 'Gestion des SureBets Sportifs Lutzer (Beta)',
-        'Español': 'Gestión de SureBets Deportivas Lutzer (Beta)',
-        'Ελληνικά': 'Διαχείριση Αθλητικών SureBets Lutzer (Βήτα)',
-        'Русский': 'Управление спортивными SureBets Lutzer (Бета)'
+        'Português': 'Gerenciamento de SureBets Esportivas Lutzer',
+        'English': 'Sports SureBets Management Lutzer',
+        'Deutsch': 'Sportwetten SureBets Verwaltung Lutzer',
+        'Italiano': 'Gestione SureBets Sportive Lutzer',
+        'Français': 'Gestion des SureBets Sportifs Lutzer',
+        'Español': 'Gestión de SureBets Deportivas Lutzer',
+        'Ελληνικά': 'Διαχείριση Αθλητικών SureBets Lutzer',
+        'Русский': 'Управление спортивными SureBets Lutzer'
     },
     'Configurações': {
         'Português': 'Configurações',
@@ -1461,6 +1461,16 @@ trans_graficos = {
         'Ελληνικά': 'Σύγκριση Αποδόσεων με Αποτελέσματα των τελευταίων',
         'Русский': 'Сравнение коэффициентов с результатами за последние'
     },
+    'Odd': {
+        'Português': 'Odd',
+        'English': 'Odd',
+        'Deutsch': 'Quote',
+        'Italiano': 'Quota',
+        'Français': 'Cote',
+        'Español': 'Cuota',
+        'Ελληνικά': 'Απόδοση',
+        'Русский': 'Коэффициент'
+    },
     'Odds': {
         'Português': 'Odds',
         'English': 'Odds',
@@ -1540,6 +1550,36 @@ trans_graficos = {
         'Español': 'Comparación de Cuotas con Resultados desde siempre',
         'Ελληνικά': 'Σύγκριση Αποδόσεων με Αποτελέσματα από πάντα',
         'Русский': 'Сравнение коэффициентов с результатами с самого начала'
+    },
+    'Participação de Lucros por casa': {
+        'Português': 'Contribuição nos Lucros por Casa de Apostas',
+        'English': 'Profit Contribution per Betting House',
+        'Deutsch': 'Gewinnbeitrag pro Wettanbieter',
+        'Italiano': 'Contributo agli Utili per Casa di Scommesse',
+        'Français': 'Contribution aux profits par Maison de paris',
+        'Español': 'Contribución de beneficios por Casa de Apuestas',
+        'Ελληνικά': 'Συνεισφορά στα κέρδη ανά Σπίτι Στοιχήματος',
+        'Русский': 'Вклад в прибыль на Букмекерскую контору'
+    },
+    'Participação de lucros por BetHouse nos últimos': {
+        'Português': 'Contribuição nos Lucros por Casa de Apostas nos últimos',
+        'English': 'Profit Contribution per Betting House in the last',
+        'Deutsch': 'Gewinnbeitrag pro Wettanbieter in den letzten',
+        'Italiano': 'Contributo agli Utili per Casa di Scommesse negli ultimi',
+        'Français': 'Contribution aux profits par Maison de paris dans les derniers',
+        'Español': 'Contribución de beneficios por Casa de Apuestas en los últimos',
+        'Ελληνικά': 'Συνεισφορά στα κέρδη ανά Σπίτι Στοιχήματος τις τελευταίες',
+        'Русский': 'Вклад в прибыль на Букмекерскую контору за последние'
+    },
+    'Participação de lucros': {
+        'Português': 'Contribuição nos lucros',
+        'English': 'Profit Contribution',
+        'Deutsch': 'Gewinnbeitrag',
+        'Italiano': 'Contributo agli Utili',
+        'Français': 'Contribution aux profits',
+        'Español': 'Contribución de beneficios',
+        'Ελληνικά': 'Συνεισφορά στα κέρδη',
+        'Русский': 'Вклад в прибыль'
     }
 }
 trans_filtros = {

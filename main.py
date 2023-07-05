@@ -13,11 +13,10 @@ from Pacotes_Lutzer.convert import convert_to_numeric, convert_mes, converter_es
 from Pacotes_Lutzer.validate import create_float_entry, create_combobox, float_error, gerar_mensagem
 from Pacotes_Lutzer.calc_apostas import calc_apostas
 from Pacotes_Lutzer.classes_personalizadas import BetHistTreeview, preencher_treeview, import_df_filtrado, save_apostas, tabela_bethouses
-from Pacotes_Lutzer.graficos import lucro_tempo, apostas_hora, calc_saldo_bethouse, apostas_bethouses, relacao_bethouses, relacao_esportes, eficiencia_bethouses, odds_x_resultado
+from Pacotes_Lutzer.graficos import lucro_tempo, apostas_hora, calc_saldo_bethouse, apostas_bethouses, relacao_bethouses, relacao_esportes, eficiencia_bethouses, odds_x_resultado, participacao_lucros
 from language import trans_config, trans_filtros, trans_graficos, trans_jogo
 import re
 from tkinter import Toplevel, Label
-from importlib import reload
 
 # Cria a janela
 janela = tk.Tk()
@@ -84,7 +83,9 @@ def update_language(language):
 def open_language_menu():
     global language_frame
     language_frame = tk.Frame(janela)
-    language_frame.place(x=100, y=40)
+    language_frame.place(x=language_button.winfo_x() + 60, y=language_button.winfo_y() + language_button.winfo_height())
+
+    language_frame.config(highlightthickness=2, highlightbackground="gray", relief="ridge")
     for i, (language, flag) in enumerate(flags.items()):
         button = tk.Button(language_frame, text=f"{language} {flag}", command=lambda lang=language: update_language(lang))
         button.grid(row=i, column=0)
@@ -123,19 +124,37 @@ def alternar_tabelas():
 tabela_visivel = True
 botao_tabelas = ttk.Button(frameOpcoes, text=trans_config['TabelaOn'][idioma], command=alternar_tabelas)
 botao_tabelas.grid(row=0, column=2)
-def selecionar_opcao(event):
-    opcao_selecionada = combo_opcoes.get()
-    if opcao_selecionada == trans_graficos['lucro tempo'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+def selecionar_opcao(opcao, popup, row):
+    if not popup.winfo_manager():
+        popup = tk.Frame(janela)
+    popup.place(x=graficos_button.winfo_x() - 65, y=graficos_button.winfo_y() + graficos_button.winfo_height() * (row + 1))
+    popup.config(highlightthickness=2, highlightbackground="gray", relief="ridge")
+
+    def on_plot_click(event):
+        widget_plot = event.widget
+        while widget_plot is not None:
+            if widget_plot == popup:
+                return
+            elif widget_plot == graficos_frame:
+                popup.destroy()
+                return
+            widget_plot = widget_plot.master
+        popup.destroy()
+        graficos_frame.destroy()
+
+    janela.bind("<Button-1>", on_plot_click)
+
+    if opcao == trans_graficos['lucro tempo'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=2, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=2, dec=0)
 
         labelPeriodo = tk.Label(popup, text=trans_graficos['Período'][idioma])
-        labelPeriodo.grid(row=1, column=0)
+        labelPeriodo.grid(row=2, column=0)
 
         comboPeriodo = ttk.Combobox(popup, values=[
             trans_graficos['dia'][idioma],
@@ -146,49 +165,49 @@ def selecionar_opcao(event):
             trans_graficos['ano'][idioma]
         ], state="readonly", width=7)
         comboPeriodo.set(trans_graficos['dia'][idioma])
-        comboPeriodo.grid(row=1, column=1)
+        comboPeriodo.grid(row=2, column=1)
 
         labelMedia = tk.Label(popup, text=trans_graficos['Média'][idioma])
-        labelMedia.grid(row=2, column=0)
+        labelMedia.grid(row=3, column=0)
 
-        entryMedia, media_var = create_float_entry(popup, row=2, width=8, column=1, dig=2, dec=0)
+        entryMedia, media_var = create_float_entry(popup, row=3, width=8, column=1, dig=2, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
             periodo = comboPeriodo.get()
             media = int(entryMedia.get()) if entryMedia.get().isdigit() else 3
-            lucro_tempo(tempo, periodo, conn, idioma, media)
+            lucro_tempo(tempo, periodo, conn, idioma, cambio, media)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=3, column=0, columnspan=2)
+        btnGerarGrafico.grid(row=4, column=0, columnspan=2)
 
-    elif opcao_selecionada == trans_graficos['apostas hora'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+    elif opcao == trans_graficos['apostas hora'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Dias'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=3, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
             apostas_hora(conn, tempo, idioma)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=1, column=0, columnspan=2)
+        btnGerarGrafico.grid(row=2, column=0, columnspan=2)
 
-    elif opcao_selecionada == trans_graficos['historico saldo'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+    elif opcao == trans_graficos['historico saldo'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=2, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=2, dec=0)
 
         labelPeriodo = tk.Label(popup, text=trans_graficos['Período'][idioma])
-        labelPeriodo.grid(row=1, column=0)
+        labelPeriodo.grid(row=2, column=0)
 
         comboPeriodo = ttk.Combobox(popup, values=[
             trans_graficos['dia'][idioma],
@@ -199,27 +218,27 @@ def selecionar_opcao(event):
             trans_graficos['ano'][idioma]
         ], state="readonly", width=7)
         comboPeriodo.set(trans_graficos['dia'][idioma])
-        comboPeriodo.grid(row=1, column=1)
+        comboPeriodo.grid(row=2, column=1)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
             periodo = comboPeriodo.get()
-            calc_saldo_bethouse(conn, tempo, periodo, bethouse_options_total, idioma)
+            calc_saldo_bethouse(conn, tempo, periodo, bethouse_options_total, idioma, cambio)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
         btnGerarGrafico.grid(row=3, column=0, columnspan=2)
 
-    elif opcao_selecionada == trans_graficos['apostas tempo'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+    elif opcao == trans_graficos['apostas tempo'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=2, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=2, dec=0)
 
         labelPeriodo = tk.Label(popup, text=trans_graficos['Período'][idioma])
-        labelPeriodo.grid(row=1, column=0)
+        labelPeriodo.grid(row=2, column=0)
 
         comboPeriodo = ttk.Combobox(popup, values=[
             trans_graficos['dia'][idioma],
@@ -230,17 +249,17 @@ def selecionar_opcao(event):
             trans_graficos['ano'][idioma]
         ], state="readonly", width=7)
         comboPeriodo.set(trans_graficos['dia'][idioma])
-        comboPeriodo.grid(row=1, column=1)
+        comboPeriodo.grid(row=2, column=1)
 
         labelTop = tk.Label(popup, text=trans_graficos['Maiores'][idioma])
-        labelTop.grid(row=2, column=0)
+        labelTop.grid(row=3, column=0)
 
-        entryTop, top_var = create_float_entry(popup, row=2, width=8, column=1, dig=2, dec=0)
+        entryTop, top_var = create_float_entry(popup, row=3, width=8, column=1, dig=2, dec=0)
 
         labelBottom = tk.Label(popup, text=trans_graficos['Menores'][idioma])
-        labelBottom.grid(row=3, column=0)
+        labelBottom.grid(row=4, column=0)
 
-        entryBottom, bottom_var = create_float_entry(popup, row=3, width=8, column=1, dig=2, dec=0)
+        entryBottom, bottom_var = create_float_entry(popup, row=4, width=8, column=1, dig=2, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
@@ -250,79 +269,80 @@ def selecionar_opcao(event):
             apostas_bethouses(conn, tempo, periodo, bethouse_options_total, idioma, top=top, bottom=bottom)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=4, column=0, columnspan=2)
-    elif opcao_selecionada == trans_graficos['apostas bethouse'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+        btnGerarGrafico.grid(row=5, column=0, columnspan=2)
+
+    elif opcao == trans_graficos['apostas bethouse'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=3, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
-            relacao_bethouses(conn, tempo, idioma)
+            relacao_bethouses(conn, tempo, idioma, cambio)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=3, column=0, columnspan=2)
-    elif opcao_selecionada == trans_graficos['esportes'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+        btnGerarGrafico.grid(row=2, column=0, columnspan=2)
+    elif opcao == trans_graficos['esportes'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=3, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
-            relacao_esportes(conn, tempo, idioma, valor=True)
+            relacao_esportes(conn, tempo, idioma, cambio, valor=True)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=3, column=0, columnspan=2)
+        btnGerarGrafico.grid(row=2, column=0, columnspan=2)
 
-    elif opcao_selecionada == trans_graficos['resultado bethouse'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+    elif opcao == trans_graficos['resultado bethouse'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=3, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
-            eficiencia_bethouses(conn, tempo, idioma)
+            eficiencia_bethouses(conn, idioma, tempo)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=3, column=0, columnspan=2)
+        btnGerarGrafico.grid(row=2, column=0, columnspan=2)
 
-    elif opcao_selecionada == trans_graficos['odd resultado'][idioma]:
-        popup = tk.Toplevel()
-        popup.title(opcao_selecionada)
+    elif opcao == trans_graficos['odd resultado'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
 
         labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
-        labelTempo.grid(row=0, column=0)
+        labelTempo.grid(row=1, column=0)
 
-        entryTempo, tempo_var = create_float_entry(popup, row=0, width=8, column=1, dig=3, dec=0)
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
 
         labelMin = tk.Label(popup, text="Arred.:")
-        labelMin.grid(row=1, column=0)
+        labelMin.grid(row=2, column=0)
         combobox_var = tk.IntVar()
         combobox_round = ttk.Combobox(popup, textvariable=combobox_var, values=[1, 2], state="readonly", width=7)
         combobox_round.set(2)  # Define o valor inicial selecionado
-        combobox_round.grid(row=1, column=1)
+        combobox_round.grid(row=2, column=1)
 
         labelMin = tk.Label(popup, text=trans_graficos['Mínimo'][idioma])
-        labelMin.grid(row=2, column=0)
+        labelMin.grid(row=3, column=0)
 
-        entryMin, min_var = create_float_entry(popup, row=2, width=8, column=1, dig=3, dec=0)
+        entryMin, min_var = create_float_entry(popup, row=3, width=8, column=1, dig=3, dec=0)
 
         labelMin_percent = tk.Label(popup, text=trans_graficos['Mínimo'][idioma] + '(%)')
-        labelMin_percent.grid(row=3, column=0)
+        labelMin_percent.grid(row=4, column=0)
 
-        entryMin_percent, min_percent_var = create_float_entry(popup, row=3, width=8, column=1, dig=2, dec=0)
+        entryMin_percent, min_percent_var = create_float_entry(popup, row=4, width=8, column=1, dig=2, dec=0)
 
         def gerar_grafico():
             tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else None
@@ -332,10 +352,25 @@ def selecionar_opcao(event):
             odds_x_resultado(conn, idioma, tempo, round=round, min=min, min_percent=min_percent)
 
         btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
-        btnGerarGrafico.grid(row=4, column=0, columnspan=2)
+        btnGerarGrafico.grid(row=5, column=0, columnspan=2)
+
+    elif opcao == trans_graficos['Participação de lucros'][idioma]:
+        labelTitulo = tk.Label(popup, text=opcao, font=('Arial', 14, 'bold'))
+        labelTitulo.grid(row=0, column=0, columnspan=2)
+
+        labelTempo = tk.Label(popup, text=trans_graficos['Tempo'][idioma])
+        labelTempo.grid(row=1, column=0)
+
+        entryTempo, tempo_var = create_float_entry(popup, row=1, width=8, column=1, dig=3, dec=0)
+
+        def gerar_grafico():
+            tempo = int(entryTempo.get()) if entryTempo.get().isdigit() else 7
+            participacao_lucros(conn, tempo, bethouse_options_total, idioma, cambio, )
+
+        btnGerarGrafico = tk.Button(popup, text=trans_graficos['Gerar Gráfico'][idioma], command=gerar_grafico)
+        btnGerarGrafico.grid(row=2, column=0, columnspan=2)
 
 combo_opcoes = ttk.Combobox(frameOpcoes, values=[
-    trans_graficos['graficos'][idioma],
     trans_graficos['lucro tempo'][idioma],
     trans_graficos['apostas hora'][idioma],
     trans_graficos['historico saldo'][idioma],
@@ -343,11 +378,35 @@ combo_opcoes = ttk.Combobox(frameOpcoes, values=[
     trans_graficos['apostas bethouse'][idioma],
     trans_graficos['esportes'][idioma],
     trans_graficos['resultado bethouse'][idioma],
-    trans_graficos['odd resultado'][idioma]
+    trans_graficos['odd resultado'][idioma],
+    trans_graficos['Participação de lucros'][idioma]
 ], state="readonly", width=14)
-combo_opcoes.bind("<<ComboboxSelected>>", selecionar_opcao)
-combo_opcoes.set(trans_graficos['graficos'][idioma])
-combo_opcoes.grid(row=0, column=3)
+def open_graficos_menu():
+    global graficos_frame
+    graficos_frame = tk.Frame(janela)
+    graficos_frame.place(x=graficos_button.winfo_x() + 50, y=graficos_button.winfo_y() + graficos_button.winfo_height())
+    graficos_frame.config(highlightthickness=2, highlightbackground="gray", relief="ridge")
+
+    popup = tk.Frame(janela)
+
+    for i, opcao in enumerate(combo_opcoes["values"]):
+        button = tk.Button(graficos_frame, text=opcao, command=lambda opt=opcao, row=i: selecionar_opcao(opt, popup, row))
+        button.grid(row=i, column=0)
+
+    def on_window_click(event):
+        widget = event.widget
+        while widget is not None:
+            if widget == graficos_frame or widget == popup:
+                return
+            widget = widget.master
+        graficos_frame.destroy()
+
+    janela.bind("<Button-1>", on_window_click)
+
+# Define the graficos button
+graficos_button = tk.Button(frameOpcoes, text=trans_graficos['graficos'][idioma], command=open_graficos_menu, width=10)
+graficos_button.grid(row=0, column=3)
+
 
 blank_label = tk.Label(frameOpcoes, text='                                ')
 blank_label.grid(row=0, column=4)
@@ -408,12 +467,12 @@ def update_lucro_diario():
 
     if float(lucro_diario) <= 0:
         frame_lucro.itemconfigure('bg', fill='red')
-    elif float(lucro_diario) > 0 and float(lucro_diario) <= 75:
-        green_value = int((float(lucro_diario) / 75) * 200)
+    elif float(lucro_diario) > 0 and float(lucro_diario) <= meta / 2:
+        green_value = int((float(lucro_diario) / (meta / 2)) * 200)
         red_value = int((255 - green_value * 1.275) * (1 + (green_value * 1.275) / 2550))
         frame_lucro.itemconfigure('bg', fill=f'#{red_value:02x}{green_value:02x}00')
     else:
-        blue_value = int(((float(lucro_diario) - 75) / 75) * 255)
+        blue_value = int(((float(lucro_diario) - (meta / 2)) / (meta / 2)) * 255)
         blue_value = 255 if blue_value > 255 else blue_value
         green_value = int((200 - blue_value / 1.275) * (1 + blue_value / 2550))
         frame_lucro.itemconfigure('bg', fill=f'#00{green_value:02x}{blue_value:02x}')
@@ -423,7 +482,6 @@ frame_lucro.create_rectangle(0, 15, 130, 55, tags='bg')
 frame_lucro.create_text(65, 5, text=trans_config['Lucro Estimado Hoje'][idioma], fill="black", font=("Arial", 12, "bold"))
 frame_lucro.create_text(65, 35, text="", fill="white", font=("Arial", 24, "bold"), tag='lucro_text')
 frame_lucro.place(x=450, y=5)
-update_lucro_diario()
 
 # Filtros
 def toggle_order_crescente():
@@ -482,7 +540,9 @@ def toggle_situation(index):
     on_filters_change()
 def show_frame(event):
     situation_frame = tk.Frame(frameTabela, width=0, height=0)
-    situation_frame.place(x=338, y=28)
+    situation_frame.place(x=situation_button.winfo_x(), y=situation_button.winfo_y() + situation_button.winfo_height())
+    situation_frame.config(highlightthickness=2, highlightbackground="gray", relief="ridge")
+
     for i, (situation, var) in enumerate(zip(situations, situation_vars)):
         if i in [0, 1]:
             tk.Checkbutton(situation_frame, text=situation, variable=var, command=lambda i=i: toggle_situation(i)).grid(row=i+1, column=0)
@@ -533,7 +593,7 @@ search_icon_label.bind("<Button-1>", search)
 search_entry.bind("<Return>", search)
 
 def load_bethouse_options():
-    global bethouse_options, bethouse_options_total, mercado_options, arred_var, cambio, linhas_apostas, linhas_bethouses
+    global bethouse_options, bethouse_options_total, mercado_options, arred_var, cambio, meta, linhas_apostas, linhas_bethouses
     try:
         with open('bethouse_options.json', 'r') as f:
             data = json.load(f)
@@ -541,12 +601,13 @@ def load_bethouse_options():
             bethouse_options = {bethouse: options for bethouse, options in bethouse_options_total.items() if options.get("ativa", "False") == "True"}
             mercado_options = data.get("mercado_options", [])
             arred_var = tk.StringVar(value=data.get("arredondamento"))
+            if arred_var.get() in trans_config['Padrão'].values():
+                arred_var = tk.StringVar(value=trans_config['Padrão'][idioma])
             custom = data.get('custom', {})
             cambio = custom.get('cambio', 'US$')
+            meta = float(custom.get('meta', 100))
             linhas_apostas = custom.get('linhas_apostas', 6)
             linhas_bethouses = custom.get('linhas_bethouses', 8)
-            if isinstance(arred_var, str):
-                arred_var = trans_config['Padrão'][idioma]
             filtros = data.get("filtros", {})
             order_text = filtros.get('ordem', trans_filtros['Crescente'][idioma])
             if order_text in trans_filtros['Crescente'].values():
@@ -609,12 +670,13 @@ time_button["text"] = time_text
 timeframe_combobox.set(timeframe_text)
 for i, var in enumerate(situation_vars):
         var.set(selected_situations[i]) # Configurações de usuário
+update_lucro_diario()
 
 def open_bethouses():
     def on_close_config():
         # Função para lidar com o fechamento da janela
         if bethouse_list:
-            tabela_bethouses(frameSaldos, idioma, cambio, conn, bethouse_list=bethouse_list)
+            tabela_bethouses(frameSaldos, idioma, cambio, linhas_bethouses, conn, bethouse_list=bethouse_list)
         bethouses_window.destroy()
 
     # Cria uma janela pop-up
@@ -984,14 +1046,16 @@ def open_customization_window():
     # Função para lidar com o clique no comando "Personalizar"
     def save_customization():
         # Função para salvar as configurações personalizadas
-        global linhas_apostas, linhas_bethouses, cambio, tabela
+        global linhas_apostas, linhas_bethouses, cambio, tabela, meta
         linhas_apostas = int(spinbox_linhas_apostas.get())
         linhas_bethouses = int(spinbox_linhas_bethouses.get())
-        cambio = entry_cambio.get()
+        cambio = entry_cambio.get() if entry_cambio.get() != '' else 'US$'
+        meta = float(entry_meta.get())
         if tabela:
             tabela.destroy()  # Destruir tabela atual, se existir
         customization_window.destroy()
         save_bethouse_options()
+        update_lucro_diario()
         tabela = BetHistTreeview(frameTabela, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, idioma, cambio, linhas_bethouses, conn, columns=("index", "adds", "jogo", "data", "resultados", "bethouses", "odds", "bets", "mercados", "id"), show="headings", style="Treeview", height=linhas_apostas)
         tabela.heading("index", text="")
         tabela.heading("adds", text=trans_filtros['Adição'][idioma].capitalize())
@@ -1023,15 +1087,26 @@ def open_customization_window():
     customization_window = tk.Toplevel()
     customization_window.title("Customização")
 
+    def validate_spinbox_input(value):
+        # Verifica se o valor inserido contém apenas números
+        if (value.isdigit() and int(value) <= 10) or value == '':
+            return True
+        else:
+            return False
     # Labels e campos de entrada
     label_linhas_apostas = tk.Label(customization_window, text="Linhas de apostas:")
     label_linhas_apostas.pack()
-    spinbox_linhas_apostas = tk.Spinbox(customization_window, from_=0, to=100, increment=1, width=4, value=linhas_apostas)
+    spinbox_var = tk.StringVar()
+    spinbox_var.set(linhas_apostas)  # Define o valor inicial do Spinbox
+    validate_input = customization_window.register(validate_spinbox_input)  # Registra a função de validação
+    spinbox_linhas_apostas = tk.Spinbox(customization_window, from_=0, to=10, increment=1, width=4, textvariable=spinbox_var, validate="key", validatecommand=(validate_input, "%P"))
     spinbox_linhas_apostas.pack()
 
     label_linhas_bethouses = tk.Label(customization_window, text="Linhas de bethouses:")
     label_linhas_bethouses.pack()
-    spinbox_linhas_bethouses = tk.Spinbox(customization_window, from_=0, to=100, increment=1, width=4, value=linhas_bethouses)
+    spinbox_var2 = tk.StringVar()
+    spinbox_var2.set(linhas_apostas)
+    spinbox_linhas_bethouses = tk.Spinbox(customization_window, from_=0, to=20, increment=1, width=4, textvariable=spinbox_var2, validate="key", validatecommand=(validate_input, "%P"))
     spinbox_linhas_bethouses.pack()
 
     label_cambio = tk.Label(customization_window, text="Moeda:")
@@ -1039,6 +1114,21 @@ def open_customization_window():
     entry_cambio = tk.Entry(customization_window, width=5)
     entry_cambio.insert(tk.END, cambio)
     entry_cambio.pack()
+
+    def validate_meta(value):
+        # Verifica se o valor inserido contém apenas números
+        if value.isdigit() or value == '':
+            return True
+        else:
+            return False
+
+    label_meta = tk.Label(customization_window, text=f"Meta diária ({cambio}):")
+    label_meta.pack()
+    validate_input_meta = customization_window.register(validate_meta)  # Registra a função de validação
+    entry_meta = tk.Entry(customization_window, width=5)
+    entry_meta.insert(tk.END, meta)
+    entry_meta.config(validate="key", validatecommand=(validate_input_meta, "%P"))
+    entry_meta.pack()
 
     # Botão de salvar
     button_save = tk.Button(customization_window, text="Salvar", command=save_customization)
@@ -1076,7 +1166,8 @@ def save_bethouse_options():
         "custom": {
             "cambio": cambio,
             "linhas_apostas": linhas_apostas,
-            "linhas_bethouses": linhas_bethouses
+            "linhas_bethouses": linhas_bethouses,
+            "meta": meta
         },
         "filtros": {
             "ordem": order_button1["text"],
@@ -1224,6 +1315,8 @@ def processar_colar(event):
 
     partes = linhas[1].split('.')
     esporte_entry.insert(tk.END, partes[0])
+    jogo_entry.focus_set()
+    dia_entry.focus_set()
 
 
 esporte_entry = tk.Entry(frameJogo, foreground='gray')
@@ -1231,8 +1324,6 @@ esporte_entry.grid(row=2, column=0, padx=5, pady=5, sticky=tk.W)
 esporte_entry.bind('<Enter>', lambda event: show_tooltip_simples(event, esporte_entry, 'esporte'))
 esporte_entry.bind('<Leave>', hide_tooltip_simples)
 janela.bind_all('<<Paste>>', processar_colar)
-
-
 
 def on_enter_game(event):
     # Obtém o nome completo do jogo inserido na entry
@@ -1242,6 +1333,9 @@ def on_enter_game(event):
         time_casa, time_fora = jogo_entry.get().strip().split(" vs ")
     elif " x " in jogo_entry.get():
         time_casa, time_fora = jogo_entry.get().strip().split(" x ")
+    else:
+        jogo_entry.focus_set()
+        return
 
     # Converte a data e hora atual para string no formato YYYY-MM-DD hh:mm:ss
     data_hora_atual = datetime.now()
@@ -1268,6 +1362,8 @@ def on_enter_game(event):
             hora_entry.insert(0, data_jogo_obj.hour)
             minuto_entry.delete(0, 'end')
             minuto_entry.insert(0, data_jogo_obj.minute)
+            # Define o foco para o bethouse_combobox
+            bethouse_combobox.focus_set()
 
 # Adiciona campo Jogo
 jogo_label = tk.Label(frameJogo, text=trans_jogo['Jogo / Esporte'][idioma])
@@ -1903,14 +1999,14 @@ def on_variable_change(*args):
 
     if (len([odd for odd in odds if odd != 0.0]) == num_bets) and (len([aposta for aposta in apostas if aposta != 0.0]) >= 1):
         arred = arred_var.get()
-        bonus = [bonus1.get(), bonus2.get(), bonus3.get()]
         if arred == trans_config['Padrão'][idioma]:
-            arreds = [float(bethouse_options.get(bethouse_var.get(), {}).get('arred', 0.0)),
-                      float(bethouse_options.get(bethouse_var2.get(), {}).get('arred', 0.0)),
-                      float(bethouse_options.get(bethouse_var3.get(), {}).get('arred', 0.0))]
+            arreds = [float(bethouse_options.get(bethouse_var.get(), {}).get('arred', 0.01)),
+                      float(bethouse_options.get(bethouse_var2.get(), {}).get('arred', 0.01)),
+                      float(bethouse_options.get(bethouse_var3.get(), {}).get('arred', 0.01))]
         else:
             arred = float(arred)
             arreds = [arred, arred, arred]
+        bonus = [bonus1.get(), bonus2.get(), bonus3.get()]
         resultado = calc_apostas(apostas[0], apostas[1], apostas[2], odds[0], odds[1], odds[2], mercado_var.get(), mercado_var2.get(), mercado_var3.get(), float_error(valor_var, 0.0), float_error(valor_var2, 0.0), float_error(valor_var3, 0.0), taxas[0], taxas[1], taxas[2], arreds, bonus)
         palpite1_label.config(text=f"{cambio} {format(round(resultado[0] ,2), '.2f')}" if resultado[0] is not None else "")
         palpite2_label.config(text=f"{cambio} {format(round(resultado[1] ,2), '.2f')}" if resultado[1] is not None else "")
@@ -2147,12 +2243,9 @@ def gravar():
             'lucro_per_real': None,
             'esporte': converter_esporte(esporte_entry.get().split(". ")[0])
         }
-        print(dados['valor1'])
-        print(dados['valor2'])
         # Gravação dos dados na tabela e atualização da Treeview
         dados = {k: str(v) if isinstance(v, datetime) else v if isinstance(v, float) else v if isinstance(v, int) else convert_to_numeric(v).strip().split('\n')[0] if isinstance(v, str) and '\n' in v else convert_to_numeric(v) for k, v in dados.items()}
-        print(dados['valor1'])
-        print(dados['valor2'])
+
         bethouse_list = {valor for valor in [dados['bethouse1'], dados['bethouse2'], dados['bethouse3']] if valor}
 
         save_apostas(dados, conn)

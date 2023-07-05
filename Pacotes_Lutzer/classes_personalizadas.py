@@ -1,17 +1,12 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import messagebox
 from tkinter import *
 import datetime
-from datetime import datetime, timedelta
+from datetime import datetime
 import pandas as pd
-from Pacotes_Lutzer.convert import convert_mes, convert_dia
+from Pacotes_Lutzer.convert import convert_mes
 from Pacotes_Lutzer.validate import validate_num, on_entry_change
-import os
 import re
-import numpy as np
-import sqlite3
-from pandastable import Table
 import webbrowser
 from language import trans_filtros, trans_datas, trans_jogo, trans_config, trans_graficos, trans_tabelas
 

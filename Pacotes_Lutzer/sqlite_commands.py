@@ -768,7 +768,7 @@ def lucro_esporte(conn, tempo):
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
 #view_column(sql_data, 'apostas')
-view_last_lines(sql_data, 'apostas', 10)
+#view_last_lines(sql_data, 'apostas', 10)
 #view_last_lines(sql_data, 'apostas_antigas', 3)
 #view_last_lines(sql_data, 'BWin_saldos', 3)
 #view_last_lines(sql_data, 'FavBet_saldos', 3)

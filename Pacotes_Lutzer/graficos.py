@@ -1,5 +1,4 @@
 import pandas as pd
-import sqlite3
 import json
 import plotly.graph_objs as go
 from plotly.subplots import make_subplots
@@ -600,7 +599,7 @@ def agrup_esportes(conn, tempo):
     return resultado
 def relacao_esportes(conn, range_val, idioma, cambio, valor=False):
     df = agrup_esportes(conn, range_val)
-    df['esporte'] = df['esporte'].apply(lambda x: trans_graficos[x][idioma] if x in linguagem else x)
+    df['esporte'] = df['esporte'].apply(lambda x: trans_graficos[x][idioma] if x in trans_graficos[x].values() else x)
 
     fig = make_subplots(rows=2, cols=2,
                         specs=[[{'type': 'domain', 'colspan': 2}, None], [{'type': 'domain'}, {'type': 'domain'}]])
@@ -919,11 +918,87 @@ def odds_x_resultado(conn, idioma, tempo=None, round=0, min=0, min_percent=0):
 
     # Exibição do gráfico
     fig.show()
+################ PARTICIPAÇÃO ################
+def participacao_bethouses(conn, tempo):
+    # Define a consulta SQL
+    query = f"""
+        SELECT 
+            bethouses,
+            SUM(lucro_real) AS participacao,
+            SUM(CASE
+                WHEN bethouses = bethouse1 AND resultado1 = 'win' THEN lucro_real
+                WHEN bethouses = bethouse2 AND resultado2 = 'win' THEN lucro_real
+                WHEN bethouses = bethouse3 AND resultado3 = 'win' THEN lucro_real
+                ELSE 0
+            END) AS retorno,
+            COUNT(*) AS ocorrencias
+        FROM (
+            SELECT 
+                data_entrada,
+                lucro_real,
+                bethouse1,
+                resultado1,
+                bethouse2,
+                resultado2,
+                bethouse3,
+                resultado3,
+                CASE
+                    WHEN resultado1 IS NOT NULL THEN bethouse1
+                    WHEN resultado2 IS NOT NULL THEN bethouse2
+                    WHEN resultado3 IS NOT NULL THEN bethouse3
+                    ELSE NULL
+                END AS bethouses
+            FROM apostas
+        )
+        WHERE data_entrada >= DATE('now', '-{tempo} days') AND bethouses IS NOT NULL
+        GROUP BY bethouses
+    """
+
+    # Executa a consulta e retorna o resultado em um dataframe
+    df = pd.read_sql_query(query, conn)
+
+    # Exibe o resultado
+    return df
+def participacao_lucros(conn, tempo, bethouse_options, idioma, cambio):
+    df = participacao_bethouses(conn, tempo)
+    df = df.sort_values(by='participacao', ascending=False)
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=df['bethouses'],
+        y=df['participacao'],
+        name=trans_graficos['Participação de lucros'][idioma],
+        marker_color=[bethouse_options[b]['background_color'] for b in df['bethouses']],
+        text=[f"{cambio} {p:.2f}" for p in df['participacao']],
+        textposition='outside'
+    ))
+    fig.add_trace(go.Scatter(
+        x=df['bethouses'],
+        y=df['retorno'],
+        name=trans_graficos['Lucro Real'][idioma],
+        mode='lines+markers',
+        text=[f"{cambio} {r:.2f}" for r in df['retorno']],
+        textposition='top center'
+    ))
+
+    fig.update_layout(
+        title=f"{trans_graficos['Participação de lucros por BetHouse nos últimos'][idioma]} {tempo} {trans_graficos['dias'][idioma].lower()}",
+        xaxis_title='BetHouses',
+        yaxis_title=f'Valor ({cambio})',
+        xaxis=dict(
+            tickmode='array',
+            tickvals=df['bethouses'],
+            ticktext=[
+                f"<span style='background-color:{bethouse_options[b]['background_color']}'>{b}</span>"
+                for b in df['bethouses']]
+        )
+    )
+
+    fig.show()
 
 
 #conn = sqlite3.connect('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db')
 #c = conn.cursor()
-#lucro_tempo(20, 'dia', conn, media=10)
+#lucro_tempo(7, 'dia', conn, 'Português', 'R$', media=3)
 #apostas_hora(conn, 10)
 #calc_saldo_bethouse(conn, 4, 'semestre', bethouse_options_total, 'Português', 'R$')
 #apostas_bethouses(conn, 5, 'quarter', bethouse_options_total, 'English')
@@ -931,3 +1006,4 @@ def odds_x_resultado(conn, idioma, tempo=None, round=0, min=0, min_percent=0):
 #eficiencia_bethouses(conn, 'English', 30)
 #relacao_bethouses(conn, 90, 'English', 'USS')
 #odds_x_resultado(conn, 'English', tempo=900, round=1, min=3, min_percent=1)
+#participacao_lucros(conn, 90, bethouse_options_total, 'English', 'US$')

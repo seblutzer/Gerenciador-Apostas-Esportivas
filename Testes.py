@@ -1,6 +1,29 @@
 from Pacotes_Lutzer.calc_resultados import calc_resultados
 from Pacotes_Lutzer.validate import check_margin
 
+
+
+combo_opcoes = ttk.Combobox(frameOpcoes, values=[
+    trans_graficos['graficos'][idioma],
+    trans_graficos['lucro tempo'][idioma],
+    trans_graficos['apostas hora'][idioma],
+    trans_graficos['historico saldo'][idioma],
+    trans_graficos['apostas tempo'][idioma],
+    trans_graficos['apostas bethouse'][idioma],
+    trans_graficos['esportes'][idioma],
+    trans_graficos['resultado bethouse'][idioma],
+    trans_graficos['odd resultado'][idioma],
+    trans_graficos['Participação de lucros'][idioma]
+], state="readonly", width=14)
+combo_opcoes.bind("<<ComboboxSelected>>", selecionar_opcao)
+combo_opcoes.set(trans_graficos['graficos'][idioma])
+combo_opcoes.grid(row=0, column=3)
+
+
+
+
+
+
 def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var, bonus):
     if aposta1 == '':
         aposta1 = 0
