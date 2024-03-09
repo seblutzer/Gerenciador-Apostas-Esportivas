@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, Tk, simpledialog
 from tkinter import *
 import datetime
 from datetime import datetime
@@ -50,6 +50,8 @@ def preencher_treeview(conn, tabela, options, situation_vars, order_button1, ord
                 return f"½{trans_jogo['W/L'][idioma][0]}"
             elif resultados == "half-loss":
                 return f"½{trans_jogo['W/L'][idioma][2]}"
+            elif resultados == "cash-out":
+                return 'C'
             else:
                 return ""
 
@@ -226,7 +228,8 @@ class BetHistTreeview(ttk.Treeview):
                       PhotoImage(file="loss.png").subsample(13, 13),
                       PhotoImage(file="return.png").subsample(13, 13),
                       PhotoImage(file="half-win.png").subsample(13, 13),
-                      PhotoImage(file="half-loss.png").subsample(13, 13)]
+                      PhotoImage(file="half-loss.png").subsample(13, 13),
+                      PhotoImage(file="cash-out.png").subsample(100, 100)]
         self.iconSave = PhotoImage(file="save.png").subsample(18, 18)
         self.current_icons = {}
         self.clicked_row = None
@@ -253,6 +256,8 @@ class BetHistTreeview(ttk.Treeview):
             return self.icons[4]
         elif resultado == 'half-loss':
             return self.icons[5]
+        elif resultado == 'cash-out':
+            return self.icons[6]
         else:
             return self.icons[0]
 
@@ -260,7 +265,10 @@ class BetHistTreeview(ttk.Treeview):
         global bethouse_options
         selected_item = self.focus()
         item = self.item(selected_item)  # Get the item data for the clicked row
-        id = item['values'][9]
+        try:
+            id = item['values'][9]
+        except IndexError:
+            return
         df_row = df_filtrado.loc[df_filtrado['id'] == id]
         icons = []
         for i in range(1, 4):
@@ -329,7 +337,7 @@ class BetHistTreeview(ttk.Treeview):
                 # The first icon was clicked
                 resultado = df_row['resultado1'].values[0]
                 if pd.isna(resultado):
-                    next_resultado = self.get_next_result('')
+                    next_resultado = self.get_next_result(None)
                 else:
                     next_resultado = self.get_next_result(resultado)
                 df_filtrado.loc[df_filtrado['id'] == id, 'resultado1'] = next_resultado
@@ -359,7 +367,7 @@ class BetHistTreeview(ttk.Treeview):
                 # The second icon was clicked
                 resultado = df_row['resultado2'].values[0]
                 if pd.isna(resultado):
-                    next_resultado = self.get_next_result('')
+                    next_resultado = self.get_next_result(None)
                 else:
                     next_resultado = self.get_next_result(resultado)
                 df_filtrado.loc[df_filtrado['id'] == id, 'resultado2'] = next_resultado
@@ -389,7 +397,7 @@ class BetHistTreeview(ttk.Treeview):
                 if df_row['bethouse3'].values[0] in bethouse_options.keys():
                     resultado = df_row['resultado3'].values[0]
                     if pd.isna(resultado):
-                        next_resultado = self.get_next_result('')
+                        next_resultado = self.get_next_result(None)
                     else:
                         next_resultado = self.get_next_result(resultado)
                     df_filtrado.loc[df_filtrado['id'] == id, 'resultado3'] = next_resultado
@@ -434,19 +442,45 @@ class BetHistTreeview(ttk.Treeview):
                     return 1 / odd
                 else:
                     return 0
+
+            def obter_valor_cash_out(bethouse, aposta):
+                root = Tk()
+                root.withdraw()
+
+                valor = simpledialog.askfloat(trans_jogo['Cash Out'][self.idioma], f"{trans_jogo['Digite o valor do Cash Out para'][self.idioma]} {self.cambio} {aposta} {trans_graficos['em'][self.idioma]} {bethouse}:")
+
+                if valor is None:  # Verifica se a caixa de diálogo foi cancelada
+                    return None
+                return valor
+
             odd = {}  # Dicionários para armazenar os valores calculados
             retornos = []
             for i in range(1, 4 if df_row['bethouse3'].values[0] in bethouse_options.keys() else 3):
+                odds = float(df_row[f'odd{i}'].values[0])
+                bethouse = df_row[f'bethouse{i}'].values[0]
+                taxa = float(bethouse_options[bethouse]['taxa'])
                 if df_row[f'mercado{i}'].values[0] == "Lay":
-                    odd[i] = (float(df_row[f'odd{i}'].values[0]) / (float(df_row[f'odd{i}'].values[0]) - 1) - 1) * (1 - float(bethouse_options[df_row[f'bethouse{i}'].values[0]]['taxa'])) + 1
+                    odd[i] = (odds / (odds - 1) - 1) * (1 - taxa) + 1
                 else:
-                    odd[i] = (float(df_row[f'odd{i}'].values[0]) - 1) * (1 - float(bethouse_options[df_row[f'bethouse{i}'].values[0]]['taxa'])) + 1
+                    odd[i] = (odds - 1) * (1 - taxa) + 1
                 if f'aposta{i}' in df_row.columns and f'resultado{i}' in df_row.columns:
-                    retorno = round(float(df_row[f'aposta{i}'].values[0]) * odd[i] * calculate_fator_resultado(df_row[f'resultado{i}'].values[0], odd[i]) - float(df_row[f'aposta{i}'].values[0]), 2)
+                    aposta = float(df_row[f'aposta{i}'].values[0])
+                    resultado = df_row[f'resultado{i}'].values[0]
+                    if resultado == 'cash-out':
+                        valor_cash_out = obter_valor_cash_out(bethouse, aposta)
+                        if valor_cash_out is None:  # Verifica se a caixa de diálogo foi cancelada
+                            return  # Sai do loop for
+                        retorno = valor_cash_out - aposta
+                    else:
+                        retorno = round(aposta * odd[i] * calculate_fator_resultado(resultado, odd[i]) - aposta, 2)
                     retornos.append(retorno)
 
-            if pd.isna(df_row['resultado1'].values[0]) or pd.isna(df_row['resultado2'].values[0]) or (
-                    len(item['values'][5].split("\n")) > 2 and pd.isna(df_row['resultado3'].values[0])):
+            resultado1 = df_row['resultado1'].values[0]
+            resultado2 = df_row['resultado2'].values[0]
+            resultado3 = df_row['resultado3'].values[0]
+
+            if pd.isna(resultado1) or pd.isna(resultado2) or (
+                    len(item['values'][5].split("\n")) > 2 and pd.isna(resultado3)):
                 lucro_real = None
                 lucro_per_real = None
                 diferencas = [0 if pd.isna(df_row[f'resultado{i + 1}'].values[0]) or df_row[f'resultado{i + 1}'].values[0] == '' else retornos[i] for i in
@@ -458,15 +492,15 @@ class BetHistTreeview(ttk.Treeview):
                 lucro_per_real = round(lucro_real / somaApostas, 4)
                 diferencas = retornos
             bethouse_list = {valor for valor in [df_row['bethouse1'].values[0], df_row['bethouse2'].values[0],df_row['bethouse3'].values[0]] if valor}
-
+            
             # Atualizar a linha correspondente na tabela apostas do dados.db
             query = f"""
             UPDATE apostas
-            SET lucro_real = {'NULL' if lucro_real == None else lucro_real}, 
-                lucro_per_real = {'NULL' if lucro_per_real == None else lucro_per_real},
-                resultado1 = {'NULL' if df_row['resultado1'].values[0] == '' or df_row['resultado1'].values[0] == None else f"'{df_row['resultado1'].values[0]}'"}, 
-                resultado2 = {'NULL' if df_row['resultado2'].values[0] == '' or df_row['resultado2'].values[0] == None else f"'{df_row['resultado2'].values[0]}'"},
-                resultado3 = {'NULL' if df_row['resultado3'].values[0] == '' or df_row['resultado3'].values[0] == None else f"'{df_row['resultado3'].values[0]}'"}
+            SET lucro_real = {'NULL' if lucro_real == None or lucro_real == '' else lucro_real}, 
+                lucro_per_real = {'NULL' if lucro_per_real == None or lucro_per_real == '' else lucro_per_real},
+                resultado1 = {'NULL' if resultado1 == '' or resultado1 == None else f"'{resultado1}'"}, 
+                resultado2 = {'NULL' if resultado2 == '' or resultado2 == None else f"'{resultado2}'"},
+                resultado3 = {'NULL' if resultado3 == '' or resultado3 == None else f"'{resultado3}'"}
             WHERE id = {df_row['id'].values[0]}
             """
 
@@ -503,14 +537,14 @@ class BetHistTreeview(ttk.Treeview):
                 tk.Label(popup, text=message).pack()
                 popup.after(2000, popup.destroy)
 
-            show_message("Aviso", "Resultados salvos com sucesso!")
+            show_message(trans_config['Aviso'][self.idioma], "Resultados salvos com sucesso!")
 
         save_results()
         self.save.place_forget()
 
     def get_next_result(self, resultado):
         # Aqui você pode definir a ordem dos resultados
-        resultados = ['', 'win', 'loss', 'return', 'half-win', 'half-loss']
+        resultados = [None, 'win', 'loss', 'return', 'half-win', 'half-loss', 'cash-out']
         index = resultados.index(resultado)
         next_index = (index + 1) % len(resultados)
         return resultados[next_index]

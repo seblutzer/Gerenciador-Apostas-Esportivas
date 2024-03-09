@@ -1,30 +1,7 @@
 from Pacotes_Lutzer.calc_resultados import calc_resultados
 from Pacotes_Lutzer.validate import check_margin
 
-
-
-combo_opcoes = ttk.Combobox(frameOpcoes, values=[
-    trans_graficos['graficos'][idioma],
-    trans_graficos['lucro tempo'][idioma],
-    trans_graficos['apostas hora'][idioma],
-    trans_graficos['historico saldo'][idioma],
-    trans_graficos['apostas tempo'][idioma],
-    trans_graficos['apostas bethouse'][idioma],
-    trans_graficos['esportes'][idioma],
-    trans_graficos['resultado bethouse'][idioma],
-    trans_graficos['odd resultado'][idioma],
-    trans_graficos['Participação de lucros'][idioma]
-], state="readonly", width=14)
-combo_opcoes.bind("<<ComboboxSelected>>", selecionar_opcao)
-combo_opcoes.set(trans_graficos['graficos'][idioma])
-combo_opcoes.grid(row=0, column=3)
-
-
-
-
-
-
-def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var, bonus):
+def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, bethouse_options1, bethouse_options2, bethouse_options3, arred_var, bonus, bethouses):
     if aposta1 == '':
         aposta1 = 0
     if aposta2 == '':
@@ -70,12 +47,15 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
         return aposta3 / 2
     retornos = [retorno1(), retorno2(), retorno3()]
 
+    mercados = [mercado for mercado in [mercado1, mercado2, mercado3] if mercado != '']
+    valores =  [valor1, valor2, valor3]
+    odds = [odd_1, odd_2, odd_3]
+    apostas = [aposta1, aposta2, aposta3]
+    bethouses = [casa for casa in bethouses if casa != '']
+    padrao, ordem, surebet, descricao = calc_resultados(mercados, valores, bethouses)
+
     if odd3 > 0.0:
-        mercados = [mercado1, mercado2, mercado3]
-        valores = [valor1, valor2, valor3]
-        odds = [odd_1, odd_2, odd_3]
-        apostas = [aposta1, aposta2, aposta3]
-        padrao, ordem, surebet = calc_resultados(mercados, valores)
+        print(padrao)
         if not padrao:
             if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
                 pass
@@ -352,6 +332,45 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 lucros, apostas = reordenar(lucros, apostas, inverso)
             lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
             return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
+        elif padrao == '1-0-0.25' or padrao == '0.25-0-2':
+            if padrao == '0.25-0-2':
+                aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
+                odd_1, odd_2, odd_3 = odd_3, odd_2, odd_1
+            if aposta1 > 0 and aposta2 > 0 and aposta3 > 0:
+                pass
+            elif aposta1 > 0 and aposta2 > 0:
+                aposta3 = round(((retorno1() + retorno2()) / odd_3) / arred_var[2]) * arred_var[2]
+            elif aposta1 > 0 and aposta3 > 0:
+                aposta2 = round(((retorno3() - retorno1()) / odd_2) / arred_var[1]) * arred_var[1]
+            elif aposta2 > 0 and aposta3 > 0:
+                aposta1 = round(((retorno3() - retorno2()) / odd_1) / arred_var[0]) * arred_var[0]
+            elif aposta1 > 0:
+                aposta3 = 0
+                aposta2 = (retorno3() - retorno1()) / odd_2
+                while not check_margin([retorno1() + retorno2() - aposta2, retorno3_halfwin(), retorno3() - aposta2], 0.01):
+                    aposta2 = (retorno3() - retorno1()) / odd_2
+                    aposta3 += 0.01
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
+            elif aposta2 > 0:
+                aposta3 = round((aposta2 / (odd_3 - 0.5 - odd_3 / 2)) / arred_var[2]) * arred_var[2]
+                aposta1 = round(((retorno3() - retorno2()) / odd_1) / arred_var[0]) * arred_var[0]
+            elif aposta3 > 0:
+                aposta2 = round((aposta3 * odd_3 - (aposta3 / 2) - (aposta3 / 2) * odd_3) / arred_var[1]) * arred_var[1]
+                aposta1 = round(((retorno3() - retorno2()) / odd_1) / arred_var[0]) * arred_var[0]
+
+            lucro1 = round((retorno1() + retorno2() - aposta1 - aposta2 - aposta3), 2)
+            lucro2 = round((retorno3_halfwin() - aposta1 - aposta3), 2)
+            lucro3 = round((retorno3() - aposta1 - aposta2 - aposta3), 2)
+            lucro_percent = round((((lucro1 + lucro2 + lucro3) / 3) / (aposta1 + aposta2 + aposta3)) * 100, 2)
+            apostas = [aposta1, aposta2, aposta3]
+            lucros = [lucro1, lucro2, lucro3]
+            if padrao == '0.25-0-2':
+                inverso = [3, 2, 1]
+                lucros, apostas = reordenar(lucros, apostas, inverso)
+            lucros, apostas = reordenar(lucros, apostas, ordem_inversa)
+            return apostas[0], apostas[1], apostas[2], None, lucros[0], lucros[1], lucros[2], lucro_percent, None, None
+
         elif padrao == '-0.25-X-2' or padrao == '1-X--0.25':
             if padrao == '1-X--0.25':
                 aposta1, aposta2, aposta3 = aposta3, aposta2, aposta1
@@ -461,23 +480,29 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             elif aposta2 > 0 and aposta3 > 0:
                 aposta1 = round(((retorno2() + retorno3()) / odd_1) / arred_var[0]) * arred_var[0]
             elif aposta1 > 0:
-                aposta3 = aposta1 / odd_3
-                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
+                aposta3 = 0
+                aposta2 = (retorno1() - retorno3()) / odd_2
+                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], 0.02):
+                    aposta2 = (retorno1() - retorno3()) / odd_2
                     aposta3 += 0.01
-                aposta3 = round((aposta3 - 0.01) / arred_var[2]) * arred_var[2]
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             elif aposta2 > 0:
-                aposta1 = aposta2
-                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta3 = round(((retorno1() - retorno2())/ odd_3) / arred_var[2]) * arred_var[2]
+                aposta1 = 0
+                aposta3 = (retorno1() - retorno2()) / odd_3
+                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], 0.02):
+                    aposta3 = (retorno1() - retorno2())/ odd_3
                     aposta1 += 0.01
-                aposta1 = round((aposta1 - 0.01) / arred_var[2]) * arred_var[2]
+                aposta1 = round(aposta1 / arred_var[0]) * arred_var[0]
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
             elif aposta3 > 0:
-                aposta1 = aposta3 / odd_3
-                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
+                aposta1 = 0
+                aposta2 = (retorno1() - retorno3()) / odd_2
+                while not check_margin([retorno1() - aposta1, retorno3() + retorno2() - aposta1, retorno2() + retorno3_halfloss()], 0.02):
+                    aposta2 = (retorno1() - retorno3()) / odd_2
                     aposta1 += 0.01
-                aposta1 = round((aposta1) / arred_var[2]) * arred_var[2]
+                aposta1 = round(aposta1 / arred_var[0]) * arred_var[0]
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno3() + retorno2() - aposta1 - aposta2 - aposta3), 2)
             lucro2 = round((retorno2() + retorno3_halfloss() - aposta3 - aposta2), 2)
@@ -502,23 +527,29 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             elif aposta2 > 0 and aposta3 > 0:
                 aposta1 = round(((retorno2() + retorno3()) / odd_1) / arred_var[0]) * arred_var[0]
             elif aposta1 > 0:
-                aposta3 = aposta1 / odd_3
-                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
+                aposta3 = 0
+                aposta2 = (retorno1() - retorno3()) / odd_2
+                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], 0.02):
+                    aposta2 = (retorno1() - retorno3()) / odd_2
                     aposta3 += 0.01
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
                 aposta3 = round((aposta3 - 0.01) / arred_var[2]) * arred_var[2]
             elif aposta2 > 0:
                 aposta1 = aposta2
-                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta3 = round(((retorno1() - retorno2())/ odd_3) / arred_var[2]) * arred_var[2]
+                aposta3 = (retorno1() - retorno2()) / odd_3
+                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], 0.02):
+                    aposta3 = (retorno1() - retorno2())/ odd_3
                     aposta1 += 0.01
-                aposta1 = round((aposta1 - 0.01) / arred_var[2]) * arred_var[2]
+                aposta1 = round((aposta1 - 0.01) / arred_var[0]) * arred_var[0]
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
             elif aposta3 > 0:
                 aposta1 = aposta3 / odd_3
-                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], [0.0038 * (sum(new_odds)-odd_1), 0.0038 * (sum(new_odds)-odd_2), 0.0038 * (sum(new_odds)-odd_3)]):
-                    aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
+                aposta2 = (retorno1() - retorno3()) / odd_2
+                while not check_margin([retorno1() - aposta1 - aposta2 - aposta3, retorno3() + retorno2() - aposta1 - aposta2 - aposta3, retorno2() + retorno1_halfloss() - aposta1 - aposta2], 0.02):
+                    aposta2 = (retorno1() - retorno3()) / odd_2
                     aposta1 += 0.01
-                aposta1 = round((aposta1) / arred_var[2]) * arred_var[2]
+                aposta1 = round((aposta1) / arred_var[0]) * arred_var[0]
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno3() + retorno2() - aposta1 - aposta2 - aposta3), 2)
             lucro2 = round((retorno2() + retorno1_halfloss() - aposta1 - aposta2), 2)
@@ -569,34 +600,31 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
                 aposta3 = round((retorno1() / odd_3) / arred_var[2]) * arred_var[2]
             elif aposta1 > 0 and aposta3 > 0:
                 aposta2 = 0
-                while not check_margin([retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()], [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2), 0.0038 * (sum(new_odds) - odd_3)]):
+                while not check_margin([retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()], 0.02):
                     aposta2 += 0.01
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             elif aposta2 > 0 and aposta3 > 0:
                 aposta1 = round((retorno3() / odd_1) / arred_var[0]) * arred_var[0]
             elif aposta1 > 0:
                 aposta3 = round((retorno1() / odd_3) / arred_var[2]) * arred_var[2]
                 aposta2 = 0
-                while not check_margin(
-                        [retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
+                while not check_margin([retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()], 0.02):
                     aposta2 += 0.01
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             elif aposta2 > 0:
                 aposta1 = 0
-                while not check_margin(
-                        [retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
-                    aposta3 = round((retorno1() / odd_3) / arred_var[2]) * arred_var[2]
+                aposta3 = retorno1() / odd_3
+                while not check_margin([retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()], 0.02):
+                    aposta3 = retorno1() / odd_3
                     aposta1 += 0.01
+                aposta1 = round(aposta1 / arred_var[0]) * arred_var[0]
+                aposta3 = round(aposta3 / arred_var[2]) * arred_var[2]
             elif aposta3 > 0:
-                aposta1 = retorno3() / odd_1
+                aposta1 = round((retorno3() / odd_1) / arred_var[0]) * arred_var[0]
                 aposta2 = 0
-                while not check_margin(
-                        [retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
+                while not check_margin([retorno1() + retorno2(), retorno3_halfwin() + retorno1_halfwin(), retorno1() + retorno2()], 0.02):
                     aposta2 += 0.01
+                aposta2 = round(aposta2 / arred_var[1]) * arred_var[1]
             lucro1 = round((retorno1() + retorno2() - aposta1 - aposta2 - aposta3), 2)
             lucro2 = round((retorno3_halfwin() + retorno1_halfwin() - aposta1 - aposta2 - aposta3), 2)
             lucro3 = round((retorno3() + retorno2() - aposta1 - aposta2 - aposta3), 2)
@@ -643,39 +671,32 @@ def calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2
             elif aposta1 > 0 and aposta2 > 0:
                 aposta3 = round(((retorno1() - retorno2()) / odd_3) / arred_var[2]) * arred_var[2]
             elif aposta1 > 0 and aposta3 > 0:
-                aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[2]) * arred_var[2]
+                aposta2 = round(((retorno1() - retorno3()) / odd_2) / arred_var[1]) * arred_var[1]
             elif aposta2 > 0 and aposta3 > 0:
                 aposta1 = round(((retorno2() + retorno3()) / odd_1) / arred_var[0]) * arred_var[0]
             elif aposta1 > 0:
                 aposta2 = 0
-                while not check_margin(
-                        [retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
+                aposta3 = (retorno1() - retorno2()) / odd_3
+                while not check_margin([retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()], 0.02):
                     aposta2 += 0.01
                     aposta3 = (retorno1() - retorno2()) / odd_3
                 aposta2 = round((aposta2 + 0.01) / arred_var[1]) * arred_var[1]
-                aposta3 = round((aposta3 - 0.01) / arred_var[1]) * arred_var[2]
+                aposta3 = round((aposta3 - 0.01) / arred_var[2]) * arred_var[2]
             elif aposta2 > 0:
                 aposta1 = 0
-                while not check_margin(
-                        [retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
+                aposta3 = (retorno1() - retorno2()) / odd_3
+                while not check_margin([retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()], 0.02):
                     aposta1 += 0.01
                     aposta3 = (retorno1() - retorno2()) / odd_3
                 aposta1 = round((aposta1 + 0.01) / arred_var[1]) * arred_var[0]
-                aposta3 = round((aposta3 - 0.01) / arred_var[1]) * arred_var[2]
+                aposta3 = round((aposta3 - 0.01) / arred_var[2]) * arred_var[2]
             elif aposta3 > 0:
-                aposta1 = retorno3() / odd_1
-                aposta2 = 0
-                while not check_margin(
-                        [retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()],
-                        [0.0038 * (sum(new_odds) - odd_1), 0.0038 * (sum(new_odds) - odd_2),
-                         0.0038 * (sum(new_odds) - odd_3)]):
-                    aposta1 += 0.01
+                aposta1 = 0
+                aposta2 = (retorno1() - retorno3()) / odd_2
+                while not check_margin([retorno1(), retorno1_halfwin() + retorno2_halfwin(), retorno2() + retorno3()], 0.02):
                     aposta2 = (retorno1() - retorno3()) / odd_2
-                aposta1 = round((aposta1 + 0.01) / arred_var[1]) * arred_var[0]
+                    aposta1 += 0.01
+                aposta1 = round((aposta1 + 0.01) / arred_var[0]) * arred_var[0]
                 aposta2 = round((aposta2 - 0.01) / arred_var[1]) * arred_var[1]
             lucro1 = round((retorno1() - aposta1 - aposta2 - aposta3), 2)
             lucro2 = round((retorno1_halfwin() + retorno2_halfwin() - aposta1 - aposta2 - aposta3), 2)
@@ -810,17 +831,18 @@ def gerar_dados(mercados, odds, apostas, valores, tipo='padrao', time='padrao'):
     apostas = [aposta1, aposta2, aposta3]
     print(mercados, odds, apostas, valores)
     return aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, taxa1, taxa2, taxa3, arreds, bonus
-mercados = ['TU', 'TO', 'TO']
-valores = [45.0, 44.5, 45.5]
-odds = [2.08, 1.95, 2.33]
-apostas = [0, 5.92, 0]
+mercados = ['TO', 'TU', 'TO']
+valores = [4.5, 4.5, 4.5]
+odds = [2, 2.2, 2.89]
+apostas = [0, 0, 5.93]
+bethouses = ['Pinnacle', 'BetFair', 'FavBet']
 tipo = 'padrao'
 #tipo = 'inverso'
 #tipo = '312'
 time = 'padrao'
 #time = 'oposto'
 aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, taxa1, taxa2, taxa3, arreds, bonus = gerar_dados(mercados, odds, apostas, valores)
-resultado1 = calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, taxa1, taxa2, taxa3, arreds, bonus)
+resultado1 = calc_apostas(aposta1, aposta2, aposta3, odd1, odd2, odd3, mercado1, mercado2, mercado3, valor1, valor2, valor3, taxa1, taxa2, taxa3, arreds, bonus, bethouses)
 print(resultado1)
 print('')
 def resto():

@@ -1351,6 +1351,16 @@ trans_graficos = {
         'Ελληνικά': 'Νίκη',
         'Русский': 'Победа'
     },
+    'Anulado': {
+        'Português': 'Anulado',
+        'English': 'Void',
+        'Deutsch': 'Annulliert',
+        'Italiano': 'Annullato',
+        'Français': 'Annulé',
+        'Español': 'Anulado',
+        'Ελληνικά': 'Ακυρωμένο',
+        'Русский': 'Аннулировано'
+    },
     'Vitórias': {
         'Português': 'Vitórias',
         'English': 'Wins',
@@ -1976,6 +1986,26 @@ trans_jogo = {
         'Ελληνικά': 'Ν/Η',
         'Русский': 'П/П'
     },
+    'Cash Out': {
+        'Português': 'Cash Out',
+        'English': 'Cash Out',
+        'Deutsch': 'Cash Out',
+        'Italiano': 'Cash Out',
+        'Français': 'Cash Out',
+        'Español': 'Cash Out',
+        'Ελληνικά': 'Cash Out',
+        'Русский': 'Cash Out'
+    },
+    'Digite o valor do Cash Out para': {
+        'Português': 'Digite o valor do Cash Out para',
+        'English': 'Enter the Cash Out amount for',
+        'Deutsch': 'Geben Sie den Cash-Out-Betrag für',
+        'Italiano': 'Inserisci l\'importo del Cash Out per',
+        'Français': 'Entrez le montant du Cash Out pour',
+        'Español': 'Ingrese el monto del Cash Out para',
+        'Ελληνικά': 'Εισαγάγετε το ποσό του Cash Out για',
+        'Русский': 'Введите сумму Cash Out для'
+    },
     'Insira o dia': {
         'Português': 'Insira o dia da partida',
         'English': 'Enter the day of the match',
@@ -2136,7 +2166,7 @@ trans_jogo = {
         'Ελληνικά': 'Εκτιμώμενο ποσοστό κέρδους',
         'Русский': 'Прибыль в процентах (оценочно)'
     },
-    'Liability': {
+    'Liability tip': {
         'Português': 'Liability (é o quanto você perderá caso a aposta perca)',
         'English': 'Liability (it is how much you will lose if the bet loses)',
         'Deutsch': 'Haftung (es ist der Betrag, den Sie verlieren, wenn die Wette verliert)',
@@ -2185,6 +2215,16 @@ trans_jogo = {
         'Español': 'Derrotas este mes',
         'Ελληνικά': 'Απώλειες αυτό το μήνα',
         'Русский': 'Поражения в этом месяце'
+    },
+    'escolher resultados': {
+        'Português': 'Clique para escolher\nos resultados',
+        'English': 'Click to choose\nthe results',
+        'Deutsch': 'Klicken Sie hier, um\ndie Ergebnisse auszuwählen',
+        'Italiano': 'Clicca per scegliere\ni risultati',
+        'Français': 'Cliquez pour choisir\nles résultats',
+        'Español': 'Haz clic para elegir\nlos resultados',
+        'Ελληνικά': 'Κάντε κλικ για να επιλέξετε\nτα αποτελέσματα',
+        'Русский': 'Щелкните, чтобы выбрать\nрезультаты'
     }
 }
 trans_datas = {
@@ -3071,5 +3111,88 @@ trans_dicas = {
         'Español': 'tiempos',
         'Ελληνικά': 'ημίχρονα',
         'Русский': 'таймы'
+    },
+    'Aposta Segura': {
+        'Português': 'Aposta Segura',
+        'English': 'Sure Bet',
+        'Deutsch': 'Sichere Wette',
+        'Italiano': 'Scommessa Sicura',
+        'Français': 'Pari Sûr',
+        'Español': 'Apuesta Segura',
+        'Ελληνικά': 'Ασφαλές Στοίχημα',
+        'Русский': 'Уверенная ставка'
+    },
+    'Lucro Garantido': {
+        'Português': 'Lucro Garantido',
+        'English': 'Guaranteed Profit',
+        'Deutsch': 'Garantierter Gewinn',
+        'Italiano': 'Profitto Garantito',
+        'Français': 'Profit Garanti',
+        'Español': 'Beneficio Garantizado',
+        'Ελληνικά': 'Εγγυημένο Κέρδος',
+        'Русский': 'Гарантированная прибыль'
+    },
+    'Lucro Garantido com Bônus': {
+        'Português': 'Lucro Garantido com Bônus',
+        'English': 'Guaranteed Profit with Bonus',
+        'Deutsch': 'Garantierter Gewinn mit Bonus',
+        'Italiano': 'Profitto Garantito con Bonus',
+        'Français': 'Profit Garanti avec Bonus',
+        'Español': 'Beneficio Garantizado con Bono',
+        'Ελληνικά': 'Εγγυημένο Κέρδος με Μπόνους',
+        'Русский': 'Гарантированная прибыль с бонусом'
+    },
+    'Aposta com Risco': {
+        'Português': 'Aposta com Risco',
+        'English': 'Risk Bet',
+        'Deutsch': 'Risikowette',
+        'Italiano': 'Scommessa a Rischio',
+        'Français': 'Pari à Risque',
+        'Español': 'Apuesta de Riesgo',
+        'Ελληνικά': 'Στοίχημα με Κίνδυνο',
+        'Русский': 'Рискованная ставка'
     }
+}
+trans_resultados = {
+    'Lucro Garantido': {
+        'Português': 'Lucro com qualquer resultado',
+        'English': 'Profit with any outcome',
+        'Deutsch': 'Gewinn bei jedem Ergebnis',
+        'Italiano': 'Profitto con qualsiasi esito',
+        'Français': "Profit avec n'importe quel résultat",
+        'Español': 'Beneficio con cualquier resultado',
+        'Ελληνικά': 'Κέρδος με οποιοδήποτε αποτέλεσμα',
+        'Русский': 'Прибыль при любом результате'
+    },
+    'Lucro Garantido com Bônus': {
+        'Português': 'Mais lucro com um resultado do que com outros',
+        'English': 'More profit with one outcome than with others',
+        'Deutsch': 'Mehr Gewinn bei einem Ergebnis als bei anderen',
+        'Italiano': 'Più profitto con un esito rispetto ad altri',
+        'Français': 'Plus de profit avec un résultat que avec les autres',
+        'Español': 'Más beneficio con un resultado que con los demás',
+        'Ελληνικά': 'Περισσότερο κέρδος με ένα αποτέλεσμα από ό,τι με άλλα',
+        'Русский': 'Больше прибыли с одним результатом, чем с другими'
+    },
+    'Aposta Segura': {
+        'Português': 'Lucro ou reembolso com qualquer resultado',
+        'English': 'Profit or refund with any outcome',
+        'Deutsch': 'Gewinn oder Rückerstattung bei jedem Ergebnis',
+        'Italiano': 'Profitto o rimborso con qualsiasi esito',
+        'Français': "Profit ou remboursement avec n'importe quel résultat",
+        'Español': 'Beneficio o reembolso con cualquier resultado',
+        'Ελληνικά': 'Κέρδος ή επιστροφή χρημάτων με οποιοδήποτε αποτέλεσμα',
+        'Русский': 'Прибыль или возмещение при любом результате'
+    },
+    'Aposta com Risco': {
+        'Português': 'Chance de prejuízo',
+        'English': 'Chance of loss',
+        'Deutsch': 'Chance auf Verlust',
+        'Italiano': 'Possibilità di perdita',
+        'Français': 'Chance de perte',
+        'Español': 'Posibilidad de pérdida',
+        'Ελληνικά': 'Πιθανότητα απώλειας',
+        'Русский': 'Вероятность убытка'
+    }
+
 }

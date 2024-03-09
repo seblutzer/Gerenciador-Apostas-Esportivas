@@ -398,10 +398,10 @@ def filter(sql_data, sql_table, table_column=None, operation=None, filter=None):
     if table_name[0].isdigit():
         table_name = f'_{table_name}'
     if table_column==None or operation==None or filter==None:
-        c.execute("SELECT valor3 FROM apostas WHERE CAST(valor1 AS REAL) IS NULL and valor3 IS NOT NULL")
+        query = "SELECT data_entrada, balanco, resultado FROM PinUp_saldos WHERE data_entrada >= DATE('2023-07-08', '-30 days')"
 
         # Recuperar os resultados da consulta
-        resultados = c.fetchall()
+        #resultados = c.fetchall()
 
         # Imprimir os valores
         #for resultado in resultados:
@@ -410,14 +410,15 @@ def filter(sql_data, sql_table, table_column=None, operation=None, filter=None):
         #query = f"SELECT * FROM apostas"# WHERE resultado IS NULL"# WHERE DATE(data_entrada) >= '2021-01-01' AND DATE(data_entrada) < '2022-01-01' ORDER BY data_entrada ASC"
     else:
         query = f"SELECT * FROM {sql_table} WHERE {table_column} {operation} {filter}"
-    #df = pd.read_sql_query(query, conn)
+    df = pd.read_sql_query(query, conn)
+    soma = df['balanco'].sum()
 
-    #print(df)
+    print(df, soma)
     # Salvando as alterações no banco de dados
     conn.commit()
     conn.close()
-    #return df
-#df = filter(sql_data, 'BetFair')
+    return df
+df = filter(sql_data, 'BetFair')
 def add_linhas_from_csv():
     # Conectando ao banco de dados SQLite
     conn = sqlite3.connect(sql_data)
@@ -768,9 +769,9 @@ def lucro_esporte(conn, tempo):
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
 #view_column(sql_data, 'apostas')
-#view_last_lines(sql_data, 'apostas', 10)
+#view_last_lines(sql_data, 'apostas', 70)
 #view_last_lines(sql_data, 'apostas_antigas', 3)
-#view_last_lines(sql_data, 'BWin_saldos', 3)
+#view_last_lines(sql_data, 'FavBet_saldos', 30)
 #view_last_lines(sql_data, 'FavBet_saldos', 3)
 #view_last_lines(sql_data, 'Ex_BetFair_saldos', 3)
 #sum_lucro_estimado(sql_data, 'apostas')

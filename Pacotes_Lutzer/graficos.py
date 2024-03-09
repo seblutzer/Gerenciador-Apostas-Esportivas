@@ -6,9 +6,10 @@ from language import trans_graficos
 import datetime
 from datetime import date, datetime, timedelta
 import re
+import sqlite3
 
 global bethouse_options_total
-with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
+with open('C:/Users/Sérgio/PycharmProjects/Gerenciador-Apostas-Esportivas/bethouse_options.json', 'r') as f:
     data = json.load(f)
     bethouse_options_total = data.get("bethouse_options", {})
 ################ LUCRO POR TEMPO ################
@@ -134,30 +135,6 @@ def count_hora(conn, dias):
         GROUP BY hora
         ORDER BY hora
     """
-    query = f"""
-        WITH subquery AS (
-            SELECT strftime('%H', data_entrada) AS hora, COUNT(*) AS total_apostas
-            FROM apostas
-            WHERE data_entrada >= date('{data}', '-{dias} days')
-            GROUP BY hora
-        ),
-        stats AS (
-            SELECT AVG(total_apostas) AS media, COUNT(*) AS count
-            FROM subquery
-        )
-        SELECT s.hora, s.total_apostas, a.lucro, 
-               POWER((SUM((s.total_apostas - stats.media)*(s.total_apostas - stats.media))/stats.count), 0.5) AS desvio_padrao
-        FROM subquery s
-        CROSS JOIN stats
-        LEFT JOIN (
-            SELECT strftime('%H', data_entrada) AS hora, SUM(lucro_real) AS lucro
-            FROM apostas
-            WHERE data_entrada >= date('{data}', '-{dias} days')
-            GROUP BY hora
-        ) a ON s.hora = a.hora
-        GROUP BY s.hora, a.lucro
-        ORDER BY s.hora
-    """
 
     # Executando a consulta
     c.execute(query)
@@ -165,21 +142,59 @@ def count_hora(conn, dias):
     # Obtendo os resultados
     resultados = c.fetchall()
 
-    # Consulta SQL para contar os dias diferentes em data_entrada nos últimos 7 dias
-    query_days = f"""
-        SELECT COUNT(DISTINCT date(data_entrada)) AS total_dias
+    query = f"""
+        SELECT 
+            DATE(data_entrada) AS data,
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '00' THEN 1 ELSE NULL END) AS '00h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '01' THEN 1 ELSE NULL END) AS '01h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '02' THEN 1 ELSE NULL END) AS '02h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '03' THEN 1 ELSE NULL END) AS '03h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '04' THEN 1 ELSE NULL END) AS '04h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '05' THEN 1 ELSE NULL END) AS '05h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '06' THEN 1 ELSE NULL END) AS '06h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '07' THEN 1 ELSE NULL END) AS '07h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '08' THEN 1 ELSE NULL END) AS '08h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '09' THEN 1 ELSE NULL END) AS '09h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '10' THEN 1 ELSE NULL END) AS '10h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '11' THEN 1 ELSE NULL END) AS '11h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '12' THEN 1 ELSE NULL END) AS '12h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '13' THEN 1 ELSE NULL END) AS '13h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '14' THEN 1 ELSE NULL END) AS '14h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '15' THEN 1 ELSE NULL END) AS '15h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '16' THEN 1 ELSE NULL END) AS '16h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '17' THEN 1 ELSE NULL END) AS '17h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '18' THEN 1 ELSE NULL END) AS '18h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '19' THEN 1 ELSE NULL END) AS '19h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '20' THEN 1 ELSE NULL END) AS '20h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '21' THEN 1 ELSE NULL END) AS '21h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '22' THEN 1 ELSE NULL END) AS '22h',
+            COUNT(CASE WHEN strftime('%H', data_entrada) = '23' THEN 1 ELSE NULL END) AS '23h'
         FROM apostas
         WHERE data_entrada >= date('{data}', '-{dias} days')
+        GROUP BY data
+        ORDER BY data
     """
-    total_dias = c.execute(query_days).fetchone()[0]
+
+    # Obtendo os resultados
+    df_diario = pd.read_sql_query(query, conn)
 
     # Criando o DataFrame com os resultados
-    df = pd.DataFrame(resultados, columns=['hora', 'total_apostas', 'lucro', 'desvio_padrao'])
+    df = pd.DataFrame(resultados, columns=['hora', 'total_apostas', 'lucro'])
+    hours = pd.DataFrame({'hora': [str(i).zfill(2) for i in range(24)]})
+
+    # Realizar um LEFT JOIN entre os DataFrames
+    df = pd.merge(hours, df, on='hora', how='left')
+
+    # Preencher os valores nulos com zero
+    df = df.fillna(0)
+    # Calcula o desvio padrão para cada coluna do DataFrame df_diario
     df['hora'] = df['hora'].apply(lambda x: f'{str(x).zfill(2)}h')
-    df['media_apostas'] = df['total_apostas'] / total_dias
     df['media_lucro'] = ((df['lucro'] if dias > 0 else 0) / (df['total_apostas'] if dias > 0 else 1))
     df['lucro_total'] = (df['lucro'] if dias > 0 else 0)
-
+    desvios_padrao = df_diario.iloc[:, 1:].std()
+    media = df_diario.iloc[:, 1:].mean()
+    df['media_apostas'] = df.index.map(lambda hora: media[hora])
+    df['desvio_padrao'] = df.index.map(lambda hora: desvios_padrao[hora])
     return df
 def apostas_hora(conn, tempo, idioma):
     df = count_hora(conn, tempo)
@@ -213,9 +228,9 @@ def apostas_hora(conn, tempo, idioma):
     ))
     fig.add_trace(go.Bar(
         x=df['hora'],
-        y=-((df['desvio_padrao'] / df['total_apostas']) * df['media_apostas']),
+        y=-df['desvio_padrao'],# / df['total_apostas']) * df['media_apostas']),
         name=trans_graficos['Desvio Padrão'][idioma],
-        hovertemplate=f"{trans_graficos['Desvio Padrão'][idioma]}" + ": " + df['desvio_padrao'].round(2).astype(str) + "<br>" + f"{trans_graficos['Desvio Padrão'][idioma]} ({trans_graficos['Média'][idioma]}): " + round((df['desvio_padrao'] / df['total_apostas']) * df['media_apostas'], 2).astype(str),
+        hovertemplate=f"{trans_graficos['Desvio Padrão'][idioma]}" + ": " + df['desvio_padrao'].round(2).astype(str),# + "<br>" + f"{trans_graficos['Desvio Padrão'][idioma]} ({trans_graficos['Média'][idioma]}): " + round((df['desvio_padrao'] / df['total_apostas']) * df['media_apostas'], 2).astype(str),
         width=0.3
     ))
 
@@ -237,8 +252,9 @@ def saldo_bethouses(conn, range_val, periodo, idioma):
     condition = ''
     if periodo == trans_graficos['dia'][idioma]:
         intervalo = f'{range_val - 1} days'
+        intervalo_fim = f'{range_val + 6} days'
     elif periodo == trans_graficos['semana'][idioma]:
-            intervalo = f'{(range_val - 1) * 7 + (current_date.weekday() + 1)} days'
+        intervalo = f'{(range_val - 1) * 7 + (current_date.weekday() + 1)} days'
     elif periodo == trans_graficos['mês'][idioma]:
         intervalo = f'{range_val - 1} month'
         condition = "'start of month',"
@@ -278,8 +294,20 @@ def saldo_bethouses(conn, range_val, periodo, idioma):
         FROM {tabela_aposta}
         WHERE data_entrada <= DATE('{current_date}', {condition}'-{intervalo}')
         """
-        saldo_anterior = c.execute(query_saldo).fetchone()[0]
-        saldo_anterior = round(saldo_anterior, 2) if saldo_anterior is not None else 0
+        if periodo == trans_graficos['dia'][idioma]:
+            query_aberto = f"""
+                    SELECT SUM(balanco + aposta)
+                    FROM {tabela_aposta}
+                    WHERE data_entrada >= DATE('{current_date}', '-{range_val + 7} days') AND data_entrada <= DATE('{current_date}', '-{range_val - 1} days') AND data_fim >= DATE('{current_date}', '-{range_val - 1} days')
+                    """
+            saldo_aberto = c.execute(query_aberto).fetchone()[0]
+            saldo_aberto = 0 if saldo_aberto is None else saldo_aberto
+            saldo_anterior = c.execute(query_saldo).fetchone()[0]
+            saldo_anterior = 0 if saldo_anterior is None else saldo_anterior
+            saldo_anterior = round(saldo_anterior - saldo_aberto, 2)
+        else:
+            saldo_anterior = c.execute(query_saldo).fetchone()[0]
+            saldo_anterior = round(saldo_anterior, 2) if saldo_anterior is not None else 0
 
         # Consulta para obter a soma de balanco e Valor agrupados por dia
         if periodo == trans_graficos['dia'][idioma]:
@@ -311,6 +339,62 @@ def saldo_bethouses(conn, range_val, periodo, idioma):
             LEFT JOIN {tabela_aposta} ON all_dates.date = DATE({tabela_aposta}.data_entrada)
             GROUP BY all_dates.date
             """
+            query_entrada = f"""
+                        WITH all_dates AS (
+                            SELECT DATE('{current_date}') AS date
+                            UNION ALL
+                            SELECT date(date, '-1 day') AS date
+                            FROM all_dates
+                            WHERE date > DATE('{current_date}', '-{intervalo}')
+                        )
+                        SELECT STRFTIME('%d', all_dates.date) || '/' || 
+                            (CASE STRFTIME('%m', all_dates.date)
+                                WHEN '01' THEN '{trans_graficos['Jan'][idioma]}'
+                                WHEN '02' THEN '{trans_graficos['Fev'][idioma]}'
+                                WHEN '03' THEN '{trans_graficos['Mar'][idioma]}'
+                                WHEN '04' THEN '{trans_graficos['Abr'][idioma]}'
+                                WHEN '05' THEN '{trans_graficos['Mai'][idioma]}'
+                                WHEN '06' THEN '{trans_graficos['Jun'][idioma]}'
+                                WHEN '07' THEN '{trans_graficos['Jul'][idioma]}'
+                                WHEN '08' THEN '{trans_graficos['Ago'][idioma]}'
+                                WHEN '09' THEN '{trans_graficos['Set'][idioma]}'
+                                WHEN '10' THEN '{trans_graficos['Out'][idioma]}'
+                                WHEN '11' THEN '{trans_graficos['Nov'][idioma]}'
+                                WHEN '12' THEN '{trans_graficos['Dez'][idioma]}'
+                            END) AS {periodo},
+                            '{bethouse}' AS bethouse, ROUND(COALESCE(-SUM({tabela_aposta}.aposta), 0), 2) AS saldo_periodo, CASE WHEN SUM(aposta) IS NULL THEN COUNT(*) - 1 ELSE COUNT(*) END AS apostas, SUM(aposta) AS investimento, GROUP_CONCAT({tabela_aposta}.id) AS ids, GROUP_CONCAT({tabela_aposta}.id) AS ids
+                        FROM all_dates
+                        LEFT JOIN {tabela_aposta} ON all_dates.date = DATE({tabela_aposta}.data_entrada)
+                        GROUP BY all_dates.date
+                        """
+            query_fim = f"""
+                        WITH all_dates AS (
+                            SELECT DATE('{current_date}') AS date
+                            UNION ALL
+                            SELECT date(date, '-1 day') AS date
+                            FROM all_dates
+                            WHERE date > DATE('{current_date}', '-{intervalo_fim}')
+                        )
+                        SELECT STRFTIME('%d', all_dates.date) || '/' || 
+                            (CASE STRFTIME('%m', all_dates.date)
+                                WHEN '01' THEN '{trans_graficos['Jan'][idioma]}'
+                                WHEN '02' THEN '{trans_graficos['Fev'][idioma]}'
+                                WHEN '03' THEN '{trans_graficos['Mar'][idioma]}'
+                                WHEN '04' THEN '{trans_graficos['Abr'][idioma]}'
+                                WHEN '05' THEN '{trans_graficos['Mai'][idioma]}'
+                                WHEN '06' THEN '{trans_graficos['Jun'][idioma]}'
+                                WHEN '07' THEN '{trans_graficos['Jul'][idioma]}'
+                                WHEN '08' THEN '{trans_graficos['Ago'][idioma]}'
+                                WHEN '09' THEN '{trans_graficos['Set'][idioma]}'
+                                WHEN '10' THEN '{trans_graficos['Out'][idioma]}'
+                                WHEN '11' THEN '{trans_graficos['Nov'][idioma]}'
+                                WHEN '12' THEN '{trans_graficos['Dez'][idioma]}'
+                            END) AS {periodo},
+                            '{bethouse}' AS bethouse, ROUND(COALESCE(SUM({tabela_aposta}.aposta) + SUM({tabela_aposta}.balanco), 0), 2) AS saldo_periodo
+                        FROM all_dates
+                        LEFT JOIN {tabela_aposta} ON all_dates.date = DATE({tabela_aposta}.data_fim)
+                        GROUP BY all_dates.date
+                        """
         elif periodo == trans_graficos['semana'][idioma]:
             query = f"""
                 WITH all_weeks AS (
@@ -443,9 +527,25 @@ def saldo_bethouses(conn, range_val, periodo, idioma):
                 GROUP BY STRFTIME('%Y', all_dates.date)
                 HAVING STRFTIME('%Y', all_dates.date) >= STRFTIME('%Y', '{current_date}', '-{intervalo}')
                 """
+        def df_certo(basico=False):
+            if basico:
+                df = pd.read_sql_query(query, conn)
+                return df
+            else:
+                df = pd.read_sql_query(query_entrada, conn)
+                df_fim = pd.read_sql_query(query_fim, conn)
+                df_merged = pd.merge(df_fim, df, on=['dia', 'bethouse'], how='right')
 
-        df = pd.read_sql_query(query, conn)
+                # Somar a coluna "saldo_periodo" resultante da fusão
+                df_merged['saldo_periodo'] = df_merged['saldo_periodo_x'] + df_merged['saldo_periodo_y']
 
+                # Remover as colunas duplicadas após a soma
+                df_merged = df_merged.drop(['saldo_periodo_x', 'saldo_periodo_y'], axis=1)
+                return df_merged
+        if periodo == trans_graficos['dia'][idioma]:
+            df = df_certo()
+        else:
+            df = df_certo('basico')
         soma_apostas = df['apostas'].sum()
 
         if soma_apostas > 0:
@@ -470,9 +570,9 @@ def saldo_bethouses(conn, range_val, periodo, idioma):
     # Criar a coluna 'num_apostas' com o tamanho de cada set
     df_apostas_periodo['num_apostas'] = df_apostas_periodo['ids'].apply(len)
 
-    df_apostas_periodo = df_apostas_periodo[df_apostas_periodo['num_apostas'] != 0]
+    #df_apostas_periodo = df_apostas_periodo[df_apostas_periodo['num_apostas'] != 0]
     df_saldos = df_saldos[df_saldos[periodo].isin(df_apostas_periodo[periodo])]
-
+    #print(df_saldos[df_saldos['bethouse'] == 'FavBet'][['dia', 'saldo_periodo', 'saldo_bethouse']])
     return df_saldos, df_apostas_periodo
 def calc_saldo_bethouse(conn, range, periodo, bethouse_options_total, idioma, cambio):
     df, total_apostas = saldo_bethouses(conn, range, periodo, idioma)
@@ -996,14 +1096,15 @@ def participacao_lucros(conn, tempo, bethouse_options, idioma, cambio):
     fig.show()
 
 
-#conn = sqlite3.connect('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db')
+#conn = sqlite3.connect('./dados.db')
 #c = conn.cursor()
 #lucro_tempo(7, 'dia', conn, 'Português', 'R$', media=3)
-#apostas_hora(conn, 10)
-#calc_saldo_bethouse(conn, 4, 'semestre', bethouse_options_total, 'Português', 'R$')
+#apostas_hora(conn, 10, 'Português')
+#calc_saldo_bethouse(conn, 7, 'dia', bethouse_options_total, 'Português', 'R$')
 #apostas_bethouses(conn, 5, 'quarter', bethouse_options_total, 'English')
 #relacao_esportes(conn, 180, 'Italiano', 'R$', valor=True)
 #eficiencia_bethouses(conn, 'English', 30)
 #relacao_bethouses(conn, 90, 'English', 'USS')
 #odds_x_resultado(conn, 'English', tempo=900, round=1, min=3, min_percent=1)
 #participacao_lucros(conn, 90, bethouse_options_total, 'English', 'US$')
+#saldo_bethouses(conn, 90, 'dia', 'Português')

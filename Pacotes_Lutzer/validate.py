@@ -146,6 +146,8 @@ def float_error(valor, erro):
     return valor_float
 
 def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str, idioma) -> str:
+    if not esporte:
+        esporte = 'Tênis'
     esporte = converter_esporte(esporte)
     plural = ''
     set = 'set'
@@ -306,15 +308,23 @@ def gerar_mensagem(mercado_var: str, valor_var: str, esporte: str, idioma) -> st
             return f"{trans_dicas['Vence se'][idioma]} {trans_dicas['Total de pontos par'][idioma]}\n{trans_dicas['Perde se'][idioma]} {trans_dicas['Total de pontos ímpar'][idioma]}"
     return ''
 
-
-def check_margin(nums, margins):
+nums_antigos = []
+media_antiga = []
+def check_margin(nums, margem):
+    global nums_antigos, media_antiga
     media = sum(nums) / len(nums)
-    for num, margin in zip(nums, margins):
-        if num > media + margin or num < media - margin:
+
+    if not nums_antigos:
+        nums_antigos = nums
+        media_antiga = sum(nums_antigos) / len(nums_antigos)
+    for num, num_antigo in zip(nums, nums_antigos):
+        if num > media + margem or num < media - margem:
+            if (num > media + margem and num_antigo < media_antiga - margem) or (num < media - margem and num_antigo > media_antiga + margem):
+                nums_antigos = []
+                media_antiga = []
+                return True
             return False
-
     return True
-
 
 def check_margin2(nums, margin):
     media = sum(nums) / len(nums)
@@ -322,3 +332,20 @@ def check_margin2(nums, margin):
         if num > media + margin or num < media - margin:
             return False
     return True
+
+def check_margin3(nums, margins):
+    print(nums, margins)
+    media = sum(nums) / len(nums)
+    for num, margin in zip(nums, margins):
+        maior = media + margin
+        menor = media - margin
+        if num > maior or num < menor:
+            return False
+    return True
+
+def blank_error(var):
+    try:
+        valor = var.get()
+    except _tkinter.TclError:
+        valor = 1
+    return valor
