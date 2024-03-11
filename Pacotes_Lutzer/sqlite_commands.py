@@ -10,16 +10,16 @@ from Pacotes_Lutzer.convert import convert_mes
 import random
 
 global bethouse_options_total
-sql_data = '/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/dados.db'
-with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
+sql_data = '/Users/Sérgio/PycharmProjects/Gerenciador-Apostas-Esportivas/dados.db'
+with open('/Users/Sérgio/PycharmProjects/Gerenciador-Apostas-Esportivas/bethouse_options.json', 'r') as f:
     data = json.load(f)
     bethouse_options_total = data.get("bethouse_options", {})
 conn = sqlite3.connect(sql_data)
 c = conn.cursor()
 def apostas_to_tabelas(sql = True):
     sql = True
-    dados = pd.read_csv('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/apostas_antigas.csv')
-    with open('/Users/sergioeblutzer/PycharmProjects/Gerenciamento_Bolsa_Esportiva/bethouse_options.json', 'r') as f:
+    dados = pd.read_csv('/Users/Sérgio/PycharmProjects/Gerenciador-Apostas-Esportivas/apostas_antigas.csv')
+    with open('/Users/Sérgio/PycharmProjects/Gerenciador-Apostas-Esportivas/bethouse_options.json', 'r') as f:
         data = json.load(f)
         bethouse_options = data.get("bethouse_options", {})
 
@@ -418,7 +418,7 @@ def filter(sql_data, sql_table, table_column=None, operation=None, filter=None):
     conn.commit()
     conn.close()
     return df
-df = filter(sql_data, 'BetFair')
+#df = filter(sql_data, 'BetFair')
 def add_linhas_from_csv():
     # Conectando ao banco de dados SQLite
     conn = sqlite3.connect(sql_data)
@@ -757,7 +757,7 @@ def lucro_esporte(conn, tempo):
 
 #edit_line(sql_data, 'BWin_saldos', 20230522015, "resultado = 'return'")
 #add_linhas_from_csv()
-#view_column(sql_data, '_1xBet_saldos')
+#view_ n(sql_data, '_1xBet_saldos')
 #del_column(sql_data, 'apostas', 'id_novo')
 #del_table(sql_data, 'apostas')
 #del_line(sql_data, 'apostas', id=20230703006)
@@ -768,8 +768,8 @@ def lucro_esporte(conn, tempo):
 #del_line(sql_data, 'SportyBet_saldos', id=696)
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
-#view_column(sql_data, 'apostas')
-#view_last_lines(sql_data, 'apostas', 70)
+view_column(sql_data, 'apostas')
+view_last_lines(sql_data, 'apostas', 70)
 #view_last_lines(sql_data, 'apostas_antigas', 3)
 #view_last_lines(sql_data, 'FavBet_saldos', 30)
 #view_last_lines(sql_data, 'FavBet_saldos', 3)

@@ -11,25 +11,32 @@ def excel_to_csv():
     my_list = [esporte for esporte, count in results for _ in range(count)]
 
     meses = {}
-    meses['abril23'] = pd.read_excel('Bolsa Esportiva Abril 2023.xlsx')
-    meses['março23'] = pd.read_excel('Bolsa Esportiva Março 2023.xlsx')
-    meses['fevereiro23'] = pd.read_excel('Bolsa Esportiva Fevereiro 2023.xlsx')
-    meses['janeiro23'] = pd.read_excel('Bolsa Esportiva Janeiro 2023.xlsx')
-    meses['outubro22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Outubro 2022')
-    meses['setembro22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Setembro 2022')
-    meses['agosto22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Agosto 2022')
-    meses['julho22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Julho 2022')
-    meses['junho22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Junho 2022')
-    meses['maio22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Maio 2022')
-    meses['abril22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Abril 2022')
-    meses['agosto21'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Agosto 2021')
-    meses['julho21'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Julho 2021')
+    #meses['abril23'] = pd.read_excel('Bolsa Esportiva Abril 2023.xlsx')
+    #meses['março23'] = pd.read_excel('Bolsa Esportiva Março 2023.xlsx')
+    #meses['fevereiro23'] = pd.read_excel('Bolsa Esportiva Fevereiro 2023.xlsx')
+    #meses['janeiro23'] = pd.read_excel('Bolsa Esportiva Janeiro 2023.xlsx')
+    #meses['outubro22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Outubro 2022')
+    #meses['setembro22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Setembro 2022')
+    #meses['agosto22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Agosto 2022')
+    #meses['julho22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Julho 2022')
+    #meses['junho22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Junho 2022')
+    #meses['maio22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Maio 2022')
+    #meses['abril22'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Abril 2022')
+    #meses['agosto21'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Agosto 2021')
+    #meses['julho21'] = pd.read_excel('Bolsa Esportiva ano 2022.xlsx', sheet_name='Julho 2021')
+    meses['julho23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Jul 2023')
+    meses['agosto23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Ago 2023')
+    meses['setembro23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Set 2023')
+    meses['outubro23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Out 2023')
+    meses['novembro23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Nov 2023')
+    meses['dezembro23'] = pd.read_excel('Bolsa Esportiva Jun Nov 2023.xlsx', sheet_name='Dez 2023')
 
     dfs = {}
     dic_mov = {}
     padroes = ['acerto de contas', 'acerto de contas diário', 'acerto de contas diario', 'acerto de contas semanal', 'acerto de contas mensal']
     #excels = {'julho21': 2021, 'agosto21': 2021, 'abril22': 2022, 'maio22': 2022, 'junho22': 2022, 'julho22': 2022, 'agosto22': 2022, 'setembro22': 2022, 'outubro22': 2022, 'janeiro23': 2023, 'fevereiro23': 2023, 'março23': 2023, 'abril23': 2023}
-    excels = {'julho21': 2021, 'agosto21': 2021, 'abril22': 2022, 'maio22': 2022, 'junho22': 2022, 'julho22': 2022, 'agosto22': 2022, 'setembro22': 2022, 'outubro22': 2022, 'janeiro23': 2023, 'fevereiro23': 2023, 'março23': 2023, 'abril23': 2023}
+    #excels = {'julho21': 2021, 'agosto21': 2021, 'abril22': 2022, 'maio22': 2022, 'junho22': 2022, 'julho22': 2022, 'agosto22': 2022, 'setembro22': 2022, 'outubro22': 2022, 'janeiro23': 2023, 'fevereiro23': 2023, 'março23': 2023, 'abril23': 2023}
+    excels = {'julho23': 2023, 'agosto23': 2023, 'setembro23': 2023, 'outubro23': 2023, 'novembro23': 2023, 'dezembro23': 2023}
 
 
 
@@ -37,18 +44,40 @@ def excel_to_csv():
         meses[mes] = meses[mes].iloc[:, :21]
 
         # Cabeçalho desejado
-        cabecalho = ['numero_aposta', 'status', 'resultado', 'dia', 'num_dia', 'vencimento', 'data_jogo', 'times', 'mercado', 'valor', 'bethouse', 'odd', 'stake', 'arred', 'aposta', 'retorno', 'apo_hoje', 'aberta', 'lucro_estimado', 'lucrp_per_estimado', 'lucro_real']
+        cabecalho = ['numero_aposta', 'status', 'resultado', 'dia', 'num_dia', 'vencimento', 'data_jogo', 'times', 'mercado', 'valor', 'bethouse', 'odd', 'stake', 'arred', 'aposta', 'retorno', 'apo_hoje', 'aberta', 'lucro_estimado', 'lucro_per_estimado', 'lucro_real']
+        cabecalho = ['numero_aposta', 'status', 'resultado', 'dia', 'num_dia', 'vencimento', 'data_jogo', 'times', 'mercado', 'valor', 'bethouse', 'odd', 'stake', 'arred', 'aposta', 'retorno', 'lucro_estimado', 'lucro_per_estimado', 'lucro_real']
 
         # Substituir as duas primeiras linhas pelo cabeçalho
         meses[mes] = meses[mes].iloc[2:].reset_index(drop=True)
         meses[mes].columns = cabecalho
 
+        def processar_valor(x):
+            try:
+                if isinstance(x, str) and ',' in x and '2023' not in x:
+                    return float(x.strip().replace('R$', '').replace('.', '').replace(',', '.').replace('-R$ ', '-').replace('\xa0', '')
+)
+                elif isinstance(x, str) and x.isdigit():
+                    return int(x.strip().replace('R$', '').replace(',', '.'))
+                elif isinstance(x, str):
+                    return float(x.replace('R$ ', ''))
+                else:
+                    return x
+            except ValueError:
+                if x.startswith('R$') or x.startswith('-R$'):
+                    return float(x.replace('R$', '').replace('-R$', '-').replace('\xa0', ''))
+                return x
+
+        # Remove 'R$' e substitui ',' por '.' e converte para float ou int
+        meses[mes] = meses[mes].applymap(lambda x: processar_valor(x))
+
         # Excluir todas as outras colunas
         meses[mes] = meses[mes][cabecalho]
 
         colunas_para_excluir = ['numero_aposta', 'status', 'num_dia', 'stake', 'vencimento', 'arred', 'retorno', 'apo_hoje', 'aberta']
+        colunas_para_excluir = ['numero_aposta', 'status', 'num_dia', 'stake', 'vencimento', 'arred', 'retorno']
+
         meses[mes] = meses[mes].drop(colunas_para_excluir, axis=1)
-        columns_to_fill = ['dia', 'data_jogo', 'times', 'lucro_estimado', 'lucrp_per_estimado', 'lucro_real']
+        columns_to_fill = ['dia', 'data_jogo', 'times', 'lucro_estimado', 'lucro_per_estimado', 'lucro_real']
         meses[mes][columns_to_fill] = meses[mes][columns_to_fill].fillna(method='ffill')
 
         # Filtrar as linhas com os padrões e adicionar ao dic_mov[mes]
@@ -131,7 +160,7 @@ def excel_to_csv():
             aposta3 = round(meses[mes]['aposta'][i + 2], 2)
             resultado3 = meses[mes]['resultado'][i + 2]
             lucro_estimado = round(meses[mes]['lucro_estimado'][i], 2)
-            lucro_per_estimado = round(meses[mes]['lucrp_per_estimado'][i], 4)
+            lucro_per_estimado = round(meses[mes]['lucro_per_estimado'][i], 4)
             lucro_real = round(lucro_estimado, 2)
             lucro_per_real = 0
             esporte = None
@@ -195,7 +224,7 @@ def excel_to_csv():
     merged_df = pd.concat(dfs_list)
 
     # Escreva o DataFrame resultante em um arquivo CSV
-    merged_df.to_csv('apostas_antigas2.csv', index=False, sep=';')
+    merged_df.to_csv('apostas_antigas2023.csv', index=False, sep=';')
 
     #print(dfs)
     #print(dfs['df_maio22'][['aposta1', 'aposta2', 'aposta3', 'lucro_estimado', 'lucro_per_estimado', 'lucro_real']])
@@ -204,7 +233,7 @@ def excel_to_csv():
 #excel_to_csv()
 
 # Lê o arquivo CSV
-df_apostas_antigas = pd.read_csv('apostas_antigas2.csv')
+#df_apostas_antigas = pd.read_csv('apostas_antigas2023.csv', sep=';')
 
 # Conecta-se ao banco de dados
 conn = sqlite3.connect('dados.db')
@@ -229,8 +258,8 @@ print(celulas_em_branco)
 
 # Encontrar a linha em que 'bethouse1' está em branco
 linha_branco = df_apostas_antigas[df_apostas_antigas['resultado3'] == ' ']
-linha_branco
+#linha_branco
 # Imprimir o resultado
 print(linha_branco)
 
-#print(df_apostas_antigas['resultado3'].tail(50))
+print(df_apostas_antigas['resultado3'].tail(50))
