@@ -190,11 +190,11 @@ def filter_selection(conn, situation_vars, order_button1, order_button2, time_bu
     if contador == 1:
         frame_vencidas = tk.Canvas(frameTabela, width=16, height=16, highlightthickness=0)
         frame_vencidas.create_oval(0, 0, 15, 15, fill="red", tags='frame')
-        frame_vencidas.create_text(8, 8, text=num_vencidas, fill="white", font=("Arial", 12, "bold"),tags=('count', 'frame'))
+        frame_vencidas.create_text(8, 8, text=num_vencidas, fill="white", font=("Arial", 10, "bold"),tags=('count', 'frame'))
         frame_vencidas.place(x=412, y=0)
     if num_vencidas > 0:
         if not frame_vencidas.winfo_viewable():
-            frame_vencidas.place(x=412, y=0)
+            frame_vencidas.place(x=400, y=0)
         frame_vencidas.itemconfigure('count', text=num_vencidas)
     else:
         frame_vencidas.place_forget()

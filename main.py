@@ -19,6 +19,7 @@ from Pacotes_Lutzer.graficos import lucro_tempo, apostas_hora, calc_saldo_bethou
 from language import trans_config, trans_filtros, trans_graficos, trans_jogo, trans_tabelas, trans_dicas, trans_resultados
 import re
 from tkinter import Toplevel, Label
+import platform
 from pynput import keyboard
 
 
@@ -52,15 +53,17 @@ selected_language = tk.StringVar()
 
 # Dictionary of flags
 flags = {
-    'Português': '🇧🇷',
-    'English': '🇺🇸',
-    'Deutsch': '🇩🇪',
-    'Italiano': '🇮🇹',
-    'Français': '🇫🇷',
-    'Ελληνικά': '🇬🇷',
-    'Русский': '🇷🇺',
-    'Español': '🇪🇸'
+    'Português': 'brazil.png',
+    'English': 'usa.png',
+    'Deutsch': 'germany.png',
+    'Italiano': 'italy.png',
+    'Français': 'france.png',
+    'Ελληνικά': 'greece.png',
+    'Русский': 'russia.png',
+    'Español': 'spain.png'
 }
+
+sistem_color = 'systemWindowBody' if platform.system() == 'Darwin' else 'white'
 
 def save_language(language):
     with open('language.txt', 'w') as f:
@@ -78,7 +81,12 @@ def restart_program():
     os.execl(python, python, *sys.argv)
 def update_language(language):
     selected_language.set(language)
-    language_button.configure(text=flags[language], font=('Arial', 21))
+    flag_image_path = "./" + flags[language]
+    flag_image = Image.open(flag_image_path)
+    flag_image = flag_image.resize((25, 25))
+    flag_img = ImageTk.PhotoImage(flag_image)
+    language_button.configure(image=flag_img)
+    language_button.image = flag_img
     confirm = messagebox.askyesno(trans_config['Confirmação'][language],
                                   f"{trans_config['Traduzir'][language]} {language}?")
     if confirm:
@@ -92,8 +100,13 @@ def open_language_menu():
 
     language_frame.config(highlightthickness=2, highlightbackground="gray", relief="ridge")
     for i, (language, flag) in enumerate(flags.items()):
-        button = tk.Button(language_frame, text=f"{language} {flag}", command=lambda lang=language: update_language(lang))
+        flag_image_path = "./" + flag
+        flag_image = Image.open(flag_image_path)
+        flag_image = flag_image.resize((25, 25))
+        flag_img = ImageTk.PhotoImage(flag_image)
+        button = tk.Button(language_frame, image=flag_img, command=lambda lang=language: update_language(lang))
         button.grid(row=i, column=0)
+        button.image = flag_img
 
     def on_window_click(event):
         widget = event.widget
@@ -106,10 +119,16 @@ def open_language_menu():
     janela.bind("<Button-1>", on_window_click)
 
 
+
 selected_language.set(load_language())  # Set the default language here
 # Define the language button
-language_button = tk.Button(frameOpcoes, text=flags[selected_language.get()], command=open_language_menu, width=1, font=('Arial', 21))
-language_button.grid(row=0, column=1)
+flag_image_path = './' + flags[selected_language.get()]
+flag_image = Image.open(flag_image_path)
+flag_image = flag_image.resize((25, 25))
+flag_img = ImageTk.PhotoImage(flag_image)
+language_button = tk.Button(frameOpcoes, image=flag_img, command=open_language_menu, width=25)
+language_button.image = flag_img
+language_button.grid(row=0, column=1, padx=10, pady=10)
 idioma = selected_language.get()
 cambio = 'R$'
 janela.title(trans_config['programa'][idioma])
@@ -128,7 +147,7 @@ def alternar_tabelas():
 
 tabela_visivel = True
 botao_tabelas = ttk.Button(frameOpcoes, text=trans_config['TabelaOn'][idioma], command=alternar_tabelas)
-botao_tabelas.grid(row=0, column=2)
+botao_tabelas.grid(row=0, column=2, padx=10, pady=10)
 def selecionar_opcao(opcao, popup, row):
     if not popup.winfo_manager():
         popup = tk.Frame(janela)
@@ -419,8 +438,8 @@ def open_graficos_menu():
     janela.bind("<Button-1>", on_window_click)
 
 # Define the graficos button
-graficos_button = tk.Button(frameOpcoes, text=trans_graficos['graficos'][idioma], command=open_graficos_menu, width=10)
-graficos_button.grid(row=0, column=3)
+graficos_button = tk.Button(frameOpcoes, text=trans_graficos['graficos'][idioma], command=open_graficos_menu, width=14)
+graficos_button.grid(row=0, column=3, padx=10, pady=10)
 
 blank_label = tk.Label(frameOpcoes, text='                                ')
 blank_label.grid(row=0, column=4)
@@ -493,7 +512,7 @@ def update_lucro_diario():
 
 frame_lucro = tk.Canvas(janela, width=132, height=57, highlightthickness=0)
 frame_lucro.create_rectangle(0, 15, 130, 55, tags='bg')
-frame_lucro.create_text(65, 5, text=trans_config['Lucro Estimado Hoje'][idioma], fill="black", font=("Arial", 12, "bold"))
+frame_lucro.create_text(65, 5, text=trans_config['Lucro Estimado Hoje'][idioma], fill="black", font=("Arial", 10, "bold"))
 frame_lucro.create_text(65, 35, text="", fill="white", font=("Arial", 24, "bold"), tag='lucro_text')
 frame_lucro.place(x=420, y=5)
 
@@ -530,19 +549,19 @@ def on_filters_change():
     preencher_treeview(conn, tabela, bethouse_options, situation_vars, order_button1, order_button2, time_button, timeframe_combobox, search_var, frameTabela, frameSaldos, idioma, cambio, linhas_bethouses, bethouse_list=bethouse_list)
     save_bethouse_options()
 
-order_button1 = tk.Button(frameTabela, text=trans_filtros['Crescente'][idioma], command=toggle_order_crescente, width=8)
-order_button1.grid(row=0, column=0)
-order_button2 = tk.Button(frameTabela, text=trans_filtros['Data'][idioma], command=toggle_order_add, width=4)
-order_button2.grid(row=0, column=1)
+order_button1 = tk.Button(frameTabela, text=trans_filtros['Crescente'][idioma], command=toggle_order_crescente, width=10)
+order_button1.grid(row=0, column=0, padx=10, pady=10)
+order_button2 = tk.Button(frameTabela, text=trans_filtros['Data'][idioma], command=toggle_order_add, width=6)
+order_button2.grid(row=0, column=1, padx=10, pady=10)
 
 # Tempo
-time_button = tk.Button(frameTabela, text=trans_filtros['Feitas desde'][idioma], width=5, command=toggle_time)
-time_button.grid(row=0, column=2)
+time_button = tk.Button(frameTabela, text=trans_filtros['Feitas desde'][idioma], width=10, command=toggle_time)
+time_button.grid(row=0, column=2, padx=10, pady=10)
 
 timeframe_options = [trans_filtros['hoje'][idioma], trans_filtros['ontem'][idioma], trans_filtros['essa semana'][idioma], trans_filtros['esse mês'][idioma], trans_filtros['30 dias'][idioma], trans_filtros['6 meses'][idioma], trans_filtros['esse ano'][idioma], trans_filtros['365 dias'][idioma], trans_filtros['sempre'][idioma]]
 timeframe_combobox = ttk.Combobox(frameTabela, values=timeframe_options, state="readonly", width=5)
 timeframe_combobox.current(0)
-timeframe_combobox.grid(row=0, column=3)
+timeframe_combobox.grid(row=0, column=3, padx=10, pady=10)
 timeframe_combobox.bind("<<ComboboxSelected>>", lambda event: on_filters_change())
 
 # Situação
@@ -596,11 +615,11 @@ def search(event=None):
 
 # Cria uma variável de controle para rastrear as alterações no Entry
 search_var = tk.StringVar()
-search_entry = tk.Entry(frameTabela, textvariable=search_var, width=10)
+search_entry = tk.Entry(frameTabela, textvariable=search_var, width=20)
 search_entry.grid(row=0, column=5)
-icon_photo = ImageTk.PhotoImage(Image.open("pesquisa.png").resize((16, 16), Image.LANCZOS))
+icon_photo = ImageTk.PhotoImage(Image.open("pesquisa.png").resize((25, 25), Image.LANCZOS))
 search_icon_label = tk.Label(frameTabela, image=icon_photo)
-search_icon_label.place(x=510, y=4)
+search_icon_label.place(x=510, y=8)
 # Vincula a função search ao evento de pressionar o botão de pesquisa
 search_icon_label.bind("<Button-1>", search)
 # Vincula a função search ao evento de pressionar a tecla Enter no campo de pesquisa
@@ -1160,7 +1179,7 @@ def show_settings_menu(event):
     settings_menu.post(event.x_root, event.y_root)
 
 # Define uma imagem para o botão de configurações
-settings_icon = tk.PhotoImage(file="./engrenagens.png").subsample(20, 20)
+settings_icon = tk.PhotoImage(file="./engrenagens.png").subsample(10, 10)
 settings_button = tk.Button(frameOpcoes, image=settings_icon, bd=0) # Ajustes Iniciais
 
 # Associa a ação do botão de configurações ao clique do mouse
@@ -2299,15 +2318,15 @@ def resetar_variaveis():
         alternar_bets()
     esporte_entry.delete(0, tk.END)
     update_columns()
-    valor_entry.configure(fg='black', bg='systemWindowBody')
-    odd_entry.configure(fg='black', bg='systemWindowBody')
-    aposta_entry.configure(fg='black', bg='systemWindowBody')
-    valor_entry2.configure(fg='black', bg='systemWindowBody')
-    odd_entry2.configure(fg='black', bg='systemWindowBody')
-    aposta_entry2.configure(fg='black', bg='systemWindowBody')
-    valor_entry3.configure(fg='black', bg='systemWindowBody')
-    odd_entry3.configure(fg='black', bg='systemWindowBody')
-    aposta_entry3.configure(fg='black', bg='systemWindowBody')
+    valor_entry.configure(fg='black', bg=sistem_color)
+    odd_entry.configure(fg='black', bg=sistem_color)
+    aposta_entry.configure(fg='black', bg=sistem_color)
+    valor_entry2.configure(fg='black', bg=sistem_color)
+    odd_entry2.configure(fg='black', bg=sistem_color)
+    aposta_entry2.configure(fg='black', bg=sistem_color)
+    valor_entry3.configure(fg='black', bg=sistem_color)
+    odd_entry3.configure(fg='black', bg=sistem_color)
+    aposta_entry3.configure(fg='black', bg=sistem_color)
     if 'edit_button' in globals():
         edit_button.grid_remove()
 
@@ -2399,9 +2418,9 @@ def gravar():
         messagebox.showwarning(trans_config['Aviso'][idioma], trans_jogo['Preencha o jogo'][idioma])
 
 gravar_button = tk.Button(frameGravar, text=trans_jogo['Gravar'][idioma], command=gravar)
-gravar_button.grid(row=0, column=0)
+gravar_button.grid(row=0, column=0, padx=10, pady=10)
 clear_button = tk.Button(frameGravar, text=trans_jogo['Limpar'][idioma], command=resetar_variaveis)
-clear_button.grid(row=0, column=1) # Gravar
+clear_button.grid(row=0, column=1, padx=10, pady=10) # Gravar
 
 def select_bets(event):
     global edit_button
@@ -2503,7 +2522,7 @@ def select_bets(event):
 
     # Botão Editar
     edit_button = tk.Button(frameGravar, text=trans_jogo['Editar'][idioma], command=editar_bets, foreground="red")
-    edit_button.grid(row=0, column=2)
+    edit_button.grid(row=0, column=2, padx=10, pady=10)
 
 # Definir estilo para o Treeview
 style = ttk.Style()

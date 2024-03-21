@@ -209,7 +209,7 @@ def to_sql(dados, nome_tabela, arquivo_retorno, data_type='dataframe', index=Fal
 def filter_column(sql_data, sql_table, table_column=None, operation=None, filter=None):
     con = sqlite3.connect(sql_data)
     if table_column==None or operation==None or filter==None:
-        query = f"SELECT esporte FROM {sql_table}"
+        query = f"SELECT {filter} FROM {sql_table}"
         #query = f"SELECT valor1 FROM {sql_table} WHERE valor1 = ''"
     else:
         query = f"SELECT * FROM {sql_table} WHERE {table_column} {operation} {filter}"
@@ -368,8 +368,8 @@ def add_aposta_individual(sql_data, table, dados):
         cursor.execute(create_table_query)
 
     # Inserir os valores na tabela
-    insert_query = '''
-    INSERT INTO "Pinnacle_apostas" (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real)
+    insert_query = f'''
+    INSERT INTO {table} (id, data_entrada, data_fim, bethouse, odd, odd_real, aposta, resultado, balanco, dif_real)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     '''
     values = (
@@ -739,6 +739,32 @@ def lucro_esporte(conn, tempo):
     # Exibindo o DataFrame com os resultados
     return resultado
 
+def replace_values(sql_data, sql_table, replacements, columns):
+    con = sqlite3.connect(sql_data)
+    cursor = con.cursor()
+
+    for old_value, new_value in replacements.items():
+        for column in columns:
+            query = f"UPDATE {sql_table} SET {column} = REPLACE({column}, '{old_value}', '{new_value}')"
+            #query = f"UPDATE {sql_table} SET {column} = REPLACE({column}, '{old_value}', '{new_value}')"
+            cursor.execute(query)
+
+    con.commit()
+    con.close()
+replacements = {
+    'Bwin': 'BWin',
+    'BetfairSB': 'BetFair',
+    'Betway': 'BetWay',
+    'Betfair Ex': 'Ex BetFair',
+    'Favbet': 'FavBet',
+    'Sportybet': 'SportyBet',
+    'Vbet': 'VBet',
+    '1win': '1Win',
+    'GGbet': 'GGBet',
+    'Pinnacle E-sports': 'Pinnacle'
+}
+#replace_values(sql_data, 'apostas', replacements, ['bethouse1', 'bethouse2', 'bethouse3'])
+
 #df = contar_bethouses(conn, 7)
 #lucro_esporte(conn, 90)
 #esportes_tempo(conn, 90)
@@ -768,8 +794,8 @@ def lucro_esporte(conn, tempo):
 #del_line(sql_data, 'SportyBet_saldos', id=696)
 #del_line(sql_data, 'Pinnacle_saldos', id=2303040101)
 #view_tables(sql_data)
-view_column(sql_data, 'apostas')
-view_last_lines(sql_data, 'apostas', 70)
+#view_column(sql_data, 'apostas')
+#view_last_lines(sql_data, 'apostas', 70)
 #view_last_lines(sql_data, 'apostas_antigas', 3)
 #view_last_lines(sql_data, 'FavBet_saldos', 30)
 #view_last_lines(sql_data, 'FavBet_saldos', 3)

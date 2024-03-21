@@ -20,7 +20,7 @@ bb_history.dropna(how='all', inplace=True)
 bb_history['date'] = bb_history['date'].ffill()
 
 # Convertendo os valores da coluna 'date' para o formato desejado
-bb_history['date'] = pd.to_datetime(bb_history['date'], format='%d/%m/%Y %H:%M')
+bb_history['date'] = pd.to_datetime(bb_history['date'], format='%Y-%m-%d %H:%M')
 bb_history = bb_history.rename(columns={'date': 'data_entrada'})
 
 # Extrair informações das colunas existentes para criar novas colunas
@@ -206,4 +206,6 @@ bb_history.loc[~pd.isna(bb_history['bethouse3']), 'lucro_per_estimado'] = bb_his
 #print(bb_history['market_value'].unique())
 
 bb_history.to_csv('apostas_BB.csv', index=False, sep=';')
+
+print(bb_history)
 

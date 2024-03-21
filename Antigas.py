@@ -233,7 +233,7 @@ def excel_to_csv():
 #excel_to_csv()
 
 # Lê o arquivo CSV
-#df_apostas_antigas = pd.read_csv('apostas_antigas2023.csv', sep=';')
+df_apostas_antigas = pd.read_csv('apostas_BB.csv', sep=';')
 
 # Conecta-se ao banco de dados
 conn = sqlite3.connect('dados.db')
